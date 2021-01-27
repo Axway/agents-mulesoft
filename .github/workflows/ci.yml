@@ -12,7 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     name: Build & Test
     defaults:
-      working-directory: ./mulesoft_discovery_agent
+      run:
+        working-directory: ./mulesoft_discovery_agent
     steps:
     - uses: actions/checkout@v2
     - uses: actions/setup-go@v2
@@ -33,7 +34,8 @@ jobs:
     runs-on: ubuntu-latest
     name: Build & Test
     defaults:
-      working-directory: ./mulesoft_traceability_agent
+      run:
+        working-directory: ./mulesoft_traceability_agent
     steps:
     - uses: actions/checkout@v2
     - uses: actions/setup-go@v2
