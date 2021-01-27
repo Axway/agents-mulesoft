@@ -4,6 +4,9 @@ on:
   push:
     tags:
       - v*.*.*
+defaults:
+  run:
+    working-directory: ./mulesoft_discovery_agent
 jobs:
   goreleaser:
     runs-on: ubuntu-latest
