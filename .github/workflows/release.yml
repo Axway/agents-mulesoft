@@ -20,6 +20,7 @@ jobs:
     - name: Release via goreleaser
       uses: goreleaser/goreleaser-action@master
       with:
+        workdir: ./mulesoft_discovery_agent
         args: release
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
