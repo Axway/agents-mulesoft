@@ -1,15 +1,23 @@
-# This is an example .goreleaser.yml file with some sane defaults.
-# Make sure to check the documentation at http://goreleaser.com
+# Documentation at http://goreleaser.com
 before:
   hooks:
-    # You may remove this if you don't use go modules.
     - go mod download
-    # you may remove this if you don't need go generate
-    - go generate ./...
-    # Update the sdk
+    - go mod tidy
+    - go mod vendor
     - go get "github.com/Axway/agent-sdk@main"
 builds:
-  - env:
+  - id: mulesoft_discovery_agent
+    binary: bin/mulesoft_discovery_agent
+    main: ./main.go
+    flags:
+      - -tags=static_all
+      - -a
+    ldflags:
+      - -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildTime={{.Date}}'
+      - -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildVersion={{.Version}}'
+      - -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildCommitSha={{.Commit}}'
+      - -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildAgentName=MulesoftDiscoveryAgent'
+    env:
       - CGO_ENABLED=0
     goos:
       - linux
