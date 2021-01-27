@@ -5,6 +5,8 @@ before:
     - go mod tidy
     - go mod vendor
     - go get "github.com/Axway/agent-sdk@main"
+checksum:
+  name_template: "discovery_checksums.txt"
 builds:
   - id: mulesoft_discovery_agent
     binary: bin/mulesoft_discovery_agent
