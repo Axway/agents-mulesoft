@@ -5,8 +5,6 @@ before:
     - go mod tidy
     - go mod vendor
     - go get "github.com/Axway/agent-sdk@main"
-checksum:
-  name_template: "traceability_checksums.txt"
 builds:
   - id: mulesoft_traceability_agent
     binary: bin/mulesoft_traceability_agent
@@ -33,7 +31,7 @@ archives:
       386: i386
       amd64: x86_64
 checksum:
-  name_template: 'checksums.txt'
+  name_template: "traceability_checksums.txt"
 snapshot:
   name_template: "{{ .Tag }}-next"
 changelog:
