@@ -24,7 +24,8 @@ builds:
       - windows
       - darwin
 archives:
-  - replacements:
+  - name_template: "mulesoft_discovery_agent_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    replacements:
       darwin: Darwin
       linux: Linux
       windows: Windows
