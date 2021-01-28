@@ -1,0 +1,9 @@
+tasks:
+  - init: cd ./mulesoft_discovery_agent && make
+    command: ./bin/mulesoft_discovery_agent
+  - init: cd ./mulesoft_traceability_agent && make
+    command: ./bin/mulesoft_traceability_agent
+
+vscode:
+  extensions:
+    - ms-vscode.go@0.14.3:ubq/hxMM96YNfNMjp5pfaQ==

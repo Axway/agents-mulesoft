@@ -19,7 +19,8 @@ update-sdk:
 
 
 ${WORKSPACE}/mulesoft_discovery_agent: lint
-	goreleaser build --snapshot --rm-dist
+	@go build -tags static_all -a -o ./bin/mulesoft_discovery_agent .
+	@go test ./...
 
 build:${WORKSPACE}/mulesoft_discovery_agent
 	@echo "Build complete"
