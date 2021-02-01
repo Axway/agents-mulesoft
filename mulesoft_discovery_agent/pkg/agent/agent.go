@@ -57,6 +57,9 @@ func (a *Agent) Run() {
 
 	agent.RegisterAPIValidator(a.validateAPI)
 	agent.OnConfigChange(a.onConfigChange)
+
+	// TODO - listen to mulesoft
+
 	select {
 	case <-a.stopChan:
 		log.Info("Received request to kill agent")

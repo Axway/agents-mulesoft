@@ -16,6 +16,7 @@ type Client interface {
 type anypointClient struct {
 	url       string
 	apiClient coreapi.Client
+	auth      Auth
 }
 
 // NewClient creates a new client for interacting with Mulesoft.
@@ -38,6 +39,10 @@ func (c *anypointClient) OnConfigChange(mulesoftConfig *config.MulesoftConfig) {
 	c.apiClient = coreapi.NewClient(mulesoftConfig.TLS, mulesoftConfig.ProxyURL)
 	// c.apiVersion = mgrConfig.APIVersion
 	// c.pollInterval = mgrConfig.PollInterval
+
+	c.auth, _ = NewAuth()
+
+	// TODO HANDLE ERR
 }
 
 // healthcheck performs healthcheck
