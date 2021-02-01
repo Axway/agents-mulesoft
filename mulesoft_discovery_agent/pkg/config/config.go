@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"time"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/cmd/properties"
@@ -33,8 +34,9 @@ type MulesoftConfig struct {
 	AnypointExchangeURL string            `config:"anypointExchangeUrl"`
 	DiscoveryIgnoreTags string            `config:"discoveryIgnoreTags"`
 	Filter              string            `config:"filter"`
-	User                string            `config:"auth.username"`
+	Username            string            `config:"auth.username"`
 	Password            string            `config:"auth.password"`
+	SessionLifetime     time.Duration     `config:"auth.lifetime"`
 	TLS                 corecfg.TLSConfig `config:"ssl"`
 	ProxyURL            string            `config:"proxyUrl"`
 }
@@ -67,6 +69,7 @@ const (
 	pathAnypointExchangeURL   = "mulesoft.anypointExchangeUrl"
 	pathAuthUsername          = "mulesoft.auth.username"
 	pathAuthPassword          = "mulesoft.auth.password"
+	pathAuthLifetime          = "mulesoft.auth.lifetime"
 	pathSSLNextProtos         = "mulesoft.ssl.nextProtos"
 	pathSSLInsecureSkipVerify = "mulesoft.ssl.insecureSkipVerify"
 	pathSSLCipherSuites       = "mulesoft.ssl.cipherSuites"
@@ -78,8 +81,9 @@ const (
 // AddMulesoftConfigProperties - Adds the command properties needed for Mulesoft
 func AddMulesoftConfigProperties(props properties.Properties) {
 	props.AddStringProperty(pathAnypointExchangeURL, "https://anypoint.mulesoft.com", "Mulesoft Anypoint Exchange URL.")
-	props.AddStringProperty(pathAuthUsername, "", "API manager username")
-	props.AddStringProperty(pathAuthPassword, "", "API Manager password")
+	props.AddStringProperty(pathAuthUsername, "", "Mulesoft username")
+	props.AddStringProperty(pathAuthPassword, "", "Mulesoft password")
+	props.AddDurationProperty(pathAuthLifetime, 60*time.Minute, "Mulesoft session lifetime")
 
 	// ssl properties and command flags
 	props.AddStringSliceProperty(pathSSLNextProtos, []string{}, "List of supported application level protocols, comma separated")
@@ -93,8 +97,9 @@ func AddMulesoftConfigProperties(props properties.Properties) {
 func ParseMulesoftConfig(props properties.Properties) *MulesoftConfig {
 	return &MulesoftConfig{
 		AnypointExchangeURL: props.StringPropertyValue(pathAnypointExchangeURL),
-		User:                props.StringPropertyValue(pathAuthUsername),
+		Username:            props.StringPropertyValue(pathAuthUsername),
 		Password:            props.StringPropertyValue(pathAuthPassword),
+		SessionLifetime:     props.DurationPropertyValue(pathAuthLifetime),
 		TLS: &corecfg.TLSConfiguration{
 			NextProtos:         props.StringSlicePropertyValue(pathSSLNextProtos),
 			InsecureSkipVerify: props.BoolPropertyValue(pathSSLInsecureSkipVerify),

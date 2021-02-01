@@ -8,3 +8,8 @@ central:
 
 mulesoft:
  anypointExchangeUrl: https://anypoint.mulesoft.com
+ auth:
+  username: <USERNAME>
+  password: <PASSWORD>
+  lifetime: <SESSION LIFETIME>
+

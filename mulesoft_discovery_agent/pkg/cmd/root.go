@@ -64,8 +64,3 @@ func initConfig(centralConfig corecfg.CentralConfig) (interface{}, error) {
 	config.SetConfig(conf)
 	return conf, nil
 }
-
-// // GetAgentConfig - Returns the agent config
-// func GetAgentConfig() *config.GatewayConfig {
-// 	return gatewayConfig
-// }
