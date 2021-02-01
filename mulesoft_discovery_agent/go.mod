@@ -4,9 +4,6 @@ go 1.13
 
 require (
 	github.com/Axway/agent-sdk v0.0.19-0.20210127074007-f4fb8434d124
-	github.com/elastic/beats/v7 v7.7.1
-	github.com/google/martian v2.1.0+incompatible
-	github.com/magiconair/properties v1.8.1
 	golang.org/x/sys v0.0.0-20210119212857-b64e53b001e4 // indirect
 )
 
