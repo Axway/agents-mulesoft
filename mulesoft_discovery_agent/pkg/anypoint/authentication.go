@@ -1,7 +1,5 @@
 package anypoint
 
-import "github.com/Axway/agent-sdk/pkg/util/log"
-
 // Auth represents the authentication information.
 type Auth interface {
 	GetToken() string
@@ -22,7 +20,6 @@ func NewAuth(c Client) (Auth, error) {
 	}
 	a.token = token
 
-	log.Info("Logged into mulesoft with " + token)
 	// TODO: START GO ROUTINE TO KEEP TOKEN FRESH
 
 	return a, nil
