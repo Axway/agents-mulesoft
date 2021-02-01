@@ -1,3 +1,5 @@
 vendor
 bin
 dist
+.idea
+mulesoft_traceability_agent.iml
