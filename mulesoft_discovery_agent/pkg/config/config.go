@@ -54,7 +54,13 @@ func (c *MulesoftConfig) ValidateCfg() (err error) {
 		return errors.New("Invalid mulesoft configuration: anypointExchangeUrl is not configured")
 	}
 
-	// TODO VALIDATION
+	if c.Username == "" {
+		return errors.New("Invalid mulesoft configuration: username is not configured")
+	}
+
+	if c.Password == "" {
+		return errors.New("Invalid mulesoft configuration: password is not configured")
+	}
 
 	return
 }
