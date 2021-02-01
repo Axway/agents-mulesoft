@@ -3,6 +3,7 @@ package anypoint
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	agenterrors "github.com/Axway/agent-sdk/pkg/util/errors"
 
@@ -15,7 +16,7 @@ import (
 // Client interface to gateway.
 type Client interface {
 	OnConfigChange(mulesoftConfig *config.MulesoftConfig)
-	GetAccessToken() (string, error)
+	GetAccessToken() (string, time.Duration, error)
 }
 
 // anypointClient is the client for interacting with Mulesoft Anypoint.
@@ -23,6 +24,7 @@ type anypointClient struct {
 	baseURL   string
 	username  string
 	password  string
+	lifetime  time.Duration
 	apiClient coreapi.Client
 	auth      Auth
 }
@@ -45,8 +47,12 @@ func (c *anypointClient) OnConfigChange(mulesoftConfig *config.MulesoftConfig) {
 	c.baseURL = mulesoftConfig.AnypointExchangeURL
 	c.username = mulesoftConfig.Username
 	c.password = mulesoftConfig.Password
+	c.lifetime = mulesoftConfig.SessionLifetime
 	c.apiClient = coreapi.NewClient(mulesoftConfig.TLS, mulesoftConfig.ProxyURL)
 
+	if c.auth != nil {
+		c.auth.Stop()
+	}
 	c.auth, _ = NewAuth(c)
 
 	// TODO HANDLE ERR..WHAT'S THE EXPECATATION HERE?
@@ -65,14 +71,14 @@ func (c *anypointClient) healthcheck(name string) (status *hc.Status) {
 }
 
 // GetAccessToken gets an access token
-func (c *anypointClient) GetAccessToken() (string, error) {
+func (c *anypointClient) GetAccessToken() (string, time.Duration, error) {
 	body := map[string]string{
 		"username": c.username,
 		"password": c.password,
 	}
 	buffer, err := json.Marshal(body)
 	if err != nil {
-		return "", agenterrors.Wrap(ErrMarshallingBody, err.Error())
+		return "", 0, agenterrors.Wrap(ErrMarshallingBody, err.Error())
 	}
 
 	headers := map[string]string{
@@ -88,18 +94,18 @@ func (c *anypointClient) GetAccessToken() (string, error) {
 
 	response, err := c.apiClient.Send(request)
 	if err != nil {
-		return "", agenterrors.Wrap(ErrCommunicatingWithGateway, err.Error())
+		return "", 0, agenterrors.Wrap(ErrCommunicatingWithGateway, err.Error())
 	}
 	if response.Code != http.StatusOK {
-		return "", ErrAuthentication
+		return "", 0, ErrAuthentication
 	}
 
 	respMap := make(map[string]interface{})
 	err = json.Unmarshal(response.Body, &respMap)
 	if err != nil {
-		return "", agenterrors.Wrap(ErrAuthentication, err.Error())
+		return "", 0, agenterrors.Wrap(ErrAuthentication, err.Error())
 	}
 
-	return respMap["access_token"].(string), nil
-
+	// Would be better to look up the lifetime.
+	return respMap["access_token"].(string), c.lifetime, nil
 }
