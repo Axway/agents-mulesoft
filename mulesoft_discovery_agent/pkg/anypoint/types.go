@@ -32,8 +32,7 @@ type Asset struct {
 	Labels       []string   `json:"labels"`
 	Categories   []Category `json:"categories"`
 	Icon         string     `json:"icon"`
-	// FILES
-	// CREATOR
+	Files        []File     `json:"files"`
 }
 
 // AssetDetails -
@@ -79,7 +78,20 @@ type APIInstance struct {
 	Public            bool      `json:"isPublic"`
 	InstanceType      string    `json:"type"`
 	CreatedBy         string    `json:"createdBy"`
-	createdDate       time.Time `json:"createdDate"`
+	CreatedDate       time.Time `json:"createdDate"`
 	UpdatedDate       time.Time `json:"updatedDate"`
-	ProviderId        string    `json:"providerId"`
+	ProviderID        string    `json:"providerId"`
+}
+
+// File -
+type File struct {
+	Classifier   string    `json:"classifier"`
+	Packaging    string    `json:"packaging"`
+	DownloadURL  string    `json:"downloadURL"`
+	ExternalLink string    `json:"externalLink"`
+	MD5          string    `json:"md5"`
+	SHA1         string    `json:"sha1"`
+	CreatedDate  time.Time `json:"createdDate"`
+	MainFile     string    `json:"mainFile"`
+	Generated    bool      `json:"isGenerated"`
 }

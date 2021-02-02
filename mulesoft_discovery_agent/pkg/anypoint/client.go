@@ -1,9 +1,12 @@
 package anypoint
 
 import (
+	"archive/zip"
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"time"
 
@@ -29,6 +32,7 @@ type Client interface {
 	ListAssets(page *Page) ([]Asset, error)
 	GetAssetDetails(asset *Asset) (*AssetDetails, error)
 	GetAssetIcon(asset *Asset) (string, error)
+	GetAssetSpecification(asset *AssetDetails) (specContent []byte, packaging string, err error)
 	// GetAssetHomePage(orgID string, groupID string, assetID string, version string) error // TODO RETURN
 	// GetAssetLinkedAPI(orgID string, environmentID string, assetID string) error          // TODO RETURN
 	// API Details
@@ -157,6 +161,93 @@ func (c *anypointClient) GetAssetIcon(asset *Asset) (string, error) {
 		return "", err
 	}
 	return base64.StdEncoding.EncodeToString([]byte(icon)), nil
+}
+
+func (c *anypointClient) GetAssetSpecification(asset *AssetDetails) (specContent []byte, packaging string, err error) {
+	packaging = "txt"
+	specFileClassifier := asset.AssetType
+	if val, ok := assetTypeMap[asset.AssetType]; ok {
+		specFileClassifier = val
+	}
+
+	// Find the spec:
+	// - known classifier
+	// - mainfile from zip packages with spec type oas or wsdl,
+	// - type oas with classifier fat-raml
+	// - jar packages
+
+	files := c.filterFiles(asset.Files, specFileClassifier)
+	if len(files) > 0 {
+		specContent, packaging, err = c.getFileSpec(files[0])
+		if err != nil {
+			return nil, "", err
+		}
+
+	} else if specFileClassifier == "oas" {
+		// for rest-api, there might not be an oas spec generated if it's an old asset, download raml
+		files = c.filterFiles(asset.Files, "fat-raml")
+		if len(files) > 0 {
+			specContent, packaging, err = c.getFileSpec(files[0])
+			if err != nil {
+				return nil, "", err
+			}
+		}
+
+	} else {
+		// majority have connector as a jar, so search for that
+		files = c.filterFiles(asset.Files, "jar")
+		if len(files) > 0 {
+			specContent, packaging, err = c.getFileSpec(files[0])
+			if err != nil {
+				return nil, "", err
+			}
+		}
+	}
+
+	return specContent, packaging, err
+}
+
+// Filter the files by classifier
+func (c *anypointClient) filterFiles(files []File, classifier string) []File {
+	filtered := []File{}
+
+	for _, file := range files {
+		if file.Classifier == classifier {
+			filtered = append(filtered, file)
+		}
+	}
+	return filtered
+}
+
+// getFileSpec loads the spec from the external link of the file.
+func (c *anypointClient) getFileSpec(file File) (specContent []byte, packaging string, err error) {
+	packaging = file.Packaging
+	specContent, err = c.invokeGet(file.ExternalLink)
+
+	if file.Packaging == "zip" && file.MainFile != "" {
+		zipReader, err := zip.NewReader(bytes.NewReader(specContent), int64(len(specContent)))
+		if err != nil {
+			return nil, "", err
+		}
+
+		for _, f := range zipReader.File {
+			if f.Name == file.MainFile {
+				content, err := f.Open()
+				if err != nil {
+					return nil, "", err
+				}
+
+				specContent, err = ioutil.ReadAll(content)
+				content.Close()
+				if err != nil {
+					return nil, "", err
+				}
+				break
+			}
+		}
+		packaging = "json"
+	}
+	return specContent, packaging, err
 }
 
 func (c *anypointClient) invokeJSONGet(url string, page *Page, resp interface{}) error {

@@ -71,7 +71,13 @@ func (a *Agent) Run() {
 
 		for _, asset := range assets {
 			assetDetail, _ := a.anypointClient.GetAssetDetails(&asset)
-			log.Infof("%s - %+v", assetDetail.Name, assetDetail.Instances)
+
+			specContent, packaging, err := a.anypointClient.GetAssetSpecification(assetDetail)
+			if err != nil {
+				log.Error(err)
+			} else {
+				log.Infof("%s - (%s) - %d", assetDetail.Name, packaging, len(specContent))
+			}
 			// icon, _ := a.anypointClient.GetAssetIcon(&asset)
 			// log.Infof("%+v", icon)
 		}
