@@ -56,7 +56,6 @@ func initConfig(centralConfig corecfg.CentralConfig) (interface{}, error) {
 		CentralConfig: centralConfig,
 		MulesoftConfig: config.ParseMulesoftConfig(RootCmd.GetProperties()),
 	}
-	agent.SetAgentConfig(agentConfig)
-
+	config.SetConfig(agentConfig)
 	return agentConfig, nil
 }

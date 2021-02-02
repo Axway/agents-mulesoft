@@ -28,18 +28,18 @@ type Agent struct {
 }
 
 var bt *Agent
-var agentConfig *config.AgentConfig
 
 // New creates an instance of mule_anypoint_traceability_agent.
 func New(b *beat.Beat, cfg *common.Config) (beat.Beater, error) {
+	agentConfig:=config.GetConfig()
 	bt := &Agent{
 		done:         make(chan struct{}),
 		eventChannel: make(chan string),
 	}
 
-	var err error
 	bt.eventProcessor = gateway.NewEventProcessor(agentConfig)
-	bt.anypointClient.OnConfigChange(agentConfig.MulesoftConfig)
+	bt.anypointClient = anypoint.NewClient(agentConfig.MulesoftConfig)
+	var err error
 	if err != nil {
 		return nil, err
 	}
@@ -52,14 +52,11 @@ func New(b *beat.Beat, cfg *common.Config) (beat.Beater, error) {
 	return bt, nil
 }
 
-// SetGatewayConfig - set parsed gateway config
-func SetAgentConfig(agentCfg *config.AgentConfig) {
-	agentConfig = agentCfg
-}
 
 // Run starts awsApigwTraceabilityAgent.
 func (bt *Agent) Run(b *beat.Beat) error {
 	logp.Info("mule_anypoint_traceability_agent is running! Hit CTRL-C to stop it.")
+	coreagent.OnConfigChange(bt.onConfigChange)
 
 	var err error
 	bt.client, err = b.Publisher.Connect()
@@ -72,18 +69,18 @@ func (bt *Agent) Run(b *beat.Beat) error {
 		select {
 		case <-bt.done:
 			return nil
-			/*case event := <-bt.eventProcessor.GetEventChannel():
-			bt.client.Publish(event)*/
+		case event := <-bt.eventProcessor.GetEventChannel():
+			bt.client.Publish(event)
+
 		}
 	}
 }
 // onConfigChange apply configuation changes
-func (a *Agent) onConfigChange() {
+func (bt *Agent) onConfigChange() {
 	cfg := config.GetConfig()
 
-
-	a.apicClient = coreagent.GetCentralClient()
-	a.anypointClient.OnConfigChange(cfg.MulesoftConfig)
+	bt.apicClient = coreagent.GetCentralClient()
+	bt.anypointClient.OnConfigChange(cfg.MulesoftConfig)
 }
 
 
