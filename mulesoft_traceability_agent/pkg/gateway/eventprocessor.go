@@ -24,13 +24,13 @@ import (
 // log entry and performs the mapping to structure expected for AMPLIFY Central Observer. The method returns the converted Events to
 // transport publisher which then produces the events over the transport.
 type EventProcessor struct {
-	cfg            *config.GatewayConfig
+	cfg            *config.AgentConfig
 	eventGenerator transaction.EventGenerator
 	eventMapper    *EventMapper
 }
 
 // NewEventProcessor - return a new EventProcessor
-func NewEventProcessor(gateway *config.GatewayConfig) *EventProcessor {
+func NewEventProcessor(gateway *config.AgentConfig) *EventProcessor {
 	ep := &EventProcessor{
 		cfg:            gateway,
 		eventGenerator: transaction.NewEventGenerator(),

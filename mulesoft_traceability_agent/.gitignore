@@ -1,3 +1,6 @@
 vendor
 bin
 dist
+.idea
+*.iml
+/demo/
