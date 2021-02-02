@@ -36,6 +36,12 @@ type Asset struct {
 	// CREATOR
 }
 
+// AssetDetails -
+type AssetDetails struct {
+	Asset
+	Instances []APIInstance `json:"instances"`
+}
+
 // Category -
 type Category struct {
 	Value       []string `json:"value"`
@@ -59,4 +65,21 @@ type Organization struct {
 	ID     string `json:"id"`
 	Name   string `json:"name"`
 	Domain string `json:"domain"`
+}
+
+// APIInstance - https://anypoint.mulesoft.com/exchange/portals/anypoint-platform/f1e97bc6-315a-4490-82a7-23abe036327a.anypoint-platform/exchange-experience-api/minor/2.0/console/method/%231972/
+type APIInstance struct {
+	ID                string    `json:"id"`
+	Name              string    `json:"name"`
+	GroupID           string    `json:"groupId"`
+	AssetID           string    `json:"assetId"`
+	ProductAPIVersion string    `json:"productApiVersion"`
+	EnvironmentID     string    `json:"environmentId"`
+	EndpointURI       string    `json:"endpointUri"`
+	Public            bool      `json:"isPublic"`
+	InstanceType      string    `json:"type"`
+	CreatedBy         string    `json:"createdBy"`
+	createdDate       time.Time `json:"createdDate"`
+	UpdatedDate       time.Time `json:"updatedDate"`
+	ProviderId        string    `json:"providerId"`
 }

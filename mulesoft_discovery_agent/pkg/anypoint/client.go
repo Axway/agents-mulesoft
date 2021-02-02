@@ -27,7 +27,8 @@ type Client interface {
 	GetAccessToken() (string, time.Duration, error)
 
 	ListAssets(page *Page) ([]Asset, error)
-	GetAssetDetails(asset *Asset) error
+	GetAssetDetails(asset *Asset) (*AssetDetails, error)
+	GetAssetIcon(asset *Asset) (string, error)
 	// GetAssetHomePage(orgID string, groupID string, assetID string, version string) error // TODO RETURN
 	// GetAssetLinkedAPI(orgID string, environmentID string, assetID string) error          // TODO RETURN
 	// API Details
@@ -132,13 +133,18 @@ func (c *anypointClient) GetAccessToken() (string, time.Duration, error) {
 // ListAssets lists the managed assets in Mulesoft: https://anypoint.mulesoft.com/exchange/portals/anypoint-platform/f1e97bc6-315a-4490-82a7-23abe036327a.anypoint-platform/exchange-experience-api/minor/2.0/console/method/%231431/
 func (c *anypointClient) ListAssets(page *Page) ([]Asset, error) {
 	assets := make([]Asset, 0, page.PageSize)
-	err := c.invokeGet(c.baseURL+"/exchange/api/v2/assets", page, &assets)
+	err := c.invokeJSONGet(c.baseURL+"/exchange/api/v2/assets", page, &assets)
 	return assets, err
 }
 
 // GetAssetDetails creates the AssetDetail form the Asset.
-func (c *anypointClient) GetAssetDetails(asset *Asset) error {
-	return nil
+func (c *anypointClient) GetAssetDetails(asset *Asset) (*AssetDetails, error) {
+	var assetDetails AssetDetails
+	err := c.invokeJSONGet(c.baseURL+"/exchange/api/v2/assets/"+asset.ID, nil, &assetDetails)
+	if err != nil {
+		return nil, err
+	}
+	return &assetDetails, nil
 }
 
 // GetAssetIcon creates the AssetDetail form the Asset.
@@ -146,16 +152,14 @@ func (c *anypointClient) GetAssetIcon(asset *Asset) (string, error) {
 	if asset.Icon == "" {
 		return "", nil
 	}
-
-	var icon []byte
-	err := c.invokeGet(asset.Icon, nil, &icon)
+	icon, err := c.invokeGet(asset.Icon)
 	if err != nil {
 		return "", err
 	}
 	return base64.StdEncoding.EncodeToString([]byte(icon)), nil
 }
 
-func (c *anypointClient) invokeGet(url string, page *Page, resp interface{}) error {
+func (c *anypointClient) invokeJSONGet(url string, page *Page, resp interface{}) error {
 	headers := map[string]string{
 		"Authorization": "Bearer " + c.auth.GetToken(),
 	}
@@ -176,21 +180,41 @@ func (c *anypointClient) invokeGet(url string, page *Page, resp interface{}) err
 		QueryParams: query,
 	}
 
-	return c.invoke(request, resp)
+	return c.invokeJSON(request, resp)
 }
 
-func (c *anypointClient) invoke(request coreapi.Request, resp interface{}) error {
-	response, err := c.apiClient.Send(request)
+func (c *anypointClient) invokeJSON(request coreapi.Request, resp interface{}) error {
+	body, err := c.invoke(request)
 	if err != nil {
 		return agenterrors.Wrap(ErrCommunicatingWithGateway, err.Error())
 	}
-	if response.Code != http.StatusOK {
-		return agenterrors.Wrap(ErrCommunicatingWithGateway, fmt.Sprint(response.Code))
-	}
 
-	err = json.Unmarshal(response.Body, resp)
+	err = json.Unmarshal(body, resp)
 	if err != nil {
-		return agenterrors.Wrap(ErrAuthentication, err.Error())
+		return agenterrors.Wrap(ErrMarshallingBody, err.Error())
 	}
 	return nil
+}
+
+func (c *anypointClient) invokeGet(url string) ([]byte, error) {
+	request := coreapi.Request{
+		Method:      coreapi.GET,
+		URL:         url,
+		Headers:     nil,
+		QueryParams: nil,
+	}
+
+	return c.invoke(request)
+}
+
+func (c *anypointClient) invoke(request coreapi.Request) ([]byte, error) {
+	response, err := c.apiClient.Send(request)
+	if err != nil {
+		return nil, agenterrors.Wrap(ErrCommunicatingWithGateway, err.Error())
+	}
+	if response.Code != http.StatusOK {
+		return nil, agenterrors.Wrap(ErrCommunicatingWithGateway, fmt.Sprint(response.Code))
+	}
+
+	return response.Body, nil
 }
