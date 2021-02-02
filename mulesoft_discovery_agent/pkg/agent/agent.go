@@ -59,11 +59,29 @@ func (a *Agent) Run() {
 	agent.OnConfigChange(a.onConfigChange)
 
 	// TODO - listen to mulesoft
-	assets, err := a.anypointClient.ListAssets(&anypoint.Page{Offset: 0, PageSize: 20})
-	if err != nil {
-		log.Error(err)
+	offset := 0
+	pageSize := 20
+
+	for {
+		page := &anypoint.Page{Offset: offset, PageSize: pageSize}
+		assets, err := a.anypointClient.ListAssets(page)
+		if err != nil {
+			log.Error(err)
+		}
+
+		for _, asset := range assets {
+			assetDetail, _ := a.anypointClient.GetAssetDetails(&asset)
+			log.Infof("%s - %+v", assetDetail.Name, assetDetail.Instances)
+			// icon, _ := a.anypointClient.GetAssetIcon(&asset)
+			// log.Infof("%+v", icon)
+		}
+
+		if len(assets) != pageSize {
+			break
+		} else {
+			offset += pageSize
+		}
 	}
-	log.Infof("%+v", assets)
 
 	select {
 	case <-a.stopChan:
