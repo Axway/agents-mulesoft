@@ -34,6 +34,7 @@ type MulesoftConfig struct {
 	AnypointExchangeURL string            `config:"anypointExchangeUrl"`
 	DiscoveryIgnoreTags string            `config:"discoveryIgnoreTags"`
 	Filter              string            `config:"filter"`
+	OrganizationID      string            `config:"organizationID"`
 	Username            string            `config:"auth.username"`
 	Password            string            `config:"auth.password"`
 	SessionLifetime     time.Duration     `config:"auth.lifetime"`

@@ -59,6 +59,11 @@ func (a *Agent) Run() {
 	agent.OnConfigChange(a.onConfigChange)
 
 	// TODO - listen to mulesoft
+	assets, err := a.anypointClient.ListAssets(&anypoint.Page{Offset: 0, PageSize: 20})
+	if err != nil {
+		log.Error(err)
+	}
+	log.Infof("%+v", assets)
 
 	select {
 	case <-a.stopChan:
