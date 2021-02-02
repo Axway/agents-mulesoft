@@ -2,6 +2,7 @@ package cmd
 
 import (
 	corecmd "github.com/Axway/agent-sdk/pkg/cmd"
+	"github.com/Axway/agent-sdk/pkg/cmd/service"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 
 	libcmd "github.com/elastic/beats/v7/libbeat/cmd"
@@ -36,6 +37,10 @@ func init() {
 		run,                         // Callback for executing the agent
 		corecfg.TraceabilityAgent,   // Agent Type (Discovery or Traceability)
 	)
+	config.AddMulesoftConfigProperties(RootCmd.GetProperties())
+
+	RootCmd.AddCommand(service.GenServiceCmd("pathConfig"))
+
 }
 
 // Callback that agent will call to process the execution
