@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"encoding/json"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	agenterrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
@@ -14,7 +15,7 @@ import (
 	"github.com/Axway/agents-mulesoft/mulesoft_traceability_agent/pkg/gateway"
 )
 
-// customLogBeater configuration.
+// Agent - mule Beater configuration- oh, the cruelty!
 type Agent struct {
 	done           chan struct{}
 	logReader      *gateway.LogReader
@@ -65,15 +66,24 @@ func (bt *Agent) Run(b *beat.Beat) error {
 		return err
 	}
 
+	go bt.sanityCheck()
+
 	for {
 		select {
 		case <-bt.done:
 			return nil
-		case event := <-bt.eventProcessor.GetEventChannel():
-			bt.client.Publish(event)
+		case event := <-bt.eventChannel:
+			eventsToPublish := bt.eventProcessor.ProcessRaw([]byte(event))
+			bt.client.PublishAll(eventsToPublish)
 
 		}
 	}
+}
+func (bt *Agent) sanityCheck() {
+	// Just get a simple payload to test that we can send to condor
+	sample := gateway.GenerateSample()
+	payload,_ := json.Marshal(sample)
+	bt.eventChannel <- string(payload)
 }
 // onConfigChange apply configuation changes
 func (bt *Agent) onConfigChange() {
