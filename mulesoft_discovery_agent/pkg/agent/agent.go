@@ -18,7 +18,11 @@ type Agent struct {
 	discoveryFilter     filter.Filter
 	anypointClient      anypoint.Client
 	apicClient          apic.Client
-	stopChan            chan struct{}
+
+	apiChan       chan *ExternalAPI
+	stopAgent     chan bool
+	stopDiscovery chan bool
+	stopPublish   chan bool
 }
 
 // New creates a new agent
@@ -30,12 +34,16 @@ func New(anypointClient anypoint.Client) (agent *Agent, err error) {
 		return nil, err
 	}
 
+	buffer := 5
 	agent = &Agent{
 		discoveryIgnoreTags: cfg.MulesoftConfig.DiscoveryIgnoreTags,
 		apicClient:          coreagent.GetCentralClient(),
 		anypointClient:      anypointClient,
 		discoveryFilter:     discoveryFilter,
-		stopChan:            make(chan struct{}),
+		apiChan:             make(chan *ExternalAPI, buffer),
+		stopAgent:           make(chan bool),
+		stopDiscovery:       make(chan bool),
+		stopPublish:         make(chan bool),
 	}
 
 	if anypointClient == nil {
@@ -58,40 +66,14 @@ func (a *Agent) Run() {
 	agent.RegisterAPIValidator(a.validateAPI)
 	agent.OnConfigChange(a.onConfigChange)
 
-	// TODO - listen to mulesoft
-	offset := 0
-	pageSize := 20
-
-	for {
-		page := &anypoint.Page{Offset: offset, PageSize: pageSize}
-		assets, err := a.anypointClient.ListAssets(page)
-		if err != nil {
-			log.Error(err)
-		}
-
-		for _, asset := range assets {
-			assetDetail, _ := a.anypointClient.GetAssetDetails(&asset)
-
-			specContent, packaging, err := a.anypointClient.GetAssetSpecification(assetDetail)
-			if err != nil {
-				log.Error(err)
-			} else {
-				log.Infof("%s - (%s) - %d", assetDetail.Name, packaging, len(specContent))
-			}
-			// icon, _ := a.anypointClient.GetAssetIcon(&asset)
-			// log.Infof("%+v", icon)
-		}
-
-		if len(assets) != pageSize {
-			break
-		} else {
-			offset += pageSize
-		}
-	}
+	go a.discoverAPIs()
+	go a.publishLoop()
 
 	select {
-	case <-a.stopChan:
+	case <-a.stopAgent:
 		log.Info("Received request to kill agent")
+		a.stopDiscovery <- true
+		a.stopPublish <- true
 		return
 	}
 }
