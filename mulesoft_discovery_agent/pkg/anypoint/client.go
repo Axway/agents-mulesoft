@@ -1,12 +1,9 @@
 package anypoint
 
 import (
-	"archive/zip"
-	"bytes"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"log"
 	"net/http"
 	"time"
 
@@ -27,12 +24,16 @@ type Page struct {
 // Client interface to gateway.
 type Client interface {
 	OnConfigChange(mulesoftConfig *config.MulesoftConfig)
-	GetAccessToken() (string, time.Duration, error)
+	GetAccessToken() (string, *User, time.Duration, error)
+
+	GetEnvironmentByName(name string) (*Environment, error)
 
 	ListAssets(page *Page) ([]Asset, error)
-	GetAssetDetails(asset *Asset) (*AssetDetails, error)
-	GetAssetIcon(asset *Asset) (string, error)
-	GetAssetSpecification(asset *AssetDetails) (specContent []byte, packaging string, err error)
+
+	// ListAssets(page *Page) ([]Asset, error)
+	// GetAssetDetails(asset *Asset) (*AssetDetails, error)
+	// GetAssetIcon(asset *Asset) (string, error)
+	// GetAssetSpecification(asset *AssetDetails) (specContent []byte, packaging string, err error)
 	// GetAssetHomePage(orgID string, groupID string, assetID string, version string) error // TODO RETURN
 	// GetAssetLinkedAPI(orgID string, environmentID string, assetID string) error          // TODO RETURN
 	// API Details
@@ -43,13 +44,13 @@ type Client interface {
 
 // anypointClient is the client for interacting with Mulesoft Anypoint.
 type anypointClient struct {
-	baseURL        string
-	organizationID string
-	username       string
-	password       string
-	lifetime       time.Duration
-	apiClient      coreapi.Client
-	auth           Auth
+	baseURL     string
+	username    string
+	password    string
+	lifetime    time.Duration
+	apiClient   coreapi.Client
+	auth        Auth
+	environment *Environment
 }
 
 // NewClient creates a new client for interacting with Mulesoft.
@@ -68,7 +69,6 @@ func NewClient(mulesoftConfig *config.MulesoftConfig) Client {
 // OnConfigChange updates the client when the configuration changes.
 func (c *anypointClient) OnConfigChange(mulesoftConfig *config.MulesoftConfig) {
 	c.baseURL = mulesoftConfig.AnypointExchangeURL
-	c.organizationID = mulesoftConfig.OrganizationID
 	c.username = mulesoftConfig.Username
 	c.password = mulesoftConfig.Password
 	c.lifetime = mulesoftConfig.SessionLifetime
@@ -77,9 +77,17 @@ func (c *anypointClient) OnConfigChange(mulesoftConfig *config.MulesoftConfig) {
 	if c.auth != nil {
 		c.auth.Stop()
 	}
-	c.auth, _ = NewAuth(c)
 
-	// TODO HANDLE ERR..WHAT'S THE EXPECATATION HERE?
+	var err error
+	c.auth, err = NewAuth(c)
+	if err != nil {
+		log.Fatalf("Failed to authenticate: %s", err.Error())
+	}
+
+	c.environment, err = c.GetEnvironmentByName(mulesoftConfig.Environment)
+	if err != nil {
+		log.Fatalf("Failed to connect to Mulesoft environment %s: %s", mulesoftConfig.Environment, err.Error())
+	}
 }
 
 // healthcheck performs healthcheck
@@ -95,14 +103,14 @@ func (c *anypointClient) healthcheck(name string) (status *hc.Status) {
 }
 
 // GetAccessToken gets an access token
-func (c *anypointClient) GetAccessToken() (string, time.Duration, error) {
+func (c *anypointClient) GetAccessToken() (string, *User, time.Duration, error) {
 	body := map[string]string{
 		"username": c.username,
 		"password": c.password,
 	}
 	buffer, err := json.Marshal(body)
 	if err != nil {
-		return "", 0, agenterrors.Wrap(ErrMarshallingBody, err.Error())
+		return "", nil, 0, agenterrors.Wrap(ErrMarshallingBody, err.Error())
 	}
 
 	headers := map[string]string{
@@ -118,137 +126,206 @@ func (c *anypointClient) GetAccessToken() (string, time.Duration, error) {
 
 	response, err := c.apiClient.Send(request)
 	if err != nil {
-		return "", 0, agenterrors.Wrap(ErrCommunicatingWithGateway, err.Error())
+		return "", nil, 0, agenterrors.Wrap(ErrCommunicatingWithGateway, err.Error())
 	}
 	if response.Code != http.StatusOK {
-		return "", 0, ErrAuthentication
+		return "", nil, 0, ErrAuthentication
 	}
 
 	respMap := make(map[string]interface{})
 	err = json.Unmarshal(response.Body, &respMap)
 	if err != nil {
-		return "", 0, agenterrors.Wrap(ErrAuthentication, err.Error())
+		return "", nil, 0, agenterrors.Wrap(ErrAuthentication, err.Error())
+	}
+	token := respMap["access_token"].(string)
+
+	user, err := c.getCurrentUser(token)
+	if err != nil {
+		return "", nil, 0, agenterrors.Wrap(ErrAuthentication, err.Error())
 	}
 
 	// Would be better to look up the lifetime.
-	return respMap["access_token"].(string), c.lifetime, nil
+	return token, user, c.lifetime, nil
 }
 
-// ListAssets lists the managed assets in Mulesoft: https://anypoint.mulesoft.com/exchange/portals/anypoint-platform/f1e97bc6-315a-4490-82a7-23abe036327a.anypoint-platform/exchange-experience-api/minor/2.0/console/method/%231431/
-func (c *anypointClient) ListAssets(page *Page) ([]Asset, error) {
-	assets := make([]Asset, 0, page.PageSize)
-	err := c.invokeJSONGet(c.baseURL+"/exchange/api/v2/assets", page, &assets)
-	return assets, err
-}
+// GetCurrentUser returns the current user.
+func (c *anypointClient) getCurrentUser(token string) (*User, error) {
+	headers := map[string]string{
+		"Authorization": "Bearer " + token,
+	}
 
-// GetAssetDetails creates the AssetDetail form the Asset.
-func (c *anypointClient) GetAssetDetails(asset *Asset) (*AssetDetails, error) {
-	var assetDetails AssetDetails
-	err := c.invokeJSONGet(c.baseURL+"/exchange/api/v2/assets/"+asset.ID, nil, &assetDetails)
+	request := coreapi.Request{
+		Method:  coreapi.GET,
+		URL:     c.baseURL + "/accounts/api/me",
+		Headers: headers,
+	}
+
+	var user CurrentUser
+	err := c.invokeJSON(request, &user)
 	if err != nil {
 		return nil, err
 	}
-	return &assetDetails, nil
+
+	return &user.User, nil
 }
 
-// GetAssetIcon creates the AssetDetail form the Asset.
-func (c *anypointClient) GetAssetIcon(asset *Asset) (string, error) {
-	if asset.Icon == "" {
-		return "", nil
+// GetEnvironmentByName -
+func (c *anypointClient) GetEnvironmentByName(name string) (*Environment, error) {
+	headers := map[string]string{
+		"Authorization": "Bearer " + c.auth.GetToken(),
 	}
-	icon, err := c.invokeGet(asset.Icon)
+
+	query := map[string]string{
+		"name": name,
+	}
+
+	request := coreapi.Request{
+		Method:      coreapi.GET,
+		URL:         c.baseURL + "/accounts/api/organizations/" + c.auth.GetOrgID() + "/environments",
+		Headers:     headers,
+		QueryParams: query,
+	}
+
+	var envSearch EnvironmentSearch
+	err := c.invokeJSON(request, &envSearch)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return base64.StdEncoding.EncodeToString([]byte(icon)), nil
+
+	if len(envSearch.Data) == 0 {
+		return nil, nil
+	}
+	return &envSearch.Data[0], nil
 }
 
-func (c *anypointClient) GetAssetSpecification(asset *AssetDetails) (specContent []byte, packaging string, err error) {
-	packaging = "txt"
-	specFileClassifier := asset.AssetType
-	if val, ok := assetTypeMap[asset.AssetType]; ok {
-		specFileClassifier = val
+// ListAssets lists the API Assets.
+func (c *anypointClient) ListAssets(page *Page) ([]Asset, error) {
+	var assetResult AssetSearch
+	url := c.baseURL + "/apimanager/api/v1/organizations/" + c.auth.GetOrgID() + "/environments/" + c.environment.ID + "/apis"
+	err := c.invokeJSONGet(url, page, &assetResult)
+
+	if err != nil {
+		return nil, err
 	}
 
-	// Find the spec:
-	// - known classifier
-	// - mainfile from zip packages with spec type oas or wsdl,
-	// - type oas with classifier fat-raml
-	// - jar packages
-
-	files := c.filterFiles(asset.Files, specFileClassifier)
-	if len(files) > 0 {
-		specContent, packaging, err = c.getFileSpec(files[0])
-		if err != nil {
-			return nil, "", err
-		}
-
-	} else if specFileClassifier == "oas" {
-		// for rest-api, there might not be an oas spec generated if it's an old asset, download raml
-		files = c.filterFiles(asset.Files, "fat-raml")
-		if len(files) > 0 {
-			specContent, packaging, err = c.getFileSpec(files[0])
-			if err != nil {
-				return nil, "", err
-			}
-		}
-
-	} else {
-		// majority have connector as a jar, so search for that
-		files = c.filterFiles(asset.Files, "jar")
-		if len(files) > 0 {
-			specContent, packaging, err = c.getFileSpec(files[0])
-			if err != nil {
-				return nil, "", err
-			}
-		}
-	}
-
-	return specContent, packaging, err
+	return assetResult.Assets, err
 }
 
-// Filter the files by classifier
-func (c *anypointClient) filterFiles(files []File, classifier string) []File {
-	filtered := []File{}
+// // ListAssets lists the managed assets in Mulesoft: https://anypoint.mulesoft.com/exchange/portals/anypoint-platform/f1e97bc6-315a-4490-82a7-23abe036327a.anypoint-platform/exchange-experience-api/minor/2.0/console/method/%231431/
+// func (c *anypointClient) ListAssets(page *Page) ([]Asset, error) {
+// 	assets := make([]Asset, 0, page.PageSize)
+// 	err := c.invokeJSONGet(c.baseURL+"/exchange/api/v2/assets", page, &assets)
+// 	return assets, err
+//}
 
-	for _, file := range files {
-		if file.Classifier == classifier {
-			filtered = append(filtered, file)
-		}
-	}
-	return filtered
-}
+// // GetAssetDetails creates the AssetDetail form the Asset.
+// func (c *anypointClient) GetAssetDetails(asset *Asset) (*AssetDetails, error) {
+// 	var assetDetails AssetDetails
+// 	err := c.invokeJSONGet(c.baseURL+"/exchange/api/v2/assets/"+asset.ID, nil, &assetDetails)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return &assetDetails, nil
+// }
 
-// getFileSpec loads the spec from the external link of the file.
-func (c *anypointClient) getFileSpec(file File) (specContent []byte, packaging string, err error) {
-	packaging = file.Packaging
-	specContent, err = c.invokeGet(file.ExternalLink)
+// // GetAssetIcon creates the AssetDetail form the Asset.
+// func (c *anypointClient) GetAssetIcon(asset *Asset) (string, error) {
+// 	if asset.Icon == "" {
+// 		return "", nil
+// 	}
+// 	icon, err := c.invokeGet(asset.Icon)
+// 	if err != nil {
+// 		return "", err
+// 	}
+// 	return base64.StdEncoding.EncodeToString([]byte(icon)), nil
+// }
 
-	if file.Packaging == "zip" && file.MainFile != "" {
-		zipReader, err := zip.NewReader(bytes.NewReader(specContent), int64(len(specContent)))
-		if err != nil {
-			return nil, "", err
-		}
+// func (c *anypointClient) GetAssetSpecification(asset *AssetDetails) (specContent []byte, packaging string, err error) {
+// 	packaging = "txt"
+// 	specFileClassifier := asset.AssetType
+// 	if val, ok := assetTypeMap[asset.AssetType]; ok {
+// 		specFileClassifier = val
+// 	}
 
-		for _, f := range zipReader.File {
-			if f.Name == file.MainFile {
-				content, err := f.Open()
-				if err != nil {
-					return nil, "", err
-				}
+// 	// Find the spec:
+// 	// - known classifier
+// 	// - mainfile from zip packages with spec type oas or wsdl,
+// 	// - type oas with classifier fat-raml
+// 	// - jar packages
 
-				specContent, err = ioutil.ReadAll(content)
-				content.Close()
-				if err != nil {
-					return nil, "", err
-				}
-				break
-			}
-		}
-		packaging = "json"
-	}
-	return specContent, packaging, err
-}
+// 	files := c.filterFiles(asset.Files, specFileClassifier)
+// 	if len(files) > 0 {
+// 		specContent, packaging, err = c.getFileSpec(files[0])
+// 		if err != nil {
+// 			return nil, "", err
+// 		}
+
+// 	} else if specFileClassifier == "oas" {
+// 		// for rest-api, there might not be an oas spec generated if it's an old asset, download raml
+// 		files = c.filterFiles(asset.Files, "fat-raml")
+// 		if len(files) > 0 {
+// 			specContent, packaging, err = c.getFileSpec(files[0])
+// 			if err != nil {
+// 				return nil, "", err
+// 			}
+// 		}
+
+// 	} else {
+// 		// majority have connector as a jar, so search for that
+// 		files = c.filterFiles(asset.Files, "jar")
+// 		if len(files) > 0 {
+// 			specContent, packaging, err = c.getFileSpec(files[0])
+// 			if err != nil {
+// 				return nil, "", err
+// 			}
+// 		}
+// 	}
+
+// 	return specContent, packaging, err
+// }
+
+// // Filter the files by classifier
+// func (c *anypointClient) filterFiles(files []File, classifier string) []File {
+// 	filtered := []File{}
+
+// 	for _, file := range files {
+// 		if file.Classifier == classifier {
+// 			filtered = append(filtered, file)
+// 		}
+// 	}
+// 	return filtered
+// }
+
+// // getFileSpec loads the spec from the external link of the file.
+// func (c *anypointClient) getFileSpec(file File) (specContent []byte, packaging string, err error) {
+// 	packaging = file.Packaging
+// 	specContent, err = c.invokeGet(file.ExternalLink)
+
+// 	if file.Packaging == "zip" && file.MainFile != "" {
+// 		zipReader, err := zip.NewReader(bytes.NewReader(specContent), int64(len(specContent)))
+// 		if err != nil {
+// 			return nil, "", err
+// 		}
+
+// 		for _, f := range zipReader.File {
+// 			if f.Name == file.MainFile {
+// 				content, err := f.Open()
+// 				if err != nil {
+// 					return nil, "", err
+// 				}
+
+// 				specContent, err = ioutil.ReadAll(content)
+// 				content.Close()
+// 				if err != nil {
+// 					return nil, "", err
+// 				}
+// 				break
+// 			}
+// 		}
+// 		packaging = "json"
+// 	}
+// 	return specContent, packaging, err
+// }
 
 func (c *anypointClient) invokeJSONGet(url string, page *Page, resp interface{}) error {
 	headers := map[string]string{
@@ -256,7 +333,7 @@ func (c *anypointClient) invokeJSONGet(url string, page *Page, resp interface{})
 	}
 
 	query := map[string]string{
-		"masterOrganizationId": c.organizationID,
+		"masterOrganizationId": c.auth.GetOrgID(),
 	}
 
 	if page != nil {
