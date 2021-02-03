@@ -10,11 +10,13 @@ import (
 type Auth interface {
 	Stop()
 	GetToken() string
+	GetOrgID() string
 }
 
 // auth represents the authentication information.
 type auth struct {
 	token    string
+	user     *User
 	client   Client
 	stopChan chan struct{}
 }
@@ -24,11 +26,13 @@ func NewAuth(client Client) (Auth, error) {
 	a := &auth{
 		stopChan: make(chan struct{}),
 	}
-	token, lifetime, err := client.GetAccessToken()
+	token, user, lifetime, err := client.GetAccessToken()
 	if err != nil {
 		return nil, err
 	}
+
 	a.token = token
+	a.user = user
 	a.client = client
 	a.startRefreshToken(lifetime)
 
@@ -53,7 +57,7 @@ func (a *auth) startRefreshToken(lifetime time.Duration) {
 			select {
 			case <-timer.C:
 				log.Debug("refreshing access token")
-				token, lifetime, err := a.client.GetAccessToken()
+				token, user, lifetime, err := a.client.GetAccessToken()
 				if err != nil {
 					// In an error scenario retry every 10 seconds
 					log.Error(err)
@@ -61,6 +65,7 @@ func (a *auth) startRefreshToken(lifetime time.Duration) {
 					continue
 				}
 				a.token = token
+				a.user = user
 
 				if lifetime <= 0 {
 					break
@@ -81,4 +86,12 @@ func (a *auth) startRefreshToken(lifetime time.Duration) {
 // GetToken returns the access token
 func (a *auth) GetToken() string {
 	return a.token
+}
+
+// GetOrgID returns the organization Id of the currently authenticated user.
+func (a *auth) GetOrgID() string {
+	if a.user != nil {
+		return a.user.Organization.ID
+	}
+	return ""
 }

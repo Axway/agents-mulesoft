@@ -9,24 +9,10 @@ import (
 func (a *Agent) publishLoop() {
 	for {
 		select {
-		case externalAPI := <-a.apiChan:
-			if externalAPI.Instances == nil || len(externalAPI.Instances) == 0 {
-				// If this Asset has no instances then skip it.
-				log.Infof("Skipping API \"%s (%s)\" to AMPLIFY Central - no instances", externalAPI.Name, externalAPI.ID)
-				continue
-			}
-
-			// SDK is only supporting WSDL, OAS2 & OAS3
-			if externalAPI.CatalogType != apic.Oas2 &&
-				externalAPI.CatalogType != apic.Oas3 &&
-				externalAPI.CatalogType != apic.Wsdl {
-				log.Infof("Skipping API \"%s (%s)\" to AMPLIFY Central - unsupported type %s", externalAPI.Name, externalAPI.ID, externalAPI.CatalogType)
-				continue
-			}
-
-			err := a.publish(externalAPI)
+		case serviceDetail := <-a.apiChan:
+			err := a.publish(serviceDetail)
 			if err != nil {
-				log.Errorf("Error publishing API \"%s:(%s)\":%s", externalAPI.Name, externalAPI.ID, err.Error())
+				log.Errorf("Error publishing API \"%s:(%s)\":%s", serviceDetail.APIName, serviceDetail.ID, err.Error())
 			}
 		case <-a.stopPublish:
 			return
@@ -34,35 +20,44 @@ func (a *Agent) publishLoop() {
 	}
 }
 
-func (a *Agent) publish(externalAPI *ExternalAPI) error {
-	log.Infof("Publishing API \"%s (%s)\" to AMPLIFY Central", externalAPI.Name, externalAPI.ID)
+func (a *Agent) publish(serviceDetail *ServiceDetail) error {
+	log.Infof("Publishing API \"%s (%s)\" to AMPLIFY Central", serviceDetail.APIName, serviceDetail.ID)
 
-	serviceBody, err := a.buildServiceBody(externalAPI)
+	serviceBody, err := a.buildServiceBody(serviceDetail)
 	if err != nil {
-		log.Errorf("Error publishing API \"%s (%s)\" to AMPLIFY Central: %s", externalAPI.Name, externalAPI.ID, err.Error())
+		log.Errorf("Error publishing API \"%s (%s)\" to AMPLIFY Central: %s", serviceDetail.APIName, serviceDetail.ID, err.Error())
 		return err
 	}
 	err = agent.PublishAPI(serviceBody)
 	if err != nil {
-		log.Errorf("Error publishing API \"%s (%s)\" to AMPLIFY Central: %s", externalAPI.Name, externalAPI.ID, err.Error())
+		log.Errorf("Error publishing API \"%s (%s)\" to AMPLIFY Central: %s", serviceDetail.APIName, serviceDetail.ID, err.Error())
 		return err
 	}
-	log.Infof("Published API \"%s (%s)\" to AMPLIFY Central", externalAPI.Name, externalAPI.ID)
+	log.Infof("Published API \"%s (%s)\" to AMPLIFY Central", serviceDetail.APIName, serviceDetail.ID)
 	return err
 }
 
 // buildServiceBody - creates the service definition
-func (a *Agent) buildServiceBody(externalAPI *ExternalAPI) (apic.ServiceBody, error) {
+func (a *Agent) buildServiceBody(service *ServiceDetail) (apic.ServiceBody, error) {
 	return apic.NewServiceBodyBuilder().
-		SetID(externalAPI.ID).
-		SetAPIName(externalAPI.Name).
-		SetTitle(externalAPI.Name).
-		SetURL(externalAPI.URL).
-		SetDescription(externalAPI.Description).
-		SetAPISpec(externalAPI.Spec).
-		SetVersion(externalAPI.Version).
-		SetAuthPolicy(apic.Passthrough).
-		SetDocumentation(externalAPI.Documentation).
-		SetResourceType(externalAPI.CatalogType).
+		SetID(service.ID).
+		SetTitle(service.Title).
+		SetAPIName(service.APIName).
+		SetURL(service.URL).
+		SetStage(service.Stage).
+		SetDescription(service.Description).
+		SetVersion(service.Instances[0].Version). // TODO ALL VERSIONS
+		SetAuthPolicy(service.AuthPolicy).
+		SetAPISpec(service.APISpec). // TODO UPDATE FOR INSTANCES
+		SetDocumentation(service.Documentation).
+		SetTags(service.Tags).
+		SetImage(service.Image).
+		SetImageContentType(service.ImageContentType).
+		SetResourceType(service.ResourceType).
+		SetSubscriptionName(service.SubscriptionName).
+		SetAPIUpdateSeverity(service.APIUpdateSeverity).
+		SetState(service.State).
+		SetStatus(service.Status).
+		SetServiceAttribute(service.ServiceAttributes).
 		Build()
 }

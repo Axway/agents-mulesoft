@@ -34,7 +34,7 @@ type MulesoftConfig struct {
 	AnypointExchangeURL string            `config:"anypointExchangeUrl"`
 	DiscoveryIgnoreTags string            `config:"discoveryIgnoreTags"`
 	Filter              string            `config:"filter"`
-	OrganizationID      string            `config:"organizationID"`
+	Environment         string            `config:"environment"`
 	Username            string            `config:"auth.username"`
 	Password            string            `config:"auth.password"`
 	SessionLifetime     time.Duration     `config:"auth.lifetime"`
@@ -63,6 +63,10 @@ func (c *MulesoftConfig) ValidateCfg() (err error) {
 		return errors.New("Invalid mulesoft configuration: password is not configured")
 	}
 
+	if c.Environment == "" {
+		return errors.New("Invalid mulesoft configuration: environment is not configured")
+	}
+
 	return
 }
 
@@ -74,6 +78,7 @@ func (c *MulesoftConfig) ApplyResources(dataplaneResource *v1.ResourceInstance, 
 
 const (
 	pathAnypointExchangeURL   = "mulesoft.anypointExchangeUrl"
+	pathEnvironment           = "mulesoft.environment"
 	pathAuthUsername          = "mulesoft.auth.username"
 	pathAuthPassword          = "mulesoft.auth.password"
 	pathAuthLifetime          = "mulesoft.auth.lifetime"
@@ -88,6 +93,7 @@ const (
 // AddMulesoftConfigProperties - Adds the command properties needed for Mulesoft
 func AddMulesoftConfigProperties(props properties.Properties) {
 	props.AddStringProperty(pathAnypointExchangeURL, "https://anypoint.mulesoft.com", "Mulesoft Anypoint Exchange URL.")
+	props.AddStringProperty(pathEnvironment, "", "Mulesoft Anypoint environment.")
 	props.AddStringProperty(pathAuthUsername, "", "Mulesoft username")
 	props.AddStringProperty(pathAuthPassword, "", "Mulesoft password")
 	props.AddDurationProperty(pathAuthLifetime, 60*time.Minute, "Mulesoft session lifetime")
@@ -104,6 +110,7 @@ func AddMulesoftConfigProperties(props properties.Properties) {
 func ParseMulesoftConfig(props properties.Properties) *MulesoftConfig {
 	return &MulesoftConfig{
 		AnypointExchangeURL: props.StringPropertyValue(pathAnypointExchangeURL),
+		Environment:         props.StringPropertyValue(pathEnvironment),
 		Username:            props.StringPropertyValue(pathAuthUsername),
 		Password:            props.StringPropertyValue(pathAuthPassword),
 		SessionLifetime:     props.DurationPropertyValue(pathAuthLifetime),

@@ -8,7 +8,7 @@ central:
 
 mulesoft:
  anypointExchangeUrl: https://anypoint.mulesoft.com
- organizationID: <ANYPOINT ORG ID>
+ environment: <MULESOFT ENVIRONMENT>
  auth:
   username: <USERNAME>
   password: <PASSWORD>
