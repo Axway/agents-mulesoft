@@ -14,12 +14,13 @@ import (
 
 // Agent links the mulesoft client and the gateway client.
 type Agent struct {
+	stage               string
 	discoveryIgnoreTags string
 	discoveryFilter     filter.Filter
 	anypointClient      anypoint.Client
 	apicClient          apic.Client
 
-	apiChan       chan *ExternalAPI
+	apiChan       chan *ServiceDetail
 	stopAgent     chan bool
 	stopDiscovery chan bool
 	stopPublish   chan bool
@@ -40,7 +41,7 @@ func New(anypointClient anypoint.Client) (agent *Agent, err error) {
 		apicClient:          coreagent.GetCentralClient(),
 		anypointClient:      anypointClient,
 		discoveryFilter:     discoveryFilter,
-		apiChan:             make(chan *ExternalAPI, buffer),
+		apiChan:             make(chan *ServiceDetail, buffer),
 		stopAgent:           make(chan bool),
 		stopDiscovery:       make(chan bool),
 		stopPublish:         make(chan bool),
@@ -87,6 +88,8 @@ func (a *Agent) onConfigChange() {
 		log.Error(err)
 	}
 
+	a.stage = cfg.MulesoftConfig.Environment
+	a.discoveryIgnoreTags = cfg.MulesoftConfig.DiscoveryIgnoreTags
 	a.discoveryFilter = discoveryFilter
 	a.discoveryIgnoreTags = cfg.MulesoftConfig.DiscoveryIgnoreTags
 	a.apicClient = coreagent.GetCentralClient()

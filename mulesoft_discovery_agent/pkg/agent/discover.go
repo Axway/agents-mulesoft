@@ -1,6 +1,11 @@
 package agent
 
 import (
+	"encoding/json"
+	"fmt"
+	"sort"
+
+	"github.com/Axway/agent-sdk/pkg/apic"
 	log "github.com/Axway/agent-sdk/pkg/util/log"
 	anypoint "github.com/Axway/agents-mulesoft/mulesoft_discovery_agent/pkg/anypoint"
 )
@@ -22,15 +27,14 @@ func (a *Agent) discoverAPIs() {
 		}
 
 		for _, asset := range assets {
-			log.Infof("%+v", asset)
-			// externalAPI, err := a.getExternalAPI(&asset)
-			// if err != nil {
-			// 	log.Errorf("Error gathering information for \"%s(%s)\": %s", asset.Name, asset.AssetID, err.Error())
-			// 	continue
-			// }
-			// if externalAPI != nil {
-			// 	a.apiChan <- externalAPI
-			// }
+			externalAPI, err := a.getExternalAPI(&asset)
+			if err != nil {
+				log.Errorf("Error gathering information for \"%s(%d)\": %s", asset.Name, asset.ID, err.Error())
+				continue
+			}
+			if externalAPI != nil {
+				a.apiChan <- externalAPI
+			}
 		}
 
 		if len(assets) != pageSize {
@@ -41,59 +45,84 @@ func (a *Agent) discoverAPIs() {
 	}
 }
 
-func (a *Agent) getExternalAPI(asset *anypoint.Asset) (*ExternalAPI, error) {
-	// assetDetail, err := a.anypointClient.GetAssetDetails(asset)
-	// if err != nil {
-	// 	return nil, err
-	// }
+func (a *Agent) getExternalAPI(asset *anypoint.Asset) (*ServiceDetail, error) {
+	exchangeAsset, err := a.anypointClient.GetExchangeAsset(asset)
+	if err != nil {
+		return nil, err
+	}
 
-	// specContent, packaging, err := a.anypointClient.GetAssetSpecification(assetDetail)
-	// if err != nil {
-	// 	return nil, err
-	// }
+	exchangeFile, err := a.getExchangeAssetSpecFile(exchangeAsset)
+	if err != nil {
+		return nil, err
+	}
 
-	// icon, err := a.anypointClient.GetAssetIcon(asset)
-	// if err != nil {
-	// 	return nil, err
-	// }
+	if exchangeFile == nil {
+		// SDK needs a spec
+		log.Debugf("No supported specification file found for asset %s (%d)", asset.Name, asset.ID)
+		return nil, nil
+	}
 
-	// catalogType := a.getCatalogType(assetDetail, packaging, specContent)
+	specContent, err := a.anypointClient.GetExchangeFileContent(exchangeFile)
+	if err != nil {
+		return nil, err
+	}
 
-	// return &ExternalAPI{
-	// 	Name:        asset.Name,
-	// 	ID:          asset.AssetID, // Not sure this will be valid
-	// 	URL:         "",            // TODO
-	// 	Spec:        specContent,
-	// 	Icon:        icon,
-	// 	Instances:   assetDetail.Instances,
-	// 	Packaging:   packaging,
-	// 	CatalogType: catalogType,
-	// }, nil
-	return nil, nil
+	specType, err := a.getSpecType(asset, exchangeFile, specContent)
+	if err != nil {
+		return nil, err
+	}
+
+	icon, iconContentType, err := a.anypointClient.GetExchangeAssetIcon(exchangeAsset)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ServiceDetail{
+		ID:               fmt.Sprint(asset.ID),
+		Title:            asset.ExchangeAssetName,
+		APIName:          asset.AssetID,
+		Stage:            a.stage, // Or perhaps it should be the asset api stage
+		APISpec:          specContent,
+		ResourceType:     specType,
+		Image:            icon,
+		ImageContentType: iconContentType,
+		Instances:        exchangeAsset.Instances,
+		// TODO: everyhing else too
+	}, nil
 }
 
-// getCatalogType determines the correct type for the asset in Unified Catalog.
-// func (a *Agent) getCatalogType(asset *anypoint.AssetDetails, packaging string, specContent []byte) string {
-// 	switch apiType := asset.AssetType; apiType {
-// 	case "soap-api":
-// 		return apic.Wsdl
-// 	case "rest-api":
-// 		if packaging == "zip" {
-// 			return "raml"
-// 		}
-// 		if specContent != nil {
-// 			jsonMap := make(map[string]interface{})
-// 			err := json.Unmarshal(specContent, &jsonMap)
-// 			if err != nil {
-// 				return apiType
-// 			}
-// 			if _, isSwagger := jsonMap["swagger"]; isSwagger {
-// 				return apic.Oas2
-// 			}
-// 			return apiType
-// 		}
-// 		return apic.Oas3
-// 	default:
-// 		return apiType
-// 	}
-// }
+// getExchangeAssetSpecFile gets the file entry for the Assets spec.
+func (a *Agent) getExchangeAssetSpecFile(asset *anypoint.ExchangeAsset) (*anypoint.ExchangeFile, error) {
+	if asset.Files == nil || len(asset.Files) == 0 {
+		return nil, nil
+	}
+
+	sort.Sort(BySpecType(asset.Files))
+	if asset.Files[0].Classifier != "oas" &&
+		asset.Files[0].Classifier != "fat-oas" &&
+		asset.Files[0].Classifier != "wsdl" {
+		// Unsupported spec type
+		return nil, nil
+	}
+	return &asset.Files[0], nil
+}
+
+// getSpecType determines the correct resource type for the asset.
+func (a *Agent) getSpecType(asset *anypoint.Asset, file *anypoint.ExchangeFile, specContent []byte) (string, error) {
+	if file.Classifier == "wsdl" {
+		return apic.Wsdl, nil
+	} else if specContent != nil {
+		jsonMap := make(map[string]interface{})
+		err := json.Unmarshal(specContent, &jsonMap)
+		if err != nil {
+			return "", err
+		}
+		if _, isSwagger := jsonMap["swagger"]; isSwagger {
+			return apic.Oas2, nil
+		} else if _, isOpenAPI := jsonMap["openapi"]; isOpenAPI {
+			return apic.Oas3, nil
+		}
+	}
+
+	return "", fmt.Errorf("Unknown spec type for \"%s(%d)\"", asset.Name, asset.ID)
+}

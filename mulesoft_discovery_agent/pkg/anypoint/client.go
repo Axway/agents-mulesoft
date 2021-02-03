@@ -1,8 +1,12 @@
 package anypoint
 
 import (
+	"archive/zip"
+	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"time"
@@ -29,17 +33,9 @@ type Client interface {
 	GetEnvironmentByName(name string) (*Environment, error)
 
 	ListAssets(page *Page) ([]Asset, error)
-
-	// ListAssets(page *Page) ([]Asset, error)
-	// GetAssetDetails(asset *Asset) (*AssetDetails, error)
-	// GetAssetIcon(asset *Asset) (string, error)
-	// GetAssetSpecification(asset *AssetDetails) (specContent []byte, packaging string, err error)
-	// GetAssetHomePage(orgID string, groupID string, assetID string, version string) error // TODO RETURN
-	// GetAssetLinkedAPI(orgID string, environmentID string, assetID string) error          // TODO RETURN
-	// API Details
-	// API Details Icon
-	// API Details Instances
-
+	GetExchangeAsset(asset *Asset) (*ExchangeAsset, error)
+	GetExchangeAssetIcon(asset *ExchangeAsset) (icon string, contentType string, err error)
+	GetExchangeFileContent(file *ExchangeFile) (fileContent []byte, err error)
 }
 
 // anypointClient is the client for interacting with Mulesoft Anypoint.
@@ -211,121 +207,62 @@ func (c *anypointClient) ListAssets(page *Page) ([]Asset, error) {
 	return assetResult.Assets, err
 }
 
-// // ListAssets lists the managed assets in Mulesoft: https://anypoint.mulesoft.com/exchange/portals/anypoint-platform/f1e97bc6-315a-4490-82a7-23abe036327a.anypoint-platform/exchange-experience-api/minor/2.0/console/method/%231431/
-// func (c *anypointClient) ListAssets(page *Page) ([]Asset, error) {
-// 	assets := make([]Asset, 0, page.PageSize)
-// 	err := c.invokeJSONGet(c.baseURL+"/exchange/api/v2/assets", page, &assets)
-// 	return assets, err
-//}
+// GetExchangeAsset creates the AssetDetail form the Asset.
+func (c *anypointClient) GetExchangeAsset(asset *Asset) (*ExchangeAsset, error) {
+	var exchangeAsset ExchangeAsset
+	url := fmt.Sprintf("%s/exchange/api/v2/assets/%s/%s", c.baseURL, asset.GroupID, asset.AssetID)
+	err := c.invokeJSONGet(url, nil, &exchangeAsset)
+	if err != nil {
+		return nil, err
+	}
+	return &exchangeAsset, nil
+}
 
-// // GetAssetDetails creates the AssetDetail form the Asset.
-// func (c *anypointClient) GetAssetDetails(asset *Asset) (*AssetDetails, error) {
-// 	var assetDetails AssetDetails
-// 	err := c.invokeJSONGet(c.baseURL+"/exchange/api/v2/assets/"+asset.ID, nil, &assetDetails)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return &assetDetails, nil
-// }
+// GetExchangeAssetIcon get the icon as a base64 encoded string from the Exchange Asset files.
+func (c *anypointClient) GetExchangeAssetIcon(asset *ExchangeAsset) (string, string, error) {
+	if asset.Icon == "" {
+		return "", "", nil
+	}
+	iconBuffer, headers, err := c.invokeGet(asset.Icon)
+	if err != nil {
+		return "", "", err
+	}
 
-// // GetAssetIcon creates the AssetDetail form the Asset.
-// func (c *anypointClient) GetAssetIcon(asset *Asset) (string, error) {
-// 	if asset.Icon == "" {
-// 		return "", nil
-// 	}
-// 	icon, err := c.invokeGet(asset.Icon)
-// 	if err != nil {
-// 		return "", err
-// 	}
-// 	return base64.StdEncoding.EncodeToString([]byte(icon)), nil
-// }
+	contentType := ""
+	if val, exists := headers["content-type"]; exists {
+		contentType = val[0]
+	}
 
-// func (c *anypointClient) GetAssetSpecification(asset *AssetDetails) (specContent []byte, packaging string, err error) {
-// 	packaging = "txt"
-// 	specFileClassifier := asset.AssetType
-// 	if val, ok := assetTypeMap[asset.AssetType]; ok {
-// 		specFileClassifier = val
-// 	}
+	return base64.StdEncoding.EncodeToString([]byte(iconBuffer)), contentType, nil
+}
 
-// 	// Find the spec:
-// 	// - known classifier
-// 	// - mainfile from zip packages with spec type oas or wsdl,
-// 	// - type oas with classifier fat-raml
-// 	// - jar packages
+func (c *anypointClient) GetExchangeFileContent(file *ExchangeFile) (fileContent []byte, err error) {
+	fileContent, _, err = c.invokeGet(file.ExternalLink)
 
-// 	files := c.filterFiles(asset.Files, specFileClassifier)
-// 	if len(files) > 0 {
-// 		specContent, packaging, err = c.getFileSpec(files[0])
-// 		if err != nil {
-// 			return nil, "", err
-// 		}
+	if file.Packaging == "zip" && file.MainFile != "" {
+		zipReader, err := zip.NewReader(bytes.NewReader(fileContent), int64(len(fileContent)))
+		if err != nil {
+			return nil, err
+		}
 
-// 	} else if specFileClassifier == "oas" {
-// 		// for rest-api, there might not be an oas spec generated if it's an old asset, download raml
-// 		files = c.filterFiles(asset.Files, "fat-raml")
-// 		if len(files) > 0 {
-// 			specContent, packaging, err = c.getFileSpec(files[0])
-// 			if err != nil {
-// 				return nil, "", err
-// 			}
-// 		}
+		for _, f := range zipReader.File {
+			if f.Name == file.MainFile {
+				content, err := f.Open()
+				if err != nil {
+					return nil, err
+				}
 
-// 	} else {
-// 		// majority have connector as a jar, so search for that
-// 		files = c.filterFiles(asset.Files, "jar")
-// 		if len(files) > 0 {
-// 			specContent, packaging, err = c.getFileSpec(files[0])
-// 			if err != nil {
-// 				return nil, "", err
-// 			}
-// 		}
-// 	}
-
-// 	return specContent, packaging, err
-// }
-
-// // Filter the files by classifier
-// func (c *anypointClient) filterFiles(files []File, classifier string) []File {
-// 	filtered := []File{}
-
-// 	for _, file := range files {
-// 		if file.Classifier == classifier {
-// 			filtered = append(filtered, file)
-// 		}
-// 	}
-// 	return filtered
-// }
-
-// // getFileSpec loads the spec from the external link of the file.
-// func (c *anypointClient) getFileSpec(file File) (specContent []byte, packaging string, err error) {
-// 	packaging = file.Packaging
-// 	specContent, err = c.invokeGet(file.ExternalLink)
-
-// 	if file.Packaging == "zip" && file.MainFile != "" {
-// 		zipReader, err := zip.NewReader(bytes.NewReader(specContent), int64(len(specContent)))
-// 		if err != nil {
-// 			return nil, "", err
-// 		}
-
-// 		for _, f := range zipReader.File {
-// 			if f.Name == file.MainFile {
-// 				content, err := f.Open()
-// 				if err != nil {
-// 					return nil, "", err
-// 				}
-
-// 				specContent, err = ioutil.ReadAll(content)
-// 				content.Close()
-// 				if err != nil {
-// 					return nil, "", err
-// 				}
-// 				break
-// 			}
-// 		}
-// 		packaging = "json"
-// 	}
-// 	return specContent, packaging, err
-// }
+				fileContent, err = ioutil.ReadAll(content)
+				content.Close()
+				if err != nil {
+					return nil, err
+				}
+				break
+			}
+		}
+	}
+	return fileContent, err
+}
 
 func (c *anypointClient) invokeJSONGet(url string, page *Page, resp interface{}) error {
 	headers := map[string]string{
@@ -352,7 +289,7 @@ func (c *anypointClient) invokeJSONGet(url string, page *Page, resp interface{})
 }
 
 func (c *anypointClient) invokeJSON(request coreapi.Request, resp interface{}) error {
-	body, err := c.invoke(request)
+	body, _, err := c.invoke(request)
 	if err != nil {
 		return agenterrors.Wrap(ErrCommunicatingWithGateway, err.Error())
 	}
@@ -364,7 +301,7 @@ func (c *anypointClient) invokeJSON(request coreapi.Request, resp interface{}) e
 	return nil
 }
 
-func (c *anypointClient) invokeGet(url string) ([]byte, error) {
+func (c *anypointClient) invokeGet(url string) ([]byte, map[string][]string, error) {
 	request := coreapi.Request{
 		Method:      coreapi.GET,
 		URL:         url,
@@ -375,14 +312,14 @@ func (c *anypointClient) invokeGet(url string) ([]byte, error) {
 	return c.invoke(request)
 }
 
-func (c *anypointClient) invoke(request coreapi.Request) ([]byte, error) {
+func (c *anypointClient) invoke(request coreapi.Request) ([]byte, map[string][]string, error) {
 	response, err := c.apiClient.Send(request)
 	if err != nil {
-		return nil, agenterrors.Wrap(ErrCommunicatingWithGateway, err.Error())
+		return nil, nil, agenterrors.Wrap(ErrCommunicatingWithGateway, err.Error())
 	}
 	if response.Code != http.StatusOK {
-		return nil, agenterrors.Wrap(ErrCommunicatingWithGateway, fmt.Sprint(response.Code))
+		return nil, nil, agenterrors.Wrap(ErrCommunicatingWithGateway, fmt.Sprint(response.Code))
 	}
 
-	return response.Body, nil
+	return response.Body, response.Headers, nil
 }

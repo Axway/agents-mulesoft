@@ -96,78 +96,65 @@ type AuditEntry struct {
 	Date time.Time `json:"date"`
 }
 
-// var assetTypeMap = map[string]string{
-// 	"template":     "mule-application-template",
-// 	"example":      "mule-plugin",
-// 	"connector":    "mule-plugin",
-// 	"extension":    "mule-plugin",
-// 	"custom":       "custom",
-// 	"api-fragment": "raml-fragment",
-// 	"soap-api":     "wsdl",
-// 	"rest-api":     "oas",
-// }
+// ExchangeAsset - https://anypoint.mulesoft.com/exchange/portals/anypoint-platform/f1e97bc6-315a-4490-82a7-23abe036327a.anypoint-platform/exchange-experience-api/minor/2.0/console/type/%231186/
+type ExchangeAsset struct {
+	ID           string                `json:"id"`
+	Name         string                `json:"name"`
+	GroupID      string                `json:"groupId"`
+	AssetID      string                `json:"assetId"`
+	Version      string                `json:"version"`
+	MinorVersion string                `json:"minorVersion"`
+	VersionGroup string                `json:"versionGroup"`
+	Description  string                `json:"description"`
+	Public       bool                  `json:"isPublic"`
+	AssetType    string                `json:"type"`
+	Snapshopt    bool                  `json:"isSnapshot"`
+	Status       string                `json:"status"`
+	CreatedAt    time.Time             `json:"createdAt"`
+	ModifiedAt   time.Time             `json:"modifiedAt"`
+	Labels       []string              `json:"labels"`
+	Categories   []ExchangeCategory    `json:"categories"`
+	Icon         string                `json:"icon"`
+	Files        []ExchangeFile        `json:"files"`
+	Instances    []ExchangeAPIInstance `json:"instances"`
+}
 
-// // Asset - https://anypoint.mulesoft.com/exchange/portals/anypoint-platform/f1e97bc6-315a-4490-82a7-23abe036327a.anypoint-platform/exchange-experience-api/minor/2.0/console/type/%231186/
-// type Asset struct {
-// 	ID           string     `json:"id"`
-// 	Name         string     `json:"name"`
-// 	GroupID      string     `json:"groupId"`
-// 	AssetID      string     `json:"assetId"`
-// 	Version      string     `json:"version"`
-// 	MinorVersion string     `json:"minorVersion"`
-// 	VersionGroup string     `json:"versionGroup"`
-// 	Description  string     `json:"description"`
-// 	Public       bool       `json:"isPublic"`
-// 	AssetType    string     `json:"type"`
-// 	Snapshopt    bool       `json:"isSnapshot"`
-// 	Status       string     `json:"status"`
-// 	CreatedAt    time.Time  `json:"createdAt"`
-// 	ModifiedAt   time.Time  `json:"modifiedAt"`
-// 	Labels       []string   `json:"labels"`
-// 	Categories   []Category `json:"categories"`
-// 	Icon         string     `json:"icon"`
-// 	Files        []File     `json:"files"`
-// }
+// ExchangeCategory -
+type ExchangeCategory struct {
+	Value       []string `json:"value"`
+	DisplayName string   `json:"displayName"`
+	Key         string   `json:"key"`
+}
 
-// // AssetDetails -
-// type AssetDetails struct {
-// 	Asset
-// 	Instances []APIInstance `json:"instances"`
-// }
+// ExchangeAPIInstance - https://anypoint.mulesoft.com/exchange/portals/anypoint-platform/f1e97bc6-315a-4490-82a7-23abe036327a.anypoint-platform/exchange-experience-api/minor/2.0/console/method/%231972/
+type ExchangeAPIInstance struct {
+	ID                string    `json:"id"`
+	Name              string    `json:"name"`
+	GroupID           string    `json:"groupId"`
+	AssetID           string    `json:"assetId"`
+	Version           string    `json:"version"`
+	ProductAPIVersion string    `json:"productApiVersion"`
+	EnvironmentID     string    `json:"environmentId"`
+	EndpointURI       string    `json:"endpointUri"`
+	IsPublic          bool      `json:"isPublic"`
+	InstanceType      string    `json:"type"`
+	Fullname          string    `json:"fullname"`
+	AssetName         string    `json:"assetName"`
+	CreatedBy         string    `json:"createdBy"`
+	CreatedDate       time.Time `json:"createdDate"`
+	UpdatedDate       time.Time `json:"updatedDate"`
+	ProviderID        string    `json:"providerId"`
+}
 
-// // Category -
-// type Category struct {
-// 	Value       []string `json:"value"`
-// 	DisplayName string   `json:"displayName"`
-// 	Key         string   `json:"key"`
-// }
-
-// // APIInstance - https://anypoint.mulesoft.com/exchange/portals/anypoint-platform/f1e97bc6-315a-4490-82a7-23abe036327a.anypoint-platform/exchange-experience-api/minor/2.0/console/method/%231972/
-// type APIInstance struct {
-// 	ID                string    `json:"id"`
-// 	Name              string    `json:"name"`
-// 	GroupID           string    `json:"groupId"`
-// 	AssetID           string    `json:"assetId"`
-// 	ProductAPIVersion string    `json:"productApiVersion"`
-// 	EnvironmentID     string    `json:"environmentId"`
-// 	EndpointURI       string    `json:"endpointUri"`
-// 	Public            bool      `json:"isPublic"`
-// 	InstanceType      string    `json:"type"`
-// 	CreatedBy         string    `json:"createdBy"`
-// 	CreatedDate       time.Time `json:"createdDate"`
-// 	UpdatedDate       time.Time `json:"updatedDate"`
-// 	ProviderID        string    `json:"providerId"`
-// }
-
-// // File -
-// type File struct {
-// 	Classifier   string    `json:"classifier"`
-// 	Packaging    string    `json:"packaging"`
-// 	DownloadURL  string    `json:"downloadURL"`
-// 	ExternalLink string    `json:"externalLink"`
-// 	MD5          string    `json:"md5"`
-// 	SHA1         string    `json:"sha1"`
-// 	CreatedDate  time.Time `json:"createdDate"`
-// 	MainFile     string    `json:"mainFile"`
-// 	Generated    bool      `json:"isGenerated"`
-// }
+// ExchangeFile -
+type ExchangeFile struct {
+	Classifier   string    `json:"classifier"`
+	Packaging    string    `json:"packaging"`
+	DownloadURL  string    `json:"downloadURL"`
+	ExternalLink string    `json:"externalLink"`
+	MD5          string    `json:"md5"`
+	SHA1         string    `json:"sha1"`
+	CreatedDate  time.Time `json:"createdDate"`
+	MainFile     string    `json:"mainFile"`
+	Generated    bool      `json:"isGenerated"`
+}
