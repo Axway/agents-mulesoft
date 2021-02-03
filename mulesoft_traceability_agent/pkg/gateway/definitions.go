@@ -31,14 +31,14 @@ type GwTrafficLogEntry struct {
 
 func GenerateSample() *GwTrafficLogEntry {
 	return &GwTrafficLogEntry{
-		TraceID:             "123456",
-		APIName:             "SampleAPI",
+		TraceID:             "123459",
+		APIName:             "SampleAPI2",
 		InboundTransaction:  GwTransaction{
 			ID:              "12233444",
 			SourceHost:      "fidoshouse.com",
-			SourcePort:      0,
+			SourcePort:      443,
 			DesHost:         "petstore.com",
-			DestPort:        0,
+			DestPort:        443,
 			URI:             "https://www.petstore.com/food",
 			Method:          "GET",
 			StatusCode:      200,
@@ -50,7 +50,7 @@ func GenerateSample() *GwTrafficLogEntry {
 		OutboundTransaction: GwTransaction{
 			ID:              "12233555",
 			SourceHost:      "petstore.com",
-			SourcePort:      0,
+			SourcePort:      443,
 			DesHost:         "fidoshouse.com",
 			DestPort:        0,
 			URI:             "https://www.petstore.com/food",

@@ -34,6 +34,7 @@ type MulesoftConfig struct {
 	AnypointExchangeURL string            `config:"anypointExchangeUrl"`
 	DiscoveryIgnoreTags string            `config:"discoveryIgnoreTags"`
 	Filter              string            `config:"filter"`
+	OrganizationID      string            `config:"organizationID"`
 	Username            string            `config:"auth.username"`
 	Password            string            `config:"auth.password"`
 	SessionLifetime     time.Duration     `config:"auth.lifetime"`
@@ -82,10 +83,12 @@ const (
 	pathSSLMinVersion         = "mulesoft.ssl.minVersion"
 	pathSSLMaxVersion         = "mulesoft.ssl.maxVersion"
 	pathProxyURL              = "mulesoft.proxyUrl"
+	pathOrganizationID        = "mulesoft.organization.id"
 )
 
 // AddMulesoftConfigProperties - Adds the command properties needed for Mulesoft
 func AddMulesoftConfigProperties(props properties.Properties) {
+	props.AddStringProperty(pathOrganizationID, "d3629a48-0067-452f-a112-575cfb0189a1", "Mulesoft Organization ID")
 	props.AddStringProperty(pathAnypointExchangeURL, "https://anypoint.mulesoft.com", "Mulesoft Anypoint Exchange URL.")
 	props.AddStringProperty(pathAuthUsername, "", "Mulesoft username")
 	props.AddStringProperty(pathAuthPassword, "", "Mulesoft password")
@@ -103,6 +106,7 @@ func AddMulesoftConfigProperties(props properties.Properties) {
 func ParseMulesoftConfig(props properties.Properties) *MulesoftConfig {
 	return &MulesoftConfig{
 		AnypointExchangeURL: props.StringPropertyValue(pathAnypointExchangeURL),
+		OrganizationID: 	 props.StringPropertyValue(pathOrganizationID),
 		Username:            props.StringPropertyValue(pathAuthUsername),
 		Password:            props.StringPropertyValue(pathAuthPassword),
 		SessionLifetime:     props.DurationPropertyValue(pathAuthLifetime),

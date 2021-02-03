@@ -1,12 +1,10 @@
 package agent
 
 import (
-	"encoding/json"
+	coreagent "github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	agenterrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
-	"github.com/Axway/agents-mulesoft/mulesoft_traceability_agent/pkg/anypoint"
-	coreagent "github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/elastic/beats/v7/libbeat/beat"
 	"github.com/elastic/beats/v7/libbeat/common"
 	"github.com/elastic/beats/v7/libbeat/logp"
@@ -18,10 +16,9 @@ import (
 // Agent - mule Beater configuration- oh, the cruelty!
 type Agent struct {
 	done           chan struct{}
-	logReader      *gateway.LogReader
+	mule      *gateway.MuleEventEmitter
 	eventProcessor *gateway.EventProcessor
 	client         beat.Client
-	anypointClient anypoint.Client
 	// Not sure if we need this
 	apicClient     apic.Client
 
@@ -38,9 +35,9 @@ func New(b *beat.Beat, cfg *common.Config) (beat.Beater, error) {
 		eventChannel: make(chan string),
 	}
 
-	bt.eventProcessor = gateway.NewEventProcessor(agentConfig)
-	bt.anypointClient = anypoint.NewClient(agentConfig.MulesoftConfig)
 	var err error
+	bt.eventProcessor = gateway.NewEventProcessor(agentConfig)
+	bt.mule,err = gateway.NewMuleEventEmitter(agentConfig,bt.eventChannel)
 	if err != nil {
 		return nil, err
 	}
@@ -66,11 +63,12 @@ func (bt *Agent) Run(b *beat.Beat) error {
 		return err
 	}
 
-	go bt.sanityCheck()
+	go bt.mule.Start()
 
 	for {
 		select {
 		case <-bt.done:
+			bt.mule.Stop()
 			return nil
 		case event := <-bt.eventChannel:
 			eventsToPublish := bt.eventProcessor.ProcessRaw([]byte(event))
@@ -79,23 +77,17 @@ func (bt *Agent) Run(b *beat.Beat) error {
 		}
 	}
 }
-func (bt *Agent) sanityCheck() {
-	// Just get a simple payload to test that we can send to condor
-	sample := gateway.GenerateSample()
-	payload,_ := json.Marshal(sample)
-	bt.eventChannel <- string(payload)
-}
 // onConfigChange apply configuation changes
 func (bt *Agent) onConfigChange() {
 	cfg := config.GetConfig()
-
 	bt.apicClient = coreagent.GetCentralClient()
-	bt.anypointClient.OnConfigChange(cfg.MulesoftConfig)
+	bt.mule.OnConfigChange(cfg)
 }
 
 
 // Stop stops customLogTraceabilityAgent.
 func (bt *Agent) Stop() {
 	bt.client.Close()
+	bt.mule.Stop()
 	close(bt.done)
 }
