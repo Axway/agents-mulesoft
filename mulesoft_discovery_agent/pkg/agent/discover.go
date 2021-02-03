@@ -3,6 +3,7 @@ package agent
 import (
 	"encoding/json"
 
+	"github.com/Axway/agent-sdk/pkg/apic"
 	log "github.com/Axway/agent-sdk/pkg/util/log"
 	anypoint "github.com/Axway/agents-mulesoft/mulesoft_discovery_agent/pkg/anypoint"
 )
@@ -29,7 +30,9 @@ func (a *Agent) discoverAPIs() {
 				log.Errorf("Error gathering information for \"%s(%s)\": %s", asset.Name, asset.AssetID, err.Error())
 				continue
 			}
-			a.apiChan <- externalAPI
+			if externalAPI != nil {
+				a.apiChan <- externalAPI
+			}
 		}
 
 		if len(assets) != pageSize {
@@ -74,7 +77,7 @@ func (a *Agent) getExternalAPI(asset *anypoint.Asset) (*ExternalAPI, error) {
 func (a *Agent) getCatalogType(asset *anypoint.AssetDetails, packaging string, specContent []byte) string {
 	switch apiType := asset.AssetType; apiType {
 	case "soap-api":
-		return "wsdl"
+		return apic.Wsdl
 	case "rest-api":
 		if packaging == "zip" {
 			return "raml"
@@ -83,14 +86,14 @@ func (a *Agent) getCatalogType(asset *anypoint.AssetDetails, packaging string, s
 			jsonMap := make(map[string]interface{})
 			err := json.Unmarshal(specContent, &jsonMap)
 			if err != nil {
-				return "custom"
+				return apiType
 			}
 			if _, isSwagger := jsonMap["swagger"]; isSwagger {
-				return "oas2"
+				return apic.Oas2
 			}
-			return "custom"
+			return apiType
 		}
-		return "oas3"
+		return apic.Oas3
 	default:
 		return apiType
 	}
