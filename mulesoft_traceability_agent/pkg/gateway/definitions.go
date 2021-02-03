@@ -28,3 +28,38 @@ type GwTrafficLogEntry struct {
 	InboundTransaction  GwTransaction `json:"inbound"`
 	OutboundTransaction GwTransaction `json:"outbound"`
 }
+
+func GenerateSample() *GwTrafficLogEntry {
+	return &GwTrafficLogEntry{
+		TraceID:             "123456",
+		APIName:             "SampleAPI",
+		InboundTransaction:  GwTransaction{
+			ID:              "12233444",
+			SourceHost:      "fidoshouse.com",
+			SourcePort:      0,
+			DesHost:         "petstore.com",
+			DestPort:        0,
+			URI:             "https://www.petstore.com/food",
+			Method:          "GET",
+			StatusCode:      200,
+			RequestHeaders:  nil,
+			ResponseHeaders: nil,
+			RequestBytes:    100,
+			ResponseBytes:   1000,
+		},
+		OutboundTransaction: GwTransaction{
+			ID:              "12233555",
+			SourceHost:      "petstore.com",
+			SourcePort:      0,
+			DesHost:         "fidoshouse.com",
+			DestPort:        0,
+			URI:             "https://www.petstore.com/food",
+			Method:          "GET",
+			StatusCode:      200,
+			RequestHeaders:  nil,
+			ResponseHeaders: nil,
+			RequestBytes:    100,
+			ResponseBytes:   1000,
+		},
+	}
+}
