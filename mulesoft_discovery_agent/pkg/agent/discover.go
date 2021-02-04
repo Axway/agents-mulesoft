@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -45,11 +46,6 @@ func (a *Agent) discoverAPIs() {
 		}
 
 		for _, asset := range assets {
-			if agent.IsAPIPublished(fmt.Sprint(asset.AssetID)) {
-				log.Debugf("Asset already published %s(%d)", asset.AssetID, asset.ID)
-				continue
-			}
-			log.Debugf("Gathering details for %s(%d)", asset.AssetID, asset.ID)
 			svcDetails := a.getServiceDetails(&asset)
 			if svcDetails != nil {
 				for _, svc := range svcDetails {
@@ -83,6 +79,18 @@ func (a *Agent) getServiceDetails(asset *anypoint.Asset) []*ServiceDetail {
 
 // getServiceDetail gets the ServiceDetail for the API asset.
 func (a *Agent) getServiceDetail(asset *anypoint.Asset, api *anypoint.API) (*ServiceDetail, error) {
+	checksum := a.checksum(asset) // Doing the asset not the API as the attribute is APIService level
+
+	if agent.IsAPIPublished(fmt.Sprint(asset.AssetID)) {
+		// Check if changed....cheaply
+		publishedChecksum := agent.GetAttributeOnPublishedAPI(asset.AssetID, "checksum")
+		if checksum == publishedChecksum {
+			return nil, nil
+		}
+		log.Debugf("Change detected in published asset %s(%d)", asset.AssetID, api.ID)
+	}
+	log.Info("Gathering details for %s(%d)", asset.AssetID, api.ID)
+
 	// Single asset has multiple versions
 	policies, err := a.anypointClient.GetPolicies(api)
 	if err != nil {
@@ -126,17 +134,17 @@ func (a *Agent) getServiceDetail(asset *anypoint.Asset, api *anypoint.API) (*Ser
 	}
 
 	return &ServiceDetail{
-		ID:               fmt.Sprint(api.AssetID),
-		Title:            asset.ExchangeAssetName,
-		APIName:          api.AssetID,
-		Stage:            a.stage, // Or perhaps it should be the asset api stage
-		APISpec:          specContent,
-		ResourceType:     specType,
-		AuthPolicy:       authPolicy,
-		Image:            icon,
-		ImageContentType: iconContentType,
-		Instances:        exchangeAsset.Instances,
-		// TODO: everyhing else too
+		ID:                fmt.Sprint(api.AssetID),
+		Title:             asset.ExchangeAssetName,
+		APIName:           api.AssetID,
+		Stage:             a.stage, // Or perhaps it should be the asset api stage
+		APISpec:           specContent,
+		ResourceType:      specType,
+		AuthPolicy:        authPolicy,
+		Image:             icon,
+		ImageContentType:  iconContentType,
+		Instances:         exchangeAsset.Instances,
+		ServiceAttributes: map[string]string{"checksum": checksum},
 	}, nil
 }
 
@@ -210,4 +218,10 @@ func (a *Agent) getAuthPolicy(policies []anypoint.Policy) string {
 	}
 
 	return apic.Passthrough
+}
+
+// checksum generates a checksum for the api for change detection
+func (a *Agent) checksum(val interface{}) string {
+	sum := sha256.Sum256([]byte(fmt.Sprintf("%v", val)))
+	return fmt.Sprintf("%x", sum)
 }
