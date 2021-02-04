@@ -8,6 +8,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic"
 	log "github.com/Axway/agent-sdk/pkg/util/log"
 	anypoint "github.com/Axway/agents-mulesoft/mulesoft_discovery_agent/pkg/anypoint"
+	"sigs.k8s.io/yaml"
 )
 
 func (a *Agent) discoveryLoop() {
@@ -88,6 +89,7 @@ func (a *Agent) getServiceDetail(asset *anypoint.Asset, api *anypoint.API) (*Ser
 	if err != nil {
 		return nil, err
 	}
+	specContent = a.specYAMLToJSON(specContent)
 
 	specType, err := a.getSpecType(exchangeFile, specContent)
 	if err != nil {
@@ -131,6 +133,28 @@ func (a *Agent) getExchangeAssetSpecFile(asset *anypoint.ExchangeAsset) (*anypoi
 		return nil, nil
 	}
 	return &asset.Files[0], nil
+}
+
+// specYAMLToJSON - if the spec is yaml convert it to json, SDK doesn't handle yaml.
+func (a *Agent) specYAMLToJSON(specContent []byte) []byte {
+	specMap := make(map[string]interface{})
+	err := json.Unmarshal(specContent, &specMap)
+	if err == nil {
+		return specContent
+	}
+
+	err = yaml.Unmarshal(specContent, &specMap)
+	if err != nil {
+		// Not yaml, nothing more to be done
+		return specContent
+	}
+
+	transcoded, err := yaml.YAMLToJSON(specContent)
+	if err != nil {
+		// Not json encodeable, nothing more to be done
+		return specContent
+	}
+	return transcoded
 }
 
 // getSpecType determines the correct resource type for the asset.
