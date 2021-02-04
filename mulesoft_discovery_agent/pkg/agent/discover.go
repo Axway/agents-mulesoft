@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"time"
 
+	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	log "github.com/Axway/agent-sdk/pkg/util/log"
 	anypoint "github.com/Axway/agents-mulesoft/mulesoft_discovery_agent/pkg/anypoint"
@@ -12,8 +14,23 @@ import (
 )
 
 func (a *Agent) discoveryLoop() {
-	// TODO: Periodic triggering, delta detection, error channel etc.
-	a.discoverAPIs()
+	go func() {
+		// Instant fist "tick"
+		a.discoverAPIs()
+		// Loop
+		ticker := time.NewTicker(a.pollInterval)
+		for {
+			select {
+			case <-ticker.C:
+				a.discoverAPIs()
+				break
+			case <-a.stopDiscovery:
+				log.Debug("stopping discovery loop")
+				ticker.Stop()
+				break
+			}
+		}
+	}()
 }
 
 func (a *Agent) discoverAPIs() {
@@ -28,6 +45,10 @@ func (a *Agent) discoverAPIs() {
 		}
 
 		for _, asset := range assets {
+			if agent.IsAPIPublished(fmt.Sprint(asset.AssetID)) {
+				log.Debugf("Asset already published %s(%d)", asset.AssetID, asset.ID)
+				continue
+			}
 			log.Debugf("Gathering details for %s(%d)", asset.AssetID, asset.ID)
 			svcDetails := a.getServiceDetails(&asset)
 			if svcDetails != nil {

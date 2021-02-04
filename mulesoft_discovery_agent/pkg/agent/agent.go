@@ -1,6 +1,8 @@
 package agent
 
 import (
+	"time"
+
 	"github.com/Axway/agent-sdk/pkg/agent"
 	coreagent "github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/apic"
@@ -19,6 +21,7 @@ type Agent struct {
 	discoveryFilter     filter.Filter
 	anypointClient      anypoint.Client
 	apicClient          apic.Client
+	pollInterval        time.Duration
 
 	apiChan       chan *ServiceDetail
 	stopAgent     chan bool
@@ -41,6 +44,7 @@ func New(anypointClient anypoint.Client) (agent *Agent, err error) {
 		apicClient:          coreagent.GetCentralClient(),
 		anypointClient:      anypointClient,
 		discoveryFilter:     discoveryFilter,
+		pollInterval:        cfg.MulesoftConfig.PollInterval,
 		apiChan:             make(chan *ServiceDetail, buffer),
 		stopAgent:           make(chan bool),
 		stopDiscovery:       make(chan bool),
@@ -63,11 +67,10 @@ func (a *Agent) CheckHealth() error {
 
 // Run the agent loop
 func (a *Agent) Run() {
-
 	agent.RegisterAPIValidator(a.validateAPI)
 	agent.OnConfigChange(a.onConfigChange)
 
-	go a.discoverAPIs()
+	go a.discoveryLoop()
 	go a.publishLoop()
 
 	select {
