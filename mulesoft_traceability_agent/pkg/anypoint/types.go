@@ -115,25 +115,25 @@ type AnalyticsEvent struct {
 	ApplicationName    string      `json:"Application Name"`
 	MessageID          string      `json:"Message ID"`
 	Timestamp          time.Time   `json:"Timestamp"`
-	RequestSize        interface{} `json:"Request Size"`
-	ResponseSize       interface{} `json:"Response Size"`
+	RequestSize        int `json:"Request Size"`
+	ResponseSize       int `json:"Response Size"`
 	RequestOutcome     string      `json:"Request Outcome"`
 	Verb               string      `json:"Verb"`
 	ResourcePath       string      `json:"Resource Path"`
 	StatusCode         int         `json:"Status Code"`
-	UserAgentName      interface{} `json:"User Agent Name"`
-	UserAgentVersion   interface{} `json:"User Agent Version"`
-	Browser            interface{} `json:"Browser"`
-	OSFamily           interface{} `json:"OS Family"`
-	OSVersion          interface{} `json:"OS Version"`
-	OSMajorVersion     interface{} `json:"OS Major Version"`
-	OSMinorVersion     interface{} `json:"OS Minor Version"`
-	HardwarePlatform   interface{} `json:"Hardware Platform"`
+	UserAgentName      string `json:"User Agent Name"`
+	UserAgentVersion   string `json:"User Agent Version"`
+	Browser            string `json:"Browser"`
+	OSFamily           string `json:"OS Family"`
+	OSVersion          string `json:"OS Version"`
+	OSMajorVersion     string `json:"OS Major Version"`
+	OSMinorVersion     string `json:"OS Minor Version"`
+	HardwarePlatform   string `json:"Hardware Platform"`
 	Timezone           string      `json:"Timezone"`
 	City               string      `json:"City"`
 	Country            string      `json:"Country"`
 	Continent          string      `json:"Continent"`
 	PostalCode         string      `json:"Postal Code"`
-	ViolatedPolicyName interface{} `json:"Violated Policy Name"`
+	ViolatedPolicyName string `json:"Violated Policy Name"`
 	ResponseTime       int         `json:"Response Time"`
 }
