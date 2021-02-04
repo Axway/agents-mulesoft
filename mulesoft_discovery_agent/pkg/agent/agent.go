@@ -1,12 +1,12 @@
 package agent
 
 import (
+	"strings"
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	coreagent "github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/apic"
-	"github.com/Axway/agent-sdk/pkg/filter"
 	utilErrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	log "github.com/Axway/agent-sdk/pkg/util/log"
@@ -17,33 +17,27 @@ import (
 // Agent links the mulesoft client and the gateway client.
 type Agent struct {
 	stage               string
-	discoveryIgnoreTags string
-	discoveryFilter     filter.Filter
+	discoveryTags       []string
+	discoveryIgnoreTags []string
 	anypointClient      anypoint.Client
 	apicClient          apic.Client
 	pollInterval        time.Duration
-
-	apiChan       chan *ServiceDetail
-	stopAgent     chan bool
-	stopDiscovery chan bool
-	stopPublish   chan bool
+	apiChan             chan *ServiceDetail
+	stopAgent           chan bool
+	stopDiscovery       chan bool
+	stopPublish         chan bool
 }
 
 // New creates a new agent
 func New(anypointClient anypoint.Client) (agent *Agent, err error) {
 	cfg := config.GetConfig()
 
-	discoveryFilter, err := filter.NewFilter(cfg.MulesoftConfig.Filter)
-	if err != nil {
-		return nil, err
-	}
-
 	buffer := 5
 	agent = &Agent{
-		discoveryIgnoreTags: cfg.MulesoftConfig.DiscoveryIgnoreTags,
+		discoveryTags:       cleanTags(cfg.MulesoftConfig.DiscoveryTags),
+		discoveryIgnoreTags: cleanTags(cfg.MulesoftConfig.DiscoveryIgnoreTags),
 		apicClient:          coreagent.GetCentralClient(),
 		anypointClient:      anypointClient,
-		discoveryFilter:     discoveryFilter,
 		pollInterval:        cfg.MulesoftConfig.PollInterval,
 		apiChan:             make(chan *ServiceDetail, buffer),
 		stopAgent:           make(chan bool),
@@ -86,20 +80,25 @@ func (a *Agent) Run() {
 func (a *Agent) onConfigChange() {
 	cfg := config.GetConfig()
 
-	discoveryFilter, err := filter.NewFilter(cfg.MulesoftConfig.Filter)
-	if err != nil {
-		log.Error(err)
-	}
-
 	a.stage = cfg.MulesoftConfig.Environment
-	a.discoveryIgnoreTags = cfg.MulesoftConfig.DiscoveryIgnoreTags
-	a.discoveryFilter = discoveryFilter
-	a.discoveryIgnoreTags = cfg.MulesoftConfig.DiscoveryIgnoreTags
+	a.discoveryTags = cleanTags(cfg.MulesoftConfig.DiscoveryTags)
+	a.discoveryIgnoreTags = cleanTags(cfg.MulesoftConfig.DiscoveryIgnoreTags)
 	a.apicClient = coreagent.GetCentralClient()
 	a.anypointClient.OnConfigChange(cfg.MulesoftConfig)
 }
 
 func (a *Agent) validateAPI(apiID, stageName string) bool {
-	// TODO
 	return true
+}
+
+func cleanTags(tagCSV string) []string {
+	clean := []string{}
+	tags := strings.Split(tagCSV, ",")
+	for _, v := range tags {
+		tag := strings.TrimSpace(strings.ToLower(v))
+		if len(tag) > 0 {
+			clean = append(clean, tag)
+		}
+	}
+	return clean
 }
