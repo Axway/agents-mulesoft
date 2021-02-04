@@ -85,6 +85,20 @@ type API struct {
 	AutodiscoveryInstanceName string   `json:"autodiscoveryInstanceName"`
 }
 
+// Policy -
+type Policy struct {
+	Audit                Audit                  `json:"audit"`
+	MasterOrganizationID string                 `json:"masterOrganizationId"`
+	OrganizationID       string                 `json:"organizationId"`
+	ID                   int64                  `json:"id"`
+	GroupID              string                 `json:"groupId"`
+	AssetID              string                 `json:"assetId"`
+	AssetVersion         string                 `json:"assetVersion"`
+	APIID                int64                  `json:"apiId"`
+	PolicyTemplateID     string                 `json:"policyTemplateId"`
+	ConfigurationData    map[string]interface{} `json:"configurationData"`
+}
+
 // Audit -
 type Audit struct {
 	Created AuditEntry `json:"created"`

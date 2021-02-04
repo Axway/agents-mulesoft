@@ -27,13 +27,12 @@ func (a *Agent) discoverAPIs() {
 		}
 
 		for _, asset := range assets {
-			externalAPI, err := a.getExternalAPI(&asset)
-			if err != nil {
-				log.Errorf("Error gathering information for \"%s(%d)\": %s", asset.Name, asset.ID, err.Error())
-				continue
-			}
-			if externalAPI != nil {
-				a.apiChan <- externalAPI
+			log.Debugf("Gathering details for %s(%d)", asset.AssetID, asset.ID)
+			svcDetails := a.getServiceDetails(&asset)
+			if svcDetails != nil {
+				for _, svc := range svcDetails {
+					a.apiChan <- svc
+				}
 			}
 		}
 
@@ -45,8 +44,31 @@ func (a *Agent) discoverAPIs() {
 	}
 }
 
-func (a *Agent) getExternalAPI(asset *anypoint.Asset) (*ServiceDetail, error) {
-	exchangeAsset, err := a.anypointClient.GetExchangeAsset(asset)
+func (a *Agent) getServiceDetails(asset *anypoint.Asset) []*ServiceDetail {
+	serviceDetails := []*ServiceDetail{}
+	for _, api := range asset.APIs {
+		serviceDetail, err := a.getServiceDetail(asset, &api)
+		if err != nil {
+			log.Errorf("Error gathering information for \"%s(%d)\": %s", asset.Name, asset.ID, err.Error())
+			continue
+		}
+		if serviceDetail != nil {
+			serviceDetails = append(serviceDetails, serviceDetail)
+		}
+	}
+	return serviceDetails
+}
+
+// getServiceDetail gets the ServiceDetail for the API asset.
+func (a *Agent) getServiceDetail(asset *anypoint.Asset, api *anypoint.API) (*ServiceDetail, error) {
+	// Single asset has multiple versions
+	policies, err := a.anypointClient.GetPolicies(api)
+	if err != nil {
+		return nil, err
+	}
+	authPolicy := a.getAuthPolicy(policies)
+
+	exchangeAsset, err := a.anypointClient.GetExchangeAsset(api)
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +80,7 @@ func (a *Agent) getExternalAPI(asset *anypoint.Asset) (*ServiceDetail, error) {
 
 	if exchangeFile == nil {
 		// SDK needs a spec
-		log.Debugf("No supported specification file found for asset %s (%d)", asset.Name, asset.ID)
+		log.Debugf("No supported specification file found for asset %s (%s)", api.AssetID, api.AssetVersion)
 		return nil, nil
 	}
 
@@ -67,9 +89,12 @@ func (a *Agent) getExternalAPI(asset *anypoint.Asset) (*ServiceDetail, error) {
 		return nil, err
 	}
 
-	specType, err := a.getSpecType(asset, exchangeFile, specContent)
+	specType, err := a.getSpecType(exchangeFile, specContent)
 	if err != nil {
 		return nil, err
+	}
+	if specType == "" {
+		return nil, fmt.Errorf("Unknown spec type for \"%s(%s)\"", api.AssetID, api.AssetVersion)
 	}
 
 	icon, iconContentType, err := a.anypointClient.GetExchangeAssetIcon(exchangeAsset)
@@ -78,12 +103,13 @@ func (a *Agent) getExternalAPI(asset *anypoint.Asset) (*ServiceDetail, error) {
 	}
 
 	return &ServiceDetail{
-		ID:               fmt.Sprint(asset.ID),
+		ID:               fmt.Sprint(api.ID),
 		Title:            asset.ExchangeAssetName,
-		APIName:          asset.AssetID,
+		APIName:          api.AssetID,
 		Stage:            a.stage, // Or perhaps it should be the asset api stage
 		APISpec:          specContent,
 		ResourceType:     specType,
+		AuthPolicy:       authPolicy,
 		Image:            icon,
 		ImageContentType: iconContentType,
 		Instances:        exchangeAsset.Instances,
@@ -108,7 +134,7 @@ func (a *Agent) getExchangeAssetSpecFile(asset *anypoint.ExchangeAsset) (*anypoi
 }
 
 // getSpecType determines the correct resource type for the asset.
-func (a *Agent) getSpecType(asset *anypoint.Asset, file *anypoint.ExchangeFile, specContent []byte) (string, error) {
+func (a *Agent) getSpecType(file *anypoint.ExchangeFile, specContent []byte) (string, error) {
 	if file.Classifier == "wsdl" {
 		return apic.Wsdl, nil
 	} else if specContent != nil {
@@ -123,6 +149,20 @@ func (a *Agent) getSpecType(asset *anypoint.Asset, file *anypoint.ExchangeFile, 
 			return apic.Oas3, nil
 		}
 	}
+	return "", nil
+}
 
-	return "", fmt.Errorf("Unknown spec type for \"%s(%d)\"", asset.Name, asset.ID)
+// getAuthPolicy gets the authentication policy type.
+func (a *Agent) getAuthPolicy(policies []anypoint.Policy) string {
+	if policies == nil || len(policies) == 0 {
+		return apic.Passthrough
+	}
+
+	for _, policy := range policies {
+		if policy.PolicyTemplateID == "client-id-enforcement" {
+			return apic.Apikey
+		}
+	}
+
+	return apic.Passthrough
 }

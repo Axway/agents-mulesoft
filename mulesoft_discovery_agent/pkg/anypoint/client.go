@@ -33,7 +33,8 @@ type Client interface {
 	GetEnvironmentByName(name string) (*Environment, error)
 
 	ListAssets(page *Page) ([]Asset, error)
-	GetExchangeAsset(asset *Asset) (*ExchangeAsset, error)
+	GetPolicies(api *API) ([]Policy, error)
+	GetExchangeAsset(api *API) (*ExchangeAsset, error)
 	GetExchangeAssetIcon(asset *ExchangeAsset) (icon string, contentType string, err error)
 	GetExchangeFileContent(file *ExchangeFile) (fileContent []byte, err error)
 }
@@ -207,10 +208,23 @@ func (c *anypointClient) ListAssets(page *Page) ([]Asset, error) {
 	return assetResult.Assets, err
 }
 
-// GetExchangeAsset creates the AssetDetail form the Asset.
-func (c *anypointClient) GetExchangeAsset(asset *Asset) (*ExchangeAsset, error) {
+// GetPolicies lists the API policies.
+func (c *anypointClient) GetPolicies(api *API) ([]Policy, error) {
+	var policies []Policy
+	url := fmt.Sprintf("%s/apimanager/api/v1/organizations/%s/environments/%s/apis/%d/policies", c.baseURL, c.auth.GetOrgID(), c.environment.ID, api.ID)
+	err := c.invokeJSONGet(url, nil, &policies)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return policies, err
+}
+
+// GetExchangeAsset creates the AssetDetail form the Asset API.
+func (c *anypointClient) GetExchangeAsset(api *API) (*ExchangeAsset, error) {
 	var exchangeAsset ExchangeAsset
-	url := fmt.Sprintf("%s/exchange/api/v2/assets/%s/%s", c.baseURL, asset.GroupID, asset.AssetID)
+	url := fmt.Sprintf("%s/exchange/api/v2/assets/%s/%s/%s", c.baseURL, api.GroupID, api.AssetID, api.AssetVersion)
 	err := c.invokeJSONGet(url, nil, &exchangeAsset)
 	if err != nil {
 		return nil, err
