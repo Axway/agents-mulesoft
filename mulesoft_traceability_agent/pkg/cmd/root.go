@@ -8,7 +8,6 @@ import (
 	libcmd "github.com/elastic/beats/v7/libbeat/cmd"
 	"github.com/elastic/beats/v7/libbeat/cmd/instance"
 
-	// CHANGE_HERE - Change the import path(s) below to reference packages correctly
 	"github.com/Axway/agents-mulesoft/mulesoft_traceability_agent/pkg/agent"
 	"github.com/Axway/agents-mulesoft/mulesoft_traceability_agent/pkg/config"
 )
@@ -31,11 +30,11 @@ func init() {
 	// The first parameter identifies the name of the yaml file that agent will look for to load the config
 	RootCmd = corecmd.NewCmd(
 		&cmd,
-		name,                        // Name of the agent and yaml config file
+		name,                               // Name of the agent and yaml config file
 		"Mule Anypoint Traceability Agent", // Agent description
-		initConfig,                  // Callback for initializing the agent config
-		run,                         // Callback for executing the agent
-		corecfg.TraceabilityAgent,   // Agent Type (Discovery or Traceability)
+		initConfig,                         // Callback for initializing the agent config
+		run,                                // Callback for executing the agent
+		corecfg.TraceabilityAgent,          // Agent Type (Discovery or Traceability)
 	)
 	config.AddMulesoftConfigProperties(RootCmd.GetProperties())
 
@@ -53,7 +52,7 @@ func run() error {
 func initConfig(centralConfig corecfg.CentralConfig) (interface{}, error) {
 
 	agentConfig := &config.AgentConfig{
-		CentralConfig: centralConfig,
+		CentralConfig:  centralConfig,
 		MulesoftConfig: config.ParseMulesoftConfig(RootCmd.GetProperties()),
 	}
 	config.SetConfig(agentConfig)

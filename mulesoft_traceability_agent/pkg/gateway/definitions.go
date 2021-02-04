@@ -29,11 +29,12 @@ type GwTrafficLogEntry struct {
 	OutboundTransaction GwTransaction `json:"outbound"`
 }
 
+// GenerateSample -
 func GenerateSample() *GwTrafficLogEntry {
 	return &GwTrafficLogEntry{
-		TraceID:             "123459",
-		APIName:             "SampleAPI2",
-		InboundTransaction:  GwTransaction{
+		TraceID: "123459",
+		APIName: "SampleAPI2",
+		InboundTransaction: GwTransaction{
 			ID:              "12233444",
 			SourceHost:      "fidoshouse.com",
 			SourcePort:      443,
