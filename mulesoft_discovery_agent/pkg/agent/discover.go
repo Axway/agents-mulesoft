@@ -105,7 +105,7 @@ func (a *Agent) getServiceDetail(asset *anypoint.Asset, api *anypoint.API) (*Ser
 	}
 
 	return &ServiceDetail{
-		ID:               fmt.Sprint(api.ID),
+		ID:               fmt.Sprint(api.AssetID),
 		Title:            asset.ExchangeAssetName,
 		APIName:          api.AssetID,
 		Stage:            a.stage, // Or perhaps it should be the asset api stage
