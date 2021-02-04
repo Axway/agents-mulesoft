@@ -229,7 +229,7 @@ func (c *anypointClient) GetExchangeAssetIcon(asset *ExchangeAsset) (string, str
 	}
 
 	contentType := ""
-	if val, exists := headers["content-type"]; exists {
+	if val, exists := headers["Content-Type"]; exists {
 		contentType = val[0]
 	}
 
