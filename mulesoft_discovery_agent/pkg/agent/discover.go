@@ -81,9 +81,9 @@ func (a *Agent) getServiceDetails(asset *anypoint.Asset) []*ServiceDetail {
 func (a *Agent) getServiceDetail(asset *anypoint.Asset, api *anypoint.API) (*ServiceDetail, error) {
 	checksum := a.checksum(asset) // Doing the asset not the API as the attribute is APIService level
 
-	if agent.IsAPIPublished(fmt.Sprint(asset.AssetID)) {
+	if agent.IsAPIPublished(fmt.Sprint(asset.ID)) {
 		// Check if changed....cheaply
-		publishedChecksum := agent.GetAttributeOnPublishedAPI(asset.AssetID, "checksum")
+		publishedChecksum := agent.GetAttributeOnPublishedAPI(fmt.Sprint(asset.ID), "checksum")
 		if checksum == publishedChecksum {
 			return nil, nil
 		}
@@ -134,7 +134,7 @@ func (a *Agent) getServiceDetail(asset *anypoint.Asset, api *anypoint.API) (*Ser
 	}
 
 	return &ServiceDetail{
-		ID:                fmt.Sprint(api.AssetID),
+		ID:                fmt.Sprint(asset.ID),
 		Title:             asset.ExchangeAssetName,
 		APIName:           api.AssetID,
 		Stage:             a.stage, // Or perhaps it should be the asset api stage
