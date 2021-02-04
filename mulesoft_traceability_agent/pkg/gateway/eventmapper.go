@@ -2,6 +2,8 @@ package gateway
 
 import (
 	"encoding/json"
+	"fmt"
+	"github.com/Axway/agents-mulesoft/mulesoft_traceability_agent/pkg/anypoint"
 	"net/http"
 	"strconv"
 	"time"
@@ -15,22 +17,18 @@ import (
 type EventMapper struct {
 }
 
-func (m *EventMapper) processMapping(gatewayTrafficLogEntry GwTrafficLogEntry) ([]*transaction.LogEvent, error) {
+func (m *EventMapper) processMapping(gatewayTrafficLogEntry anypoint.AnalyticsEvent) ([]*transaction.LogEvent, error) {
 	centralCfg := agent.GetCentralConfig()
 
 	eventTime := time.Now().Unix()
-	txID := gatewayTrafficLogEntry.TraceID
-	txEventID := gatewayTrafficLogEntry.InboundTransaction.ID
-	txDetails := gatewayTrafficLogEntry.InboundTransaction
-	transInboundLogEventLeg, err := m.createTransactionEvent(eventTime, txID, txDetails, txEventID, "", "Inbound")
+	txID := fmt.Sprintf("%s-%s", gatewayTrafficLogEntry.APIVersionID,gatewayTrafficLogEntry.MessageID);
+	txEventID := gatewayTrafficLogEntry.MessageID
+	transInboundLogEventLeg, err := m.createTransactionEvent(eventTime, txID, gatewayTrafficLogEntry, txEventID+"-leg0", "", "Inbound")
 	if err != nil {
 		return nil, err
 	}
 
-	txEventID = gatewayTrafficLogEntry.OutboundTransaction.ID
-	txParentEventID := gatewayTrafficLogEntry.InboundTransaction.ID
-	txDetails = gatewayTrafficLogEntry.OutboundTransaction
-	transOutboundLogEventLeg, err := m.createTransactionEvent(eventTime, txID, txDetails, txEventID, txParentEventID, "Outbound")
+	transOutboundLogEventLeg, err := m.createTransactionEvent(eventTime, txID, gatewayTrafficLogEntry, txEventID+"-leg1", txEventID+"-leg0", "Outbound")
 	if err != nil {
 		return nil, err
 	}
@@ -74,17 +72,31 @@ func (m *EventMapper) buildHeaders(headers map[string]string) string {
 	return string(jsonHeader)
 }
 
-func (m *EventMapper) createTransactionEvent(eventTime int64, txID string, txDetails GwTransaction, eventID, parentEventID, direction string) (*transaction.LogEvent, error) {
+func (m *EventMapper) createTransactionEvent(eventTime int64, txID string, txDetails anypoint.AnalyticsEvent, eventID, parentEventID, direction string) (*transaction.LogEvent, error) {
+/*
+		ID              string  `json:"id"`
+	SourceHost      string  `json:"srcHost"`
+	SourcePort      int     `json:"srcPort"`
+	DesHost         string  `json:"destHost"`
+	DestPort        int     `json:"destPort"`
+	URI             string  `json:"uri"`
+	Method          string  `json:"method"`
+	StatusCode      int     `json:"statusCode"`
+	RequestHeaders  Headers `json:"requestHeaders"`
+	ResponseHeaders Headers `json:"responseHeaders"`
+	RequestBytes    int     `json:"requestByte"`
+	ResponseBytes   int     `json:"responseByte"`
 
+*/
 	httpProtocolDetails, err := transaction.NewHTTPProtocolBuilder().
-		SetURI(txDetails.URI).
-		SetMethod(txDetails.Method).
+		SetURI(fmt.Sprintf("https://mulepoop%s",txDetails.ResourcePath)).
+		SetMethod(txDetails.Verb).
 		SetStatus(txDetails.StatusCode, http.StatusText(txDetails.StatusCode)).
-		SetHost(txDetails.SourceHost).
-		SetHeaders(m.buildHeaders(txDetails.RequestHeaders), m.buildHeaders(txDetails.ResponseHeaders)).
-		SetByteLength(txDetails.RequestBytes, txDetails.ResponseBytes).
-		SetRemoteAddress("", txDetails.DesHost, txDetails.DestPort).
-		SetLocalAddress(txDetails.SourceHost, txDetails.SourcePort).
+		SetHost(txDetails.ClientIP).
+		//SetHeaders(m.buildHeaders(txDetails.RequestHeaders), m.buildHeaders(txDetails.ResponseHeaders)).
+		SetByteLength(txDetails.RequestSize, txDetails.ResponseSize).
+		//SetRemoteAddress("", txDetails.DesHost, txDetails.DestPort).
+		//SetLocalAddress(txDetails.SourceHost, txDetails.SourcePort).
 		Build()
 	if err != nil {
 		return nil, err
@@ -95,19 +107,19 @@ func (m *EventMapper) createTransactionEvent(eventTime int64, txID string, txDet
 		SetTransactionID(txID).
 		SetID(eventID).
 		SetParentID(parentEventID).
-		SetSource(txDetails.SourceHost + ":" + strconv.Itoa(txDetails.SourcePort)).
-		SetDestination(txDetails.DesHost + ":" + strconv.Itoa(txDetails.DestPort)).
+		SetSource(txDetails.ClientIP+":0").
+		SetDestination("mulepoop:443").
 		SetDirection(direction).
 		SetStatus(m.getTransactionEventStatus(txDetails.StatusCode)).
 		SetProtocolDetail(httpProtocolDetails).
 		Build()
 }
 
-func (m *EventMapper) createSummaryEvent(eventTime int64, txID string, gatewayTrafficLogEntry GwTrafficLogEntry, teamID string) (*transaction.LogEvent, error) {
-	statusCode := gatewayTrafficLogEntry.InboundTransaction.StatusCode
-	method := gatewayTrafficLogEntry.InboundTransaction.Method
-	uri := gatewayTrafficLogEntry.InboundTransaction.URI
-	host := gatewayTrafficLogEntry.InboundTransaction.SourceHost
+func (m *EventMapper) createSummaryEvent(eventTime int64, txID string, gatewayTrafficLogEntry anypoint.AnalyticsEvent, teamID string) (*transaction.LogEvent, error) {
+	statusCode := gatewayTrafficLogEntry.StatusCode
+	method := gatewayTrafficLogEntry.Verb
+	uri := 	fmt.Sprintf("https://mulepoop%s",gatewayTrafficLogEntry.ResourcePath)
+	host := gatewayTrafficLogEntry.ClientIP
 
 	return transaction.NewTransactionSummaryBuilder().
 		SetTimestamp(eventTime).

@@ -302,7 +302,7 @@ func (c *anypointClient) GetAnalyticsWindow() ([]AnalyticsEvent, error) {
 	//4c161832-f4c0-4ea6-ad59-63a44354858b
 	query := map[string]string{
 		"format": "json",
-		"duration": "1d",
+		"duration": "5m",
 		"fields": "Application Name.Browser.City.Client IP.Continent.Country.Hardware Platform.Message ID.OS Family.OS Major Version.OS Minor Version.OS Version.Postal Code.Request Outcome.Request Size.Resource Path.Response Size.Response Time.Status Code.Timezone.User Agent Name.User Agent Version.Verb.Violated Policy Name",
 	}
 	headers := map[string]string{

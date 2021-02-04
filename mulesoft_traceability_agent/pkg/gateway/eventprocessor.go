@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"encoding/json"
+	"github.com/Axway/agents-mulesoft/mulesoft_traceability_agent/pkg/anypoint"
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/transaction"
@@ -69,7 +70,7 @@ func (p *EventProcessor) Process(events []publisher.Event) []publisher.Event {
 
 // ProcessRaw - process the received log entry and returns the event to be published to AMPLIFY ingestion service
 func (p *EventProcessor) ProcessRaw(rawEventData []byte) []beat.Event {
-	var gatewayTrafficLogEntry GwTrafficLogEntry
+	var gatewayTrafficLogEntry anypoint.AnalyticsEvent
 	err := json.Unmarshal(rawEventData, &gatewayTrafficLogEntry)
 	if err != nil {
 		log.Error(err.Error())
