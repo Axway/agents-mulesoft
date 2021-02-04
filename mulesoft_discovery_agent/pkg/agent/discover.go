@@ -89,7 +89,7 @@ func (a *Agent) getServiceDetail(asset *anypoint.Asset, api *anypoint.API) (*Ser
 		}
 		log.Debugf("Change detected in published asset %s(%d)", asset.AssetID, api.ID)
 	}
-	log.Info("Gathering details for %s(%d)", asset.AssetID, api.ID)
+	log.Infof("Gathering details for %s(%d)", asset.AssetID, api.ID)
 
 	// Single asset has multiple versions
 	policies, err := a.anypointClient.GetPolicies(api)
