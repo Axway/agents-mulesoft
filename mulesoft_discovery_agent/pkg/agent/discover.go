@@ -82,7 +82,7 @@ func (a *Agent) getServiceDetails(asset *anypoint.Asset) []*ServiceDetail {
 func (a *Agent) getServiceDetail(asset *anypoint.Asset, api *anypoint.API) (*ServiceDetail, error) {
 	// Filtering
 	if !a.shouldDiscoverAPI(api) {
-		log.Infof("Skipping %s(%d)", asset.AssetID, asset.ID)
+		// Skip
 		return nil, nil
 	}
 
