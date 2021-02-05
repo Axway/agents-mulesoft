@@ -54,7 +54,7 @@ func (a *Agent) discoverAPIs() {
 		}
 
 		for _, asset := range assets {
-			key := fmt.Sprintf("%d-%s", asset.ID, a.stage)
+			key := a.formatCacheKey(fmt.Sprint(asset.ID), a.stage)
 			// Updating the existing cache to avoid racing while publishing
 			a.assetCache.Set(key, asset)
 			// Creating a clean cache to handle removed apis

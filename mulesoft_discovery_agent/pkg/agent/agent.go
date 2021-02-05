@@ -106,7 +106,7 @@ func (a *Agent) Run() {
 // performs cleanup on the API Central environment. The asset cache is populated by the
 // discovery loop.
 func (a *Agent) validateAPI(apiID, stageName string) bool {
-	asset, err := a.assetCache.Get(fmt.Sprintf("%s-%s", apiID, stageName))
+	asset, err := a.assetCache.Get(a.formatCacheKey(apiID, stageName))
 	if err != nil {
 		log.Warnf("Unable to validate API: %s", err.Error())
 		// If we can't validate it exists then assume it does until known otherwise.
@@ -126,4 +126,9 @@ func cleanTags(tagCSV string) []string {
 		}
 	}
 	return clean
+}
+
+// formatCacheKey ensure consistent naming of asset cache key
+func (a *Agent) formatCacheKey(apiID, stageName string) string {
+	return fmt.Sprintf("%s-%s", apiID, stageName)
 }
