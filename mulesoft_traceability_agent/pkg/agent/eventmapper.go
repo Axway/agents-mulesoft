@@ -84,14 +84,14 @@ func (m *EventMapper) buildHeaders(headers map[string]string) string {
 
 func (m *EventMapper) createTransactionEvent(eventTime int64, txID string, txDetails anypoint.AnalyticsEvent, eventID, parentEventID, direction string) (*transaction.LogEvent, error) {
 	//TODO - Slim pickings on header data
-	req:=map[string]string{"User-AgentName": txDetails.UserAgentName,}
-	res:=map[string]string{"Request-Outcome": txDetails.RequestOutcome}
+	req := map[string]string{"User-AgentName": txDetails.UserAgentName}
+	res := map[string]string{"Request-Outcome": txDetails.RequestOutcome}
 	httpProtocolDetails, err := transaction.NewHTTPProtocolBuilder().
-		SetURI(fmt.Sprintf("https://mulepoop%s", txDetails.ResourcePath)).
+		SetURI(txDetails.ResourcePath).
 		SetMethod(txDetails.Verb).
 		SetStatus(txDetails.StatusCode, http.StatusText(txDetails.StatusCode)).
 		SetHost(txDetails.ClientIP).
-		SetHeaders(	m.buildHeaders(req),	m.buildHeaders(res)).
+		SetHeaders(m.buildHeaders(req), m.buildHeaders(res)).
 		SetByteLength(txDetails.RequestSize, txDetails.ResponseSize).
 		//SetRemoteAddress("", txDetails.DesHost, txDetails.DestPort).
 		//SetLocalAddress(txDetails.SourceHost, txDetails.SourcePort).
@@ -116,7 +116,7 @@ func (m *EventMapper) createTransactionEvent(eventTime int64, txID string, txDet
 func (m *EventMapper) createSummaryEvent(eventTime int64, txID string, anypointAnalyticsEvent anypoint.AnalyticsEvent, teamID string) (*transaction.LogEvent, error) {
 	statusCode := anypointAnalyticsEvent.StatusCode
 	method := anypointAnalyticsEvent.Verb
-	uri := fmt.Sprintf("https://mulepoop%s", anypointAnalyticsEvent.ResourcePath)
+	uri := anypointAnalyticsEvent.ResourcePath // TODO
 	host := anypointAnalyticsEvent.ClientIP
 
 	res, _ := agent.GetAPICache().Get(anypointAnalyticsEvent.APIVersionID)
