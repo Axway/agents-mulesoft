@@ -130,6 +130,6 @@ func (m *EventMapper) createSummaryEvent(eventTime int64, txID string, gatewayTr
 		// If the API is published to Central as unified catalog item/API service, se the Proxy details with the API definition
 		// The Proxy.Name represents the name of the API
 		// The Proxy.ID should be of format "remoteApiId_<ID Of the API on remote gateway>". Use transaction.FormatProxyID(<ID Of the API on remote gateway>) to get the formatted value.
-		SetProxy("unknown", "", 0).
+		SetProxy(transaction.FormatApplicationID(gatewayTrafficLogEntry.APIVersionID), "mule", 0).
 		Build()
 }
