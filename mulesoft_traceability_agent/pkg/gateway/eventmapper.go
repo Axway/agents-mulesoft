@@ -3,10 +3,11 @@ package gateway
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/Axway/agents-mulesoft/mulesoft_traceability_agent/pkg/anypoint"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/Axway/agents-mulesoft/mulesoft_traceability_agent/pkg/anypoint"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/transaction"
@@ -21,7 +22,7 @@ func (m *EventMapper) processMapping(gatewayTrafficLogEntry anypoint.AnalyticsEv
 	centralCfg := agent.GetCentralConfig()
 
 	eventTime := time.Now().Unix()
-	txID := fmt.Sprintf("%s-%s", gatewayTrafficLogEntry.APIVersionID,gatewayTrafficLogEntry.MessageID);
+	txID := fmt.Sprintf("%s-%s", gatewayTrafficLogEntry.APIVersionID, gatewayTrafficLogEntry.MessageID)
 	txEventID := gatewayTrafficLogEntry.MessageID
 	transInboundLogEventLeg, err := m.createTransactionEvent(eventTime, txID, gatewayTrafficLogEntry, txEventID+"-leg0", "", "Inbound")
 	if err != nil {
@@ -73,23 +74,23 @@ func (m *EventMapper) buildHeaders(headers map[string]string) string {
 }
 
 func (m *EventMapper) createTransactionEvent(eventTime int64, txID string, txDetails anypoint.AnalyticsEvent, eventID, parentEventID, direction string) (*transaction.LogEvent, error) {
-/*
-		ID              string  `json:"id"`
-	SourceHost      string  `json:"srcHost"`
-	SourcePort      int     `json:"srcPort"`
-	DesHost         string  `json:"destHost"`
-	DestPort        int     `json:"destPort"`
-	URI             string  `json:"uri"`
-	Method          string  `json:"method"`
-	StatusCode      int     `json:"statusCode"`
-	RequestHeaders  Headers `json:"requestHeaders"`
-	ResponseHeaders Headers `json:"responseHeaders"`
-	RequestBytes    int     `json:"requestByte"`
-	ResponseBytes   int     `json:"responseByte"`
+	/*
+			ID              string  `json:"id"`
+		SourceHost      string  `json:"srcHost"`
+		SourcePort      int     `json:"srcPort"`
+		DesHost         string  `json:"destHost"`
+		DestPort        int     `json:"destPort"`
+		URI             string  `json:"uri"`
+		Method          string  `json:"method"`
+		StatusCode      int     `json:"statusCode"`
+		RequestHeaders  Headers `json:"requestHeaders"`
+		ResponseHeaders Headers `json:"responseHeaders"`
+		RequestBytes    int     `json:"requestByte"`
+		ResponseBytes   int     `json:"responseByte"`
 
-*/
+	*/
 	httpProtocolDetails, err := transaction.NewHTTPProtocolBuilder().
-		SetURI(fmt.Sprintf("https://mulepoop%s",txDetails.ResourcePath)).
+		SetURI(fmt.Sprintf("https://mulepoop%s", txDetails.ResourcePath)).
 		SetMethod(txDetails.Verb).
 		SetStatus(txDetails.StatusCode, http.StatusText(txDetails.StatusCode)).
 		SetHost(txDetails.ClientIP).
@@ -107,7 +108,7 @@ func (m *EventMapper) createTransactionEvent(eventTime int64, txID string, txDet
 		SetTransactionID(txID).
 		SetID(eventID).
 		SetParentID(parentEventID).
-		SetSource(txDetails.ClientIP+":0").
+		SetSource(txDetails.ClientIP + ":0").
 		SetDestination("mulepoop:443").
 		SetDirection(direction).
 		SetStatus(m.getTransactionEventStatus(txDetails.StatusCode)).
@@ -118,7 +119,7 @@ func (m *EventMapper) createTransactionEvent(eventTime int64, txID string, txDet
 func (m *EventMapper) createSummaryEvent(eventTime int64, txID string, gatewayTrafficLogEntry anypoint.AnalyticsEvent, teamID string) (*transaction.LogEvent, error) {
 	statusCode := gatewayTrafficLogEntry.StatusCode
 	method := gatewayTrafficLogEntry.Verb
-	uri := 	fmt.Sprintf("https://mulepoop%s",gatewayTrafficLogEntry.ResourcePath)
+	uri := fmt.Sprintf("https://mulepoop%s", gatewayTrafficLogEntry.ResourcePath)
 	host := gatewayTrafficLogEntry.ClientIP
 
 	return transaction.NewTransactionSummaryBuilder().
@@ -130,6 +131,6 @@ func (m *EventMapper) createSummaryEvent(eventTime int64, txID string, gatewayTr
 		// If the API is published to Central as unified catalog item/API service, se the Proxy details with the API definition
 		// The Proxy.Name represents the name of the API
 		// The Proxy.ID should be of format "remoteApiId_<ID Of the API on remote gateway>". Use transaction.FormatProxyID(<ID Of the API on remote gateway>) to get the formatted value.
-		SetProxy(transaction.FormatApplicationID(gatewayTrafficLogEntry.APIVersionID), "mule", 0).
+		SetProxy(transaction.FormatProxyID(gatewayTrafficLogEntry.APIVersionID), gatewayTrafficLogEntry.APIName, 1).
 		Build()
 }
