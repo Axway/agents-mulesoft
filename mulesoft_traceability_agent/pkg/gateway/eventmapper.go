@@ -88,12 +88,15 @@ func (m *EventMapper) createTransactionEvent(eventTime int64, txID string, txDet
 	ResponseBytes   int     `json:"responseByte"`
 
 */
+	//TODO - Slim pickings on header data
+	req:=map[string]string{"User-AgentName": txDetails.UserAgentName,}
+	res:=map[string]string{"Request-Outcome": txDetails.RequestOutcome}
 	httpProtocolDetails, err := transaction.NewHTTPProtocolBuilder().
 		SetURI(fmt.Sprintf("https://mulepoop%s",txDetails.ResourcePath)).
 		SetMethod(txDetails.Verb).
 		SetStatus(txDetails.StatusCode, http.StatusText(txDetails.StatusCode)).
 		SetHost(txDetails.ClientIP).
-		//SetHeaders(m.buildHeaders(txDetails.RequestHeaders), m.buildHeaders(txDetails.ResponseHeaders)).
+		SetHeaders(	m.buildHeaders(req),	m.buildHeaders(res)).
 		SetByteLength(txDetails.RequestSize, txDetails.ResponseSize).
 		//SetRemoteAddress("", txDetails.DesHost, txDetails.DestPort).
 		//SetLocalAddress(txDetails.SourceHost, txDetails.SourcePort).
