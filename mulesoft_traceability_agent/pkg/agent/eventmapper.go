@@ -106,7 +106,7 @@ func (m *EventMapper) createTransactionEvent(eventTime int64, txID string, txDet
 		SetID(eventID).
 		SetParentID(parentEventID).
 		SetSource(txDetails.ClientIP + ":0").
-		SetDestination("mulepoop:443").
+		SetDestination(txDetails.APIName). // TODO
 		SetDirection(direction).
 		SetStatus(m.getTransactionEventStatus(txDetails.StatusCode)).
 		SetProtocolDetail(httpProtocolDetails).
