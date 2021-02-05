@@ -102,11 +102,15 @@ func (a *Agent) Run() {
 	}
 }
 
+// validateAPI checks that the API still exists on the dataplane. If it doesn't the agent
+// performs cleanup on the API Central environment. The asset cache is populated by the
+// discovery loop.
 func (a *Agent) validateAPI(apiID, stageName string) bool {
 	asset, err := a.assetCache.Get(fmt.Sprintf("%s-%s", apiID, stageName))
 	if err != nil {
 		log.Warnf("Unable to validate API: %s", err.Error())
-		return false
+		// If we can't validate it exists then assume it does until known otherwise.
+		return true
 	}
 	return asset != nil
 }
