@@ -33,8 +33,8 @@ type MulesoftConfig struct {
 	corecfg.IResourceConfigCallback
 	AnypointExchangeURL string            `config:"anypointExchangeUrl"`
 	PollInterval        time.Duration     `config:"pollInterval"`
+	DiscoveryTags       string            `config:"discoveryTags"`
 	DiscoveryIgnoreTags string            `config:"discoveryIgnoreTags"`
-	Filter              string            `config:"filter"`
 	Environment         string            `config:"environment"`
 	Username            string            `config:"auth.username"`
 	Password            string            `config:"auth.password"`
@@ -86,6 +86,8 @@ const (
 	pathAnypointExchangeURL   = "mulesoft.anypointExchangeUrl"
 	pathPollInterval          = "mulesoft.pollInterval"
 	pathEnvironment           = "mulesoft.environment"
+	pathDiscoveryTags         = "mulesoft.discoveryTags"
+	pathDiscoveryIgnoreTags   = "mulesoft.discoveryIgnoreTags"
 	pathAuthUsername          = "mulesoft.auth.username"
 	pathAuthPassword          = "mulesoft.auth.password"
 	pathAuthLifetime          = "mulesoft.auth.lifetime"
@@ -105,6 +107,8 @@ func AddMulesoftConfigProperties(props properties.Properties) {
 	props.AddStringProperty(pathAuthUsername, "", "Mulesoft username")
 	props.AddStringProperty(pathAuthPassword, "", "Mulesoft password")
 	props.AddDurationProperty(pathAuthLifetime, 60*time.Minute, "Mulesoft session lifetime")
+	props.AddStringProperty(pathDiscoveryTags, "", "APIs containing any of these tags are selected for discovery.")
+	props.AddStringProperty(pathDiscoveryIgnoreTags, "", "APIs containing any of these tags are ignored. Takes precedence over "+pathDiscoveryIgnoreTags)
 
 	// ssl properties and command flags
 	props.AddStringSliceProperty(pathSSLNextProtos, []string{}, "List of supported application level protocols, comma separated")
@@ -123,6 +127,8 @@ func ParseMulesoftConfig(props properties.Properties) *MulesoftConfig {
 		Username:            props.StringPropertyValue(pathAuthUsername),
 		Password:            props.StringPropertyValue(pathAuthPassword),
 		SessionLifetime:     props.DurationPropertyValue(pathAuthLifetime),
+		DiscoveryTags:       props.StringPropertyValue(pathDiscoveryTags),
+		DiscoveryIgnoreTags: props.StringPropertyValue(pathDiscoveryIgnoreTags),
 		TLS: &corecfg.TLSConfiguration{
 			NextProtos:         props.StringSlicePropertyValue(pathSSLNextProtos),
 			InsecureSkipVerify: props.BoolPropertyValue(pathSSLInsecureSkipVerify),

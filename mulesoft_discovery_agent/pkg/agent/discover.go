@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
@@ -79,6 +80,12 @@ func (a *Agent) getServiceDetails(asset *anypoint.Asset) []*ServiceDetail {
 
 // getServiceDetail gets the ServiceDetail for the API asset.
 func (a *Agent) getServiceDetail(asset *anypoint.Asset, api *anypoint.API) (*ServiceDetail, error) {
+	// Filtering
+	if !a.shouldDiscoverAPI(api) {
+		// Skip
+		return nil, nil
+	}
+
 	checksum := a.checksum(asset) // Doing the asset not the API as the attribute is APIService level
 
 	if agent.IsAPIPublished(fmt.Sprint(asset.ID)) {
@@ -146,6 +153,35 @@ func (a *Agent) getServiceDetail(asset *anypoint.Asset, api *anypoint.API) (*Ser
 		Instances:         exchangeAsset.Instances,
 		ServiceAttributes: map[string]string{"checksum": checksum},
 	}, nil
+}
+
+// shouldDiscoverAPI - callback used determine if the API should be pushed to Central or not
+func (a *Agent) shouldDiscoverAPI(api *anypoint.API) bool {
+	if a.doesAPIContainAnyMatchingTag(a.discoveryIgnoreTags, api) {
+		return false // ignore
+	}
+
+	if len(a.discoveryTags) > 0 {
+		if !a.doesAPIContainAnyMatchingTag(a.discoveryTags, api) {
+			return false // ignore
+		}
+	}
+	return true
+}
+
+// doesAPIContainAnyMatchingTag checks if the API has any of the tags
+func (a *Agent) doesAPIContainAnyMatchingTag(tags []string, api *anypoint.API) bool {
+	apiTags := api.Tags
+
+	for _, apiTag := range apiTags {
+		apiTag = strings.ToLower(apiTag)
+		for _, tag := range tags {
+			if tag == apiTag {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // getExchangeAssetSpecFile gets the file entry for the Assets spec.
