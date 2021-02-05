@@ -138,6 +138,7 @@ func (m *EventMapper) createSummaryEvent(eventTime int64, txID string, anypointA
 		SetTimestamp(eventTime).
 		SetTransactionID(txID).
 		SetStatus(m.getTransactionSummaryStatus(statusCode), strconv.Itoa(statusCode)).
+		SetDuration(anypointAnalyticsEvent.ResponseTime).
 		SetTeam(teamID).
 		SetEntryPoint("http", method, uri, host).
 		SetProxy(transaction.FormatProxyID(anypointAnalyticsEvent.APIVersionID), resInstance.ResourceMeta.Title, 1).
