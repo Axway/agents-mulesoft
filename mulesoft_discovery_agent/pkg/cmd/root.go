@@ -12,8 +12,6 @@ import (
 // RootCmd - Agent root command
 var RootCmd corecmd.AgentRootCmd
 
-// var mulesoftConfig *config.MulesoftConfig
-
 func init() {
 	// Create new root command with callbacks to initialize the agent config and command execution.
 	// The first parameter identifies the name of the yaml file that agent will look for to load the config
@@ -24,13 +22,11 @@ func init() {
 		run,                        // Callback for executing the agent
 		corecfg.DiscoveryAgent,     // Agent Type (Discovery or Traceability)
 	)
-
 	config.AddMulesoftConfigProperties(RootCmd.GetProperties())
-
 	RootCmd.AddCommand(service.GenServiceCmd("pathConfig"))
 }
 
-// Callback that agent will call to process the execution
+// run Callback that agent will call to process the execution
 func run() error {
 	discoveryAgent, err := agent.New(nil)
 	if err != nil {
@@ -45,12 +41,9 @@ func run() error {
 	return nil
 }
 
-// Callback that agent will call to initialize the config. CentralConfig is parsed by Agent SDK
+// initConfig Callback that agent will call to initialize the config. CentralConfig is parsed by Agent SDK
 // and passed to the callback allowing the agent code to access the central config
 func initConfig(centralConfig corecfg.CentralConfig) (interface{}, error) {
-	//c := centralConfig.(*corecfg.CentralConfiguration)
-	// notify.SetSubscriptionConfig(c.SubscriptionConfiguration)
-
 	// default the data plane name
 	if centralConfig.GetDataPlaneName() == "" {
 		centralConfig.SetDataPlaneName("Mulesoft")

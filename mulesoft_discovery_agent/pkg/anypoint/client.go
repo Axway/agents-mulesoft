@@ -55,8 +55,6 @@ func NewClient(mulesoftConfig *config.MulesoftConfig) Client {
 	client := &anypointClient{}
 	client.OnConfigChange(mulesoftConfig)
 
-	// TODO
-
 	// Register the healthcheck
 	hc.RegisterHealthcheck("Mulesoft Anypoint Exchange", "mulesoft", client.healthcheck)
 
@@ -87,14 +85,26 @@ func (c *anypointClient) OnConfigChange(mulesoftConfig *config.MulesoftConfig) {
 	}
 }
 
-// healthcheck performs healthcheck
+// healthcheck performs Mulesoft healthcheck.
 func (c *anypointClient) healthcheck(name string) (status *hc.Status) {
 	// Create the default status
 	status = &hc.Status{
 		Result: hc.OK,
 	}
 
-	// TODO: Implement gateway healthchecks
+	user, err := c.GetCurrentUser()
+	if err != nil {
+		status = &hc.Status{
+			Result:  hc.FAIL,
+			Details: fmt.Sprintf("%s Failed. Unable to connect to Mulesoft, check Mulesoft configuration. %s", name, err.Error()),
+		}
+	}
+	if user == nil {
+		status = &hc.Status{
+			Result:  hc.FAIL,
+			Details: fmt.Sprintf("%s Failed. Unable to connect to Mulesoft, check Mulesoft configuration.", name),
+		}
+	}
 
 	return status
 }
@@ -146,6 +156,11 @@ func (c *anypointClient) GetAccessToken() (string, *User, time.Duration, error) 
 }
 
 // GetCurrentUser returns the current user.
+func (c *anypointClient) GetCurrentUser() (*User, error) {
+	return c.getCurrentUser(c.auth.GetToken())
+}
+
+// getCurrentUser returns the current user. Used internally during authentication
 func (c *anypointClient) getCurrentUser(token string) (*User, error) {
 	headers := map[string]string{
 		"Authorization": "Bearer " + token,
@@ -166,7 +181,7 @@ func (c *anypointClient) getCurrentUser(token string) (*User, error) {
 	return &user.User, nil
 }
 
-// GetEnvironmentByName -
+// GetEnvironmentByName gets the Mulesoft environment with the specified name.
 func (c *anypointClient) GetEnvironmentByName(name string) (*Environment, error) {
 	headers := map[string]string{
 		"Authorization": "Bearer " + c.auth.GetToken(),
@@ -250,6 +265,8 @@ func (c *anypointClient) GetExchangeAssetIcon(asset *ExchangeAsset) (string, str
 	return base64.StdEncoding.EncodeToString([]byte(iconBuffer)), contentType, nil
 }
 
+// GetExchangeFileContent download the file from the ExternalLink reference. If the file is a zip file
+// and thre is a MainFile set then the content of the MainFile is returned.
 func (c *anypointClient) GetExchangeFileContent(file *ExchangeFile) (fileContent []byte, err error) {
 	fileContent, _, err = c.invokeGet(file.ExternalLink)
 

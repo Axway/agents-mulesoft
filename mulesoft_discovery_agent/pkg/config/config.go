@@ -11,12 +11,12 @@ import (
 
 var config *AgentConfig
 
-// SetConfig -
+// SetConfig sets the global AgentConfig reference.
 func SetConfig(newConfig *AgentConfig) {
 	config = newConfig
 }
 
-// GetConfig -
+// GetConfig gets the AgentConfig
 func GetConfig() *AgentConfig {
 	return config
 }
@@ -27,7 +27,7 @@ type AgentConfig struct {
 	MulesoftConfig *MulesoftConfig       `config:"mulesoft"`
 }
 
-// MulesoftConfig - represents the config for gateway
+// MulesoftConfig - represents the config for the Mulesoft gateway
 type MulesoftConfig struct {
 	corecfg.IConfigValidator
 	corecfg.IResourceConfigCallback
@@ -78,7 +78,7 @@ func (c *MulesoftConfig) ValidateCfg() (err error) {
 
 // ApplyResources - Applies the agent and dataplane resource to config
 func (c *MulesoftConfig) ApplyResources(dataplaneResource *v1.ResourceInstance, agentResource *v1.ResourceInstance) error {
-	// TODO: Extract config from SaaS model
+	// Currently there is not dataplane agent configuration for mulesoft.
 	return nil
 }
 
@@ -104,18 +104,18 @@ func AddMulesoftConfigProperties(props properties.Properties) {
 	props.AddStringProperty(pathAnypointExchangeURL, "https://anypoint.mulesoft.com", "Mulesoft Anypoint Exchange URL.")
 	props.AddDurationProperty(pathPollInterval, 30*time.Second, "The interval at which Mulesoft is checked for updates.")
 	props.AddStringProperty(pathEnvironment, "", "Mulesoft Anypoint environment.")
-	props.AddStringProperty(pathAuthUsername, "", "Mulesoft username")
-	props.AddStringProperty(pathAuthPassword, "", "Mulesoft password")
-	props.AddDurationProperty(pathAuthLifetime, 60*time.Minute, "Mulesoft session lifetime")
+	props.AddStringProperty(pathAuthUsername, "", "Mulesoft username.")
+	props.AddStringProperty(pathAuthPassword, "", "Mulesoft password.")
+	props.AddDurationProperty(pathAuthLifetime, 60*time.Minute, "Mulesoft session lifetime.")
 	props.AddStringProperty(pathDiscoveryTags, "", "APIs containing any of these tags are selected for discovery.")
-	props.AddStringProperty(pathDiscoveryIgnoreTags, "", "APIs containing any of these tags are ignored. Takes precedence over "+pathDiscoveryIgnoreTags)
+	props.AddStringProperty(pathDiscoveryIgnoreTags, "", "APIs containing any of these tags are ignored. Takes precedence over "+pathDiscoveryIgnoreTags+".")
 
 	// ssl properties and command flags
-	props.AddStringSliceProperty(pathSSLNextProtos, []string{}, "List of supported application level protocols, comma separated")
-	props.AddBoolProperty(pathSSLInsecureSkipVerify, false, "Controls whether a client verifies the server's certificate chain and host name")
-	props.AddStringSliceProperty(pathSSLCipherSuites, corecfg.TLSDefaultCipherSuitesStringSlice(), "List of supported cipher suites, comma separated")
-	props.AddStringProperty(pathSSLMinVersion, corecfg.TLSDefaultMinVersionString(), "Minimum acceptable SSL/TLS protocol version")
-	props.AddStringProperty(pathSSLMaxVersion, "0", "Maximum acceptable SSL/TLS protocol version")
+	props.AddStringSliceProperty(pathSSLNextProtos, []string{}, "List of supported application level protocols, comma separated.")
+	props.AddBoolProperty(pathSSLInsecureSkipVerify, false, "Controls whether a client verifies the server's certificate chain and host name.")
+	props.AddStringSliceProperty(pathSSLCipherSuites, corecfg.TLSDefaultCipherSuitesStringSlice(), "List of supported cipher suites, comma separated.")
+	props.AddStringProperty(pathSSLMinVersion, corecfg.TLSDefaultMinVersionString(), "Minimum acceptable SSL/TLS protocol version.")
+	props.AddStringProperty(pathSSLMaxVersion, "0", "Maximum acceptable SSL/TLS protocol version.")
 }
 
 // ParseMulesoftConfig - parse the props and create an Mulesoft Configuration structure

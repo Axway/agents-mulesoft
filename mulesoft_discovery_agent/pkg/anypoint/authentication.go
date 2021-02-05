@@ -39,10 +39,12 @@ func NewAuth(client Client) (Auth, error) {
 	return a, nil
 }
 
+// Stop terminates the background access token refresh.
 func (a *auth) Stop() {
 	a.stopChan <- struct{}{}
 }
 
+// startRefreshToken starts the background token refresh.
 func (a *auth) startRefreshToken(lifetime time.Duration) {
 	if lifetime <= 0 {
 		return
