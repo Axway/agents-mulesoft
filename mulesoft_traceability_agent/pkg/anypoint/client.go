@@ -3,6 +3,7 @@ package anypoint
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -42,6 +43,7 @@ type anypointClient struct {
 	lifetime       time.Duration
 	apiClient      coreapi.Client
 	auth           Auth
+	environment    *Environment
 	cache          cache.Cache
 }
 
@@ -50,8 +52,6 @@ func NewClient(mulesoftConfig *config.MulesoftConfig) Client {
 
 	client := &anypointClient{}
 	client.OnConfigChange(mulesoftConfig)
-	// TODO add to config
-	client.cache = loadOrCreateCache("/tmp/anypoint.cache")
 
 	// Register the healthcheck
 	hc.RegisterHealthcheck("Mulesoft Anypoint Exchange", "mulesoft", client.healthcheck)
@@ -59,15 +59,8 @@ func NewClient(mulesoftConfig *config.MulesoftConfig) Client {
 	return client
 }
 
-// GetAnalyticsWindow lists the managed assets in Mulesoft: https://anypoint.mulesoft.com/exchange/portals/anypoint-platform/f1e97bc6-315a-4490-82a7-23abe036327a.anypoint-platform/exchange-experience-api/minor/2.0/console/method/%231431/
+// GetAnalyticsWindow lists the managed assets in Mulesoft: https://docs.qax.mulesoft.com/api-manager/2.x/analytics-event-api
 func (c *anypointClient) GetAnalyticsWindow() ([]AnalyticsEvent, error) {
-
-	//4c161832-f4c0-4ea6-ad59-63a44354858b
-	// TODO add to config
-	/*
-		client.cache = loadOrCreateCache("/tmp/anypoint.cache")
-	*/
-
 	startDate, endDate := c.getLastRun()
 	query := map[string]string{
 		"format":    "json",
@@ -79,7 +72,7 @@ func (c *anypointClient) GetAnalyticsWindow() ([]AnalyticsEvent, error) {
 		"Authorization": "Bearer " + c.auth.GetToken(),
 	}
 
-	url := c.baseURL + "/analytics/1.0/" + c.organizationID + "/environments/4c161832-f4c0-4ea6-ad59-63a44354858b/events"
+	url := c.baseURL + "/analytics/1.0/" + c.organizationID + "/environments/" + c.environment.ID + "/events"
 	events := make([]AnalyticsEvent, 0)
 	request := coreapi.Request{
 		Method:      coreapi.GET,
@@ -200,19 +193,33 @@ func loadOrCreateCache(path string) cache.Cache {
 
 // OnConfigChange updates the client when the configuration changes.
 func (c *anypointClient) OnConfigChange(mulesoftConfig *config.MulesoftConfig) {
-	c.baseURL = mulesoftConfig.AnypointExchangeURL
-	c.organizationID = mulesoftConfig.OrganizationID
-	c.username = mulesoftConfig.Username
-	c.password = mulesoftConfig.Password
-	c.lifetime = mulesoftConfig.SessionLifetime
-	c.apiClient = coreapi.NewClient(mulesoftConfig.TLS, mulesoftConfig.ProxyURL)
-
 	if c.auth != nil {
 		c.auth.Stop()
 	}
 	c.auth, _ = NewAuth(c)
 
-	// TODO HANDLE ERR..WHAT'S THE EXPECATATION HERE?
+	if c.auth != nil {
+		c.auth.Stop()
+	}
+
+	c.baseURL = mulesoftConfig.AnypointExchangeURL
+	c.username = mulesoftConfig.Username
+	c.password = mulesoftConfig.Password
+	c.lifetime = mulesoftConfig.SessionLifetime
+	c.apiClient = coreapi.NewClient(mulesoftConfig.TLS, mulesoftConfig.ProxyURL)
+	// TODO add to config
+	c.cache = loadOrCreateCache("/tmp/anypoint.cache")
+
+	var err error
+	c.auth, err = NewAuth(c)
+	if err != nil {
+		log.Fatalf("Failed to authenticate: %s", err.Error())
+	}
+
+	c.environment, err = c.GetEnvironmentByName(mulesoftConfig.Environment)
+	if err != nil {
+		log.Fatalf("Failed to connect to Mulesoft environment %s: %s", mulesoftConfig.Environment, err.Error())
+	}
 }
 
 // healthcheck performs Mulesoft healthcheck.
@@ -239,19 +246,6 @@ func (c *anypointClient) healthcheck(name string) (status *hc.Status) {
 	return status
 }
 
-func (c *anypointClient) invokeJSON(request coreapi.Request, resp interface{}) error {
-	body, err := c.invoke(request)
-	if err != nil {
-		return agenterrors.Wrap(ErrCommunicatingWithGateway, err.Error())
-	}
-
-	err = json.Unmarshal(body, resp)
-	if err != nil {
-		return agenterrors.Wrap(ErrMarshallingBody, err.Error())
-	}
-	return nil
-}
-
 func (c *anypointClient) getLastRun() (string, string) {
 	tStamp, _ := c.cache.Get(CacheKeyTimeStamp)
 	now := time.Now()
@@ -263,6 +257,19 @@ func (c *anypointClient) getLastRun() (string, string) {
 	c.cache.Save("/tmp/anypoint.cache")
 	return tStamp.(string), tNow
 
+}
+
+func (c *anypointClient) invokeJSON(request coreapi.Request, resp interface{}) error {
+	body, err := c.invoke(request)
+	if err != nil {
+		return agenterrors.Wrap(ErrCommunicatingWithGateway, err.Error())
+	}
+
+	err = json.Unmarshal(body, resp)
+	if err != nil {
+		return agenterrors.Wrap(ErrMarshallingBody, err.Error())
+	}
+	return nil
 }
 
 func (c *anypointClient) invoke(request coreapi.Request) ([]byte, error) {
