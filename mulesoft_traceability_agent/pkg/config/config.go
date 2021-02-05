@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"os"
 	"time"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -40,6 +41,7 @@ type MulesoftConfig struct {
 	SessionLifetime     time.Duration     `config:"auth.lifetime"`
 	TLS                 corecfg.TLSConfig `config:"ssl"`
 	ProxyURL            string            `config:"proxyUrl"`
+	CachePath           string    `config:"cachePath"`
 }
 
 // NewMulesoftConfig creates an empty config.
@@ -71,7 +73,10 @@ func (c *MulesoftConfig) ValidateCfg() (err error) {
 	if c.PollInterval == 0 {
 		return errors.New("Invalid mulesoft configuration: pollInterval is invalid")
 	}
-
+	if _, err := os.Stat(c.CachePath); os.IsNotExist(err) {
+		// path/to/whatever does not exist
+		return errors.New("Invalid mulesoft cache path: path does not exist")
+	}
 	return
 }
 
@@ -94,6 +99,7 @@ const (
 	pathSSLMinVersion         = "mulesoft.ssl.minVersion"
 	pathSSLMaxVersion         = "mulesoft.ssl.maxVersion"
 	pathProxyURL              = "mulesoft.proxyUrl"
+	pathCachePath             = "mulesoft.cachePath"
 )
 
 // AddMulesoftConfigProperties - Adds the command properties needed for Mulesoft
@@ -104,6 +110,7 @@ func AddMulesoftConfigProperties(props properties.Properties) {
 	props.AddStringProperty(pathAuthUsername, "", "Mulesoft username")
 	props.AddStringProperty(pathAuthPassword, "", "Mulesoft password")
 	props.AddDurationProperty(pathAuthLifetime, 60*time.Minute, "Mulesoft session lifetime")
+	props.AddStringProperty(pathCachePath, "/tmp", "Mulesoft Cache Path")
 
 	// ssl properties and command flags
 	props.AddStringSliceProperty(pathSSLNextProtos, []string{}, "List of supported application level protocols, comma separated")
@@ -118,6 +125,7 @@ func ParseMulesoftConfig(props properties.Properties) *MulesoftConfig {
 	return &MulesoftConfig{
 		AnypointExchangeURL: props.StringPropertyValue(pathAnypointExchangeURL),
 		PollInterval:        props.DurationPropertyValue(pathPollInterval),
+		CachePath:			 props.StringPropertyValue(pathCachePath),
 		Environment:         props.StringPropertyValue(pathEnvironment),
 		Username:            props.StringPropertyValue(pathAuthUsername),
 		Password:            props.StringPropertyValue(pathAuthPassword),

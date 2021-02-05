@@ -202,7 +202,7 @@ func (c *anypointClient) OnConfigChange(mulesoftConfig *config.MulesoftConfig) {
 	c.lifetime = mulesoftConfig.SessionLifetime
 	c.apiClient = coreapi.NewClient(mulesoftConfig.TLS, mulesoftConfig.ProxyURL)
 	// TODO add to config
-	c.cache = loadOrCreateCache("/tmp/anypoint.cache")
+	c.cache = loadOrCreateCache(mulesoftConfig.CachePath+"/anypoint.cache")
 
 	var err error
 	c.auth, err = NewAuth(c)
