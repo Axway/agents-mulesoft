@@ -13,7 +13,7 @@ type ServiceDetail struct {
 	AuthPolicy        string
 	APISpec           []byte
 	Documentation     []byte
-	Tags              map[string]interface{}
+	Tags              []string
 	Image             string
 	ImageContentType  string
 	ResourceType      string

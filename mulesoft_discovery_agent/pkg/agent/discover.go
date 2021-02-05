@@ -150,8 +150,9 @@ func (a *Agent) getServiceDetail(asset *anypoint.Asset, api *anypoint.API) (*Ser
 		AuthPolicy:        authPolicy,
 		Image:             icon,
 		ImageContentType:  iconContentType,
-		Instances:         exchangeAsset.Instances,
+		Tags:              api.Tags,
 		ServiceAttributes: map[string]string{"checksum": checksum},
+		Instances:         exchangeAsset.Instances,
 	}, nil
 }
 

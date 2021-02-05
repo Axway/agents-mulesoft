@@ -39,6 +39,12 @@ func (a *Agent) publish(serviceDetail *ServiceDetail) error {
 
 // buildServiceBody - creates the service definition
 func (a *Agent) buildServiceBody(service *ServiceDetail) (apic.ServiceBody, error) {
+	tags := map[string]interface{}{}
+	if service.Tags != nil {
+		for _, tag := range service.Tags {
+			tags[tag] = true
+		}
+	}
 	return apic.NewServiceBodyBuilder().
 		SetID(service.ID).
 		SetTitle(service.Title).
@@ -50,7 +56,7 @@ func (a *Agent) buildServiceBody(service *ServiceDetail) (apic.ServiceBody, erro
 		SetAuthPolicy(service.AuthPolicy).
 		SetAPISpec(service.APISpec). // TODO UPDATE FOR INSTANCES
 		SetDocumentation(service.Documentation).
-		SetTags(service.Tags).
+		SetTags(tags).
 		SetImage(service.Image).
 		SetImageContentType(service.ImageContentType).
 		SetResourceType(service.ResourceType).
