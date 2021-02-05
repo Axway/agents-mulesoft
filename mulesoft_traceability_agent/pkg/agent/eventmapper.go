@@ -1,4 +1,4 @@
-package gateway
+package agent
 
 import (
 	"encoding/json"
@@ -18,23 +18,23 @@ import (
 type EventMapper struct {
 }
 
-func (m *EventMapper) processMapping(gatewayTrafficLogEntry anypoint.AnalyticsEvent) ([]*transaction.LogEvent, error) {
+func (m *EventMapper) processMapping(anypointAnalyticsEvent anypoint.AnalyticsEvent) ([]*transaction.LogEvent, error) {
 	centralCfg := agent.GetCentralConfig()
 
 	eventTime := time.Now().Unix()
-	txID := fmt.Sprintf("%s-%s", gatewayTrafficLogEntry.APIVersionID, gatewayTrafficLogEntry.MessageID)
-	txEventID := gatewayTrafficLogEntry.MessageID
-	transInboundLogEventLeg, err := m.createTransactionEvent(eventTime, txID, gatewayTrafficLogEntry, txEventID+"-leg0", "", "Inbound")
+	txID := fmt.Sprintf("%s-%s", anypointAnalyticsEvent.APIVersionID, anypointAnalyticsEvent.MessageID)
+	txEventID := anypointAnalyticsEvent.MessageID
+	transInboundLogEventLeg, err := m.createTransactionEvent(eventTime, txID, anypointAnalyticsEvent, txEventID+"-leg0", "", "Inbound")
 	if err != nil {
 		return nil, err
 	}
 
-	transOutboundLogEventLeg, err := m.createTransactionEvent(eventTime, txID, gatewayTrafficLogEntry, txEventID+"-leg1", txEventID+"-leg0", "Outbound")
+	transOutboundLogEventLeg, err := m.createTransactionEvent(eventTime, txID, anypointAnalyticsEvent, txEventID+"-leg1", txEventID+"-leg0", "Outbound")
 	if err != nil {
 		return nil, err
 	}
 
-	transSummaryLogEvent, err := m.createSummaryEvent(eventTime, txID, gatewayTrafficLogEntry, centralCfg.GetTeamID())
+	transSummaryLogEvent, err := m.createSummaryEvent(eventTime, txID, anypointAnalyticsEvent, centralCfg.GetTeamID())
 	if err != nil {
 		return nil, err
 	}
@@ -116,11 +116,11 @@ func (m *EventMapper) createTransactionEvent(eventTime int64, txID string, txDet
 		Build()
 }
 
-func (m *EventMapper) createSummaryEvent(eventTime int64, txID string, gatewayTrafficLogEntry anypoint.AnalyticsEvent, teamID string) (*transaction.LogEvent, error) {
-	statusCode := gatewayTrafficLogEntry.StatusCode
-	method := gatewayTrafficLogEntry.Verb
-	uri := fmt.Sprintf("https://mulepoop%s", gatewayTrafficLogEntry.ResourcePath)
-	host := gatewayTrafficLogEntry.ClientIP
+func (m *EventMapper) createSummaryEvent(eventTime int64, txID string, anypointAnalyticsEvent anypoint.AnalyticsEvent, teamID string) (*transaction.LogEvent, error) {
+	statusCode := anypointAnalyticsEvent.StatusCode
+	method := anypointAnalyticsEvent.Verb
+	uri := fmt.Sprintf("https://mulepoop%s", anypointAnalyticsEvent.ResourcePath)
+	host := anypointAnalyticsEvent.ClientIP
 
 	return transaction.NewTransactionSummaryBuilder().
 		SetTimestamp(eventTime).
@@ -131,6 +131,6 @@ func (m *EventMapper) createSummaryEvent(eventTime int64, txID string, gatewayTr
 		// If the API is published to Central as unified catalog item/API service, se the Proxy details with the API definition
 		// The Proxy.Name represents the name of the API
 		// The Proxy.ID should be of format "remoteApiId_<ID Of the API on remote gateway>". Use transaction.FormatProxyID(<ID Of the API on remote gateway>) to get the formatted value.
-		SetProxy(transaction.FormatProxyID(gatewayTrafficLogEntry.APIVersionID), gatewayTrafficLogEntry.APIName, 1).
+		SetProxy(transaction.FormatProxyID(anypointAnalyticsEvent.APIVersionID), anypointAnalyticsEvent.APIName, 1).
 		Build()
 }

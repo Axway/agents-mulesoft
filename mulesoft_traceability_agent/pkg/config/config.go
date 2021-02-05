@@ -32,9 +32,9 @@ type MulesoftConfig struct {
 	corecfg.IConfigValidator
 	corecfg.IResourceConfigCallback
 	AnypointExchangeURL string            `config:"anypointExchangeUrl"`
-	DiscoveryIgnoreTags string            `config:"discoveryIgnoreTags"`
-	Filter              string            `config:"filter"`
+	PollInterval        time.Duration     `config:"pollInterval"`
 	OrganizationID      string            `config:"organizationID"`
+	Environment         string            `config:"environment"`
 	Username            string            `config:"auth.username"`
 	Password            string            `config:"auth.password"`
 	SessionLifetime     time.Duration     `config:"auth.lifetime"`
@@ -45,7 +45,8 @@ type MulesoftConfig struct {
 // NewMulesoftConfig creates an empty config.
 func NewMulesoftConfig() MulesoftConfig {
 	return MulesoftConfig{
-		TLS: &corecfg.TLSConfiguration{},
+		PollInterval: time.Minute,
+		TLS:          &corecfg.TLSConfiguration{},
 	}
 }
 
@@ -63,17 +64,27 @@ func (c *MulesoftConfig) ValidateCfg() (err error) {
 		return errors.New("Invalid mulesoft configuration: password is not configured")
 	}
 
+	if c.Environment == "" {
+		return errors.New("Invalid mulesoft configuration: environment is not configured")
+	}
+
+	if c.PollInterval == 0 {
+		return errors.New("Invalid mulesoft configuration: pollInterval is invalid")
+	}
+
 	return
 }
 
 // ApplyResources - Applies the agent and dataplane resource to config
 func (c *MulesoftConfig) ApplyResources(dataplaneResource *v1.ResourceInstance, agentResource *v1.ResourceInstance) error {
-	// TODO: Extract config from SaaS model
+	// Currently there is not dataplane agent configuration for mulesoft.
 	return nil
 }
 
 const (
 	pathAnypointExchangeURL   = "mulesoft.anypointExchangeUrl"
+	pathPollInterval          = "mulesoft.pollInterval"
+	pathEnvironment           = "mulesoft.environment"
 	pathAuthUsername          = "mulesoft.auth.username"
 	pathAuthPassword          = "mulesoft.auth.password"
 	pathAuthLifetime          = "mulesoft.auth.lifetime"
@@ -83,13 +94,13 @@ const (
 	pathSSLMinVersion         = "mulesoft.ssl.minVersion"
 	pathSSLMaxVersion         = "mulesoft.ssl.maxVersion"
 	pathProxyURL              = "mulesoft.proxyUrl"
-	pathOrganizationID        = "mulesoft.organization.id"
 )
 
 // AddMulesoftConfigProperties - Adds the command properties needed for Mulesoft
 func AddMulesoftConfigProperties(props properties.Properties) {
-	props.AddStringProperty(pathOrganizationID, "d3629a48-0067-452f-a112-575cfb0189a1", "Mulesoft Organization ID")
 	props.AddStringProperty(pathAnypointExchangeURL, "https://anypoint.mulesoft.com", "Mulesoft Anypoint Exchange URL.")
+	props.AddDurationProperty(pathPollInterval, 60*time.Second, "The interval at which Mulesoft is checked for updates.")
+	props.AddStringProperty(pathEnvironment, "", "Mulesoft Anypoint environment.")
 	props.AddStringProperty(pathAuthUsername, "", "Mulesoft username")
 	props.AddStringProperty(pathAuthPassword, "", "Mulesoft password")
 	props.AddDurationProperty(pathAuthLifetime, 60*time.Minute, "Mulesoft session lifetime")
@@ -106,7 +117,8 @@ func AddMulesoftConfigProperties(props properties.Properties) {
 func ParseMulesoftConfig(props properties.Properties) *MulesoftConfig {
 	return &MulesoftConfig{
 		AnypointExchangeURL: props.StringPropertyValue(pathAnypointExchangeURL),
-		OrganizationID: 	 props.StringPropertyValue(pathOrganizationID),
+		PollInterval:        props.DurationPropertyValue(pathPollInterval),
+		Environment:         props.StringPropertyValue(pathEnvironment),
 		Username:            props.StringPropertyValue(pathAuthUsername),
 		Password:            props.StringPropertyValue(pathAuthPassword),
 		SessionLifetime:     props.DurationPropertyValue(pathAuthLifetime),

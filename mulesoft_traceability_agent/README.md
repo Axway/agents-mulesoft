@@ -17,7 +17,7 @@
 6. Locate pkg/gateway/definition.go to define the structure of the log entry the traceability agent will receive. See pkg/gateway/definition.go for sample definition.
 7. Implement the mechanism to read the log entry. Optionally you can wrap the existing beat(for e.g. filebeat) in beater.New() to read events and they setup output event processor to process the events
 8. Locate pkg/gateway/eventprocessor.go to perform processing on event to be published. The processing can be performed either on the received event by beat input or before the event is published by transport. See pkg/gateway/eventprocessor.go for example of both type of processing.
-9. Locate pkg/gateway/eventmapper.go to map the log entry received by beat to event structure expected for AMPLIFY Central Observer.
+9. Locate pkg/gateway/eventmapper.go to map the log entry received by beat to event structure expected for AmplifyCentral Observer.
 10. Run "make build" to build the agent.
 11. Rename *mulesoft_traceability_agent.yml* file to the desired agents name and setup the agent config in the file.
 12. Execute the agent by running the binary file generated under *bin* directory. The YAML config must be in the current working directory
