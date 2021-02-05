@@ -36,15 +36,14 @@ type Client interface {
 
 // anypointClient is the client for interacting with Mulesoft Anypoint.
 type anypointClient struct {
-	baseURL        string
-	organizationID string
-	username       string
-	password       string
-	lifetime       time.Duration
-	apiClient      coreapi.Client
-	auth           Auth
-	environment    *Environment
-	cache          cache.Cache
+	baseURL     string
+	username    string
+	password    string
+	lifetime    time.Duration
+	apiClient   coreapi.Client
+	auth        Auth
+	environment *Environment
+	cache       cache.Cache
 }
 
 // NewClient creates a new client for interacting with Mulesoft.
@@ -72,7 +71,7 @@ func (c *anypointClient) GetAnalyticsWindow() ([]AnalyticsEvent, error) {
 		"Authorization": "Bearer " + c.auth.GetToken(),
 	}
 
-	url := c.baseURL + "/analytics/1.0/" + c.organizationID + "/environments/" + c.environment.ID + "/events"
+	url := c.baseURL + "/analytics/1.0/" + c.auth.GetOrgID() + "/environments/" + c.environment.ID + "/events"
 	events := make([]AnalyticsEvent, 0)
 	request := coreapi.Request{
 		Method:      coreapi.GET,
