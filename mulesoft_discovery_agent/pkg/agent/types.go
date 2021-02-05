@@ -6,6 +6,7 @@ import anypoint "github.com/Axway/agents-mulesoft/mulesoft_discovery_agent/pkg/a
 type ServiceDetail struct {
 	ID                string
 	Title             string
+	Version           string
 	APIName           string
 	URL               string
 	Stage             string
@@ -22,7 +23,6 @@ type ServiceDetail struct {
 	State             string
 	Status            string
 	ServiceAttributes map[string]string
-	Instances         []anypoint.ExchangeAPIInstance
 }
 
 var specPreference = map[string]int{

@@ -43,7 +43,7 @@ func (a *Agent) discoverAPIs() {
 	pageSize := a.discoveryPageSize
 
 	// Replacing asset cache rather than updating it
-	newAssetCache := cache.New()
+	freshAssetCache := cache.New()
 
 	for {
 		page := &anypoint.Page{Offset: offset, PageSize: pageSize}
@@ -54,13 +54,8 @@ func (a *Agent) discoverAPIs() {
 		}
 
 		for _, asset := range assets {
-			key := a.formatCacheKey(fmt.Sprint(asset.ID), a.stage)
-			// Updating the existing cache to avoid racing while publishing
-			a.assetCache.Set(key, asset)
-			// Creating a clean cache to handle removed apis
-			newAssetCache.Set(key, asset)
 
-			svcDetails := a.getServiceDetails(&asset)
+			svcDetails := a.getServiceDetails(&asset, freshAssetCache)
 			if svcDetails != nil {
 				for _, svc := range svcDetails {
 					a.apiChan <- svc
@@ -76,14 +71,20 @@ func (a *Agent) discoverAPIs() {
 	}
 
 	// Replace the cache
-	a.assetCache = newAssetCache
+	a.assetCache = freshAssetCache
 }
 
 // getServiceDetails gathers the ServiceDetail for a single Mulesoft Asset. Each Asset has multiple versions and
 // so can resolve to multiple ServiceDetails.
-func (a *Agent) getServiceDetails(asset *anypoint.Asset) []*ServiceDetail {
+func (a *Agent) getServiceDetails(asset *anypoint.Asset, freshAssetCache cache.Cache) []*ServiceDetail {
 	serviceDetails := []*ServiceDetail{}
 	for _, api := range asset.APIs {
+		// Cache - update the existing to ensure it contains anything new, but create fresh cache
+		// to ensure deletions are detected.
+		key := a.formatCacheKey(fmt.Sprint(api.ID), a.stage)
+		a.assetCache.Set(key, api)
+		freshAssetCache.Set(key, api)
+
 		serviceDetail, err := a.getServiceDetail(asset, &api)
 		if err != nil {
 			log.Errorf("Error gathering information for \"%s(%d)\": %s", asset.Name, asset.ID, err.Error())
@@ -104,10 +105,17 @@ func (a *Agent) getServiceDetail(asset *anypoint.Asset, api *anypoint.API) (*Ser
 		return nil, nil
 	}
 
-	// Change detection
-	checksum := a.checksum(asset) // Doing the asset not the API as the attribute is APIService level
-	if agent.IsAPIPublished(fmt.Sprint(asset.ID)) {
-		publishedChecksum := agent.GetAttributeOnPublishedAPI(fmt.Sprint(asset.ID), "checksum")
+	// Get the policies associated with the API
+	policies, err := a.anypointClient.GetPolicies(api)
+	if err != nil {
+		return nil, err
+	}
+	authPolicy := a.getAuthPolicy(policies)
+
+	// Change detection (asset + policies)
+	checksum := a.checksum(api, authPolicy)
+	if agent.IsAPIPublished(fmt.Sprint(api.ID)) {
+		publishedChecksum := agent.GetAttributeOnPublishedAPI(fmt.Sprint(api.ID), "checksum")
 		if checksum == publishedChecksum {
 			return nil, nil
 		}
@@ -116,13 +124,6 @@ func (a *Agent) getServiceDetail(asset *anypoint.Asset, api *anypoint.API) (*Ser
 
 	// Potentially discoverable API, gather the details
 	log.Infof("Gathering details for %s(%d)", asset.AssetID, api.ID)
-
-	// Single asset has multiple versions
-	policies, err := a.anypointClient.GetPolicies(api)
-	if err != nil {
-		return nil, err
-	}
-	authPolicy := a.getAuthPolicy(policies)
 
 	exchangeAsset, err := a.anypointClient.GetExchangeAsset(api)
 	if err != nil {
@@ -160,10 +161,11 @@ func (a *Agent) getServiceDetail(asset *anypoint.Asset, api *anypoint.API) (*Ser
 	}
 
 	return &ServiceDetail{
-		ID:                fmt.Sprint(asset.ID),
+		ID:                fmt.Sprint(api.ID),
 		Title:             asset.ExchangeAssetName,
+		Version:           api.AssetVersion,
 		APIName:           api.AssetID,
-		Stage:             a.stage, // Or perhaps it should be the asset api stage
+		Stage:             a.stage,
 		APISpec:           specContent,
 		ResourceType:      specType,
 		AuthPolicy:        authPolicy,
@@ -171,7 +173,6 @@ func (a *Agent) getServiceDetail(asset *anypoint.Asset, api *anypoint.API) (*Ser
 		ImageContentType:  iconContentType,
 		Tags:              api.Tags,
 		ServiceAttributes: map[string]string{"checksum": checksum},
-		Instances:         exchangeAsset.Instances,
 	}, nil
 }
 
@@ -275,7 +276,7 @@ func (a *Agent) getAuthPolicy(policies []anypoint.Policy) string {
 }
 
 // checksum generates a checksum for the api for change detection
-func (a *Agent) checksum(val interface{}) string {
-	sum := sha256.Sum256([]byte(fmt.Sprintf("%v", val)))
+func (a *Agent) checksum(val interface{}, authPolicy string) string {
+	sum := sha256.Sum256([]byte(fmt.Sprintf("%v%s", val, authPolicy)))
 	return fmt.Sprintf("%x", sum)
 }

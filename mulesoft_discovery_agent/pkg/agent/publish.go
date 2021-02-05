@@ -1,6 +1,8 @@
 package agent
 
 import (
+	"fmt"
+
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	log "github.com/Axway/agent-sdk/pkg/util/log"
@@ -49,14 +51,14 @@ func (a *Agent) buildServiceBody(service *ServiceDetail) (apic.ServiceBody, erro
 	}
 	return apic.NewServiceBodyBuilder().
 		SetID(service.ID).
-		SetTitle(service.Title).
+		SetTitle(fmt.Sprintf("%s (%s)", service.Title, service.Version)).
 		SetAPIName(service.APIName).
 		SetURL(service.URL).
 		SetStage(service.Stage).
 		SetDescription(service.Description).
-		SetVersion(service.Instances[0].Version). // TODO ALL VERSIONS
+		SetVersion(service.Version).
 		SetAuthPolicy(service.AuthPolicy).
-		SetAPISpec(service.APISpec). // TODO UPDATE FOR INSTANCES
+		SetAPISpec(service.APISpec).
 		SetDocumentation(service.Documentation).
 		SetTags(tags).
 		SetImage(service.Image).
