@@ -3,4 +3,5 @@ bin
 dist
 .idea
 *.iml
-/demo/
+demo
+data

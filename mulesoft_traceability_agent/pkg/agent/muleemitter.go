@@ -1,4 +1,4 @@
-package gateway
+package agent
 
 import (
 	"encoding/json"
@@ -6,7 +6,6 @@ import (
 
 	"github.com/elastic/beats/v7/libbeat/logp"
 
-	// CHANGE_HERE - Change the import path(s) below to reference packages correctly
 	"github.com/Axway/agents-mulesoft/mulesoft_traceability_agent/pkg/anypoint"
 	"github.com/Axway/agents-mulesoft/mulesoft_traceability_agent/pkg/config"
 )
@@ -15,6 +14,7 @@ import (
 type MuleEventEmitter struct {
 	cfg            *config.AgentConfig
 	anypointClient anypoint.Client
+	pollInterval   time.Duration
 	done           chan bool
 	eventChannel   chan string
 }
@@ -23,6 +23,7 @@ type MuleEventEmitter struct {
 func NewMuleEventEmitter(gatewayCfg *config.AgentConfig, eventChannel chan string) (*MuleEventEmitter, error) {
 	return &MuleEventEmitter{
 		cfg:            gatewayCfg,
+		pollInterval:   gatewayCfg.MulesoftConfig.PollInterval,
 		done:           make(chan bool),
 		eventChannel:   eventChannel,
 		anypointClient: anypoint.NewClient(gatewayCfg.MulesoftConfig),
@@ -31,24 +32,18 @@ func NewMuleEventEmitter(gatewayCfg *config.AgentConfig, eventChannel chan strin
 
 // Start - Starts reading log file
 func (me *MuleEventEmitter) Start() {
-	// Just get a simple payload to test that we can send to condor
-	/*		sample := GenerateSample()
-			payload,_ := json.Marshal(sample)
-			me.eventChannel <- string(payload)*/
 	me.pollForEvents()
 }
 
 // pollForEvents - Polls for the events
 func (me *MuleEventEmitter) pollForEvents() {
-
-	ticker := time.NewTicker(60 * time.Second)
+	ticker := time.NewTicker(me.pollInterval)
 	go func() {
 		for {
 			select {
 			case <-me.done:
 				return
 			case <-ticker.C:
-				logp.Info("Tick...")
 				events, err := me.anypointClient.GetAnalyticsWindow()
 				if err != nil {
 					logp.Warn("Client Failure: %s", err.Error())
@@ -56,7 +51,7 @@ func (me *MuleEventEmitter) pollForEvents() {
 				for _, event := range events {
 					j, err := json.Marshal(event)
 					if err != nil {
-						logp.Warn("Marshal Failure: ", err.Error())
+						logp.Warn("Marshal Failure: %s", err.Error())
 					}
 					me.eventChannel <- string(j)
 				}
@@ -64,10 +59,6 @@ func (me *MuleEventEmitter) pollForEvents() {
 			}
 		}
 	}()
-	/*	t, _ := tail.TailFile(r.cfg.LogFile, tail.Config{Follow: true})
-		for line := range t.Lines {
-			r.eventChannel <- line.Text
-		}*/
 }
 
 // Stop -
