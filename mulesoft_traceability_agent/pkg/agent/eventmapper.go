@@ -30,7 +30,7 @@ func (m *EventMapper) processMapping(anypointAnalyticsEvent anypoint.AnalyticsEv
 
 	centralCfg := agent.GetCentralConfig()
 
-	eventTime := anypointAnalyticsEvent.Timestamp.Unix()
+	eventTime := anypointAnalyticsEvent.Timestamp.UnixNano() / 1000000
 	txID := fmt.Sprintf("%s-%s", anypointAnalyticsEvent.APIVersionID, anypointAnalyticsEvent.MessageID)
 	txEventID := anypointAnalyticsEvent.MessageID
 	transInboundLogEventLeg, err := m.createTransactionEvent(eventTime, txID, anypointAnalyticsEvent, txEventID+"-leg0", "", "Inbound")
