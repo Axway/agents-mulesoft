@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"time"
 
+	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agents-mulesoft/mulesoft_traceability_agent/pkg/anypoint"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
@@ -19,9 +19,18 @@ type EventMapper struct {
 }
 
 func (m *EventMapper) processMapping(anypointAnalyticsEvent anypoint.AnalyticsEvent) ([]*transaction.LogEvent, error) {
+	item, err := agent.GetAPICache().GetItem(anypointAnalyticsEvent.APIVersionID)
+	if err != nil {
+		return nil, err
+	}
+	if item == nil {
+		// API not in central
+		return nil, nil
+	}
+
 	centralCfg := agent.GetCentralConfig()
 
-	eventTime := time.Now().Unix()
+	eventTime := anypointAnalyticsEvent.Timestamp.Unix()
 	txID := fmt.Sprintf("%s-%s", anypointAnalyticsEvent.APIVersionID, anypointAnalyticsEvent.MessageID)
 	txEventID := anypointAnalyticsEvent.MessageID
 	transInboundLogEventLeg, err := m.createTransactionEvent(eventTime, txID, anypointAnalyticsEvent, txEventID+"-leg0", "", "Inbound")
@@ -122,15 +131,15 @@ func (m *EventMapper) createSummaryEvent(eventTime int64, txID string, anypointA
 	uri := fmt.Sprintf("https://mulepoop%s", anypointAnalyticsEvent.ResourcePath)
 	host := anypointAnalyticsEvent.ClientIP
 
+	res, _ := agent.GetAPICache().Get(anypointAnalyticsEvent.APIVersionID)
+	resInstance := res.(apiV1.ResourceInstance)
+
 	return transaction.NewTransactionSummaryBuilder().
 		SetTimestamp(eventTime).
 		SetTransactionID(txID).
 		SetStatus(m.getTransactionSummaryStatus(statusCode), strconv.Itoa(statusCode)).
 		SetTeam(teamID).
 		SetEntryPoint("http", method, uri, host).
-		// If the API is published to Central as unified catalog item/API service, se the Proxy details with the API definition
-		// The Proxy.Name represents the name of the API
-		// The Proxy.ID should be of format "remoteApiId_<ID Of the API on remote gateway>". Use transaction.FormatProxyID(<ID Of the API on remote gateway>) to get the formatted value.
-		SetProxy(transaction.FormatProxyID(anypointAnalyticsEvent.APIVersionID), anypointAnalyticsEvent.APIName, 1).
+		SetProxy(transaction.FormatProxyID(anypointAnalyticsEvent.APIVersionID), resInstance.ResourceMeta.Title, 1).
 		Build()
 }
