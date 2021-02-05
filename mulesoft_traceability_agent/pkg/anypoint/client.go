@@ -196,11 +196,6 @@ func (c *anypointClient) OnConfigChange(mulesoftConfig *config.MulesoftConfig) {
 	if c.auth != nil {
 		c.auth.Stop()
 	}
-	c.auth, _ = NewAuth(c)
-
-	if c.auth != nil {
-		c.auth.Stop()
-	}
 
 	c.baseURL = mulesoftConfig.AnypointExchangeURL
 	c.username = mulesoftConfig.Username
