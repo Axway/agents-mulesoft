@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agents-mulesoft/mulesoft_traceability_agent/pkg/config"
 	"io/ioutil"
 	"net/http"
@@ -23,6 +24,9 @@ type Page struct {
 	PageSize int
 }
 
+const (
+	CacheKeyTimeStamp = "LAST_RUN"
+)
 // Client interface to gateway.
 type Client interface {
 	OnConfigChange(mulesoftConfig *config.MulesoftConfig)
@@ -50,14 +54,16 @@ type anypointClient struct {
 	lifetime       time.Duration
 	apiClient      coreapi.Client
 	auth           Auth
+	cache          cache.Cache
 }
 
 // NewClient creates a new client for interacting with Mulesoft.
 func NewClient(mulesoftConfig *config.MulesoftConfig) Client {
+
 	client := &anypointClient{}
 	client.OnConfigChange(mulesoftConfig)
-
-	// TODO
+	// TODO add to config
+	client.cache = loadOrCreateCache("/tmp/anypoint.cache")
 
 	// Register the healthcheck
 	hc.RegisterHealthcheck("Mulesoft Anypoint Exchange", "mulesoft", client.healthcheck)
@@ -65,6 +71,10 @@ func NewClient(mulesoftConfig *config.MulesoftConfig) Client {
 	return client
 }
 
+// loadOrCreateCache  build the cache or load from prior
+func loadOrCreateCache(path string) cache.Cache {
+	return cache.Load(path)
+}
 // OnConfigChange updates the client when the configuration changes.
 func (c *anypointClient) OnConfigChange(mulesoftConfig *config.MulesoftConfig) {
 	c.baseURL = mulesoftConfig.AnypointExchangeURL
@@ -297,12 +307,32 @@ func (c *anypointClient) invokeGet(url string) ([]byte, error) {
 
 	return c.invoke(request)
 }
+func (c *anypointClient) getLastRun() (string, string) {
+	tStamp,_:=c.cache.Get(CacheKeyTimeStamp)
+	now:=time.Now()
+	tNow:=now.Format(time.RFC3339)
+	if tStamp == nil {
+		tStamp=tNow
+	}
+	c.cache.Set(CacheKeyTimeStamp,tNow)
+	c.cache.Save("/tmp/anypoint.cache")
+	return  tStamp.(string), tNow
+
+}
 // GetAnalyticsWindow lists the managed assets in Mulesoft: https://anypoint.mulesoft.com/exchange/portals/anypoint-platform/f1e97bc6-315a-4490-82a7-23abe036327a.anypoint-platform/exchange-experience-api/minor/2.0/console/method/%231431/
 func (c *anypointClient) GetAnalyticsWindow() ([]AnalyticsEvent, error) {
+
 	//4c161832-f4c0-4ea6-ad59-63a44354858b
+	// TODO add to config
+	/*
+	client.cache = loadOrCreateCache("/tmp/anypoint.cache")
+*/
+
+	startDate, endDate := c.getLastRun()
 	query := map[string]string{
 		"format": "json",
-		"duration": "5m",
+		"startDate": startDate,
+		"endDate": endDate,
 		"fields": "Application Name.Browser.City.Client IP.Continent.Country.Hardware Platform.Message ID.OS Family.OS Major Version.OS Minor Version.OS Version.Postal Code.Request Outcome.Request Size.Resource Path.Response Size.Response Time.Status Code.Timezone.User Agent Name.User Agent Version.Verb.Violated Policy Name",
 	}
 	headers := map[string]string{
