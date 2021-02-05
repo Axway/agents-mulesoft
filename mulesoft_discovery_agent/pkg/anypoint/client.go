@@ -63,15 +63,15 @@ func NewClient(mulesoftConfig *config.MulesoftConfig) Client {
 
 // OnConfigChange updates the client when the configuration changes.
 func (c *anypointClient) OnConfigChange(mulesoftConfig *config.MulesoftConfig) {
+	if c.auth != nil {
+		c.auth.Stop()
+	}
+
 	c.baseURL = mulesoftConfig.AnypointExchangeURL
 	c.username = mulesoftConfig.Username
 	c.password = mulesoftConfig.Password
 	c.lifetime = mulesoftConfig.SessionLifetime
 	c.apiClient = coreapi.NewClient(mulesoftConfig.TLS, mulesoftConfig.ProxyURL)
-
-	if c.auth != nil {
-		c.auth.Stop()
-	}
 
 	var err error
 	c.auth, err = NewAuth(c)

@@ -10,11 +10,13 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/apic"
+	"github.com/Axway/agent-sdk/pkg/cache"
 	log "github.com/Axway/agent-sdk/pkg/util/log"
 	anypoint "github.com/Axway/agents-mulesoft/mulesoft_discovery_agent/pkg/anypoint"
 	"sigs.k8s.io/yaml"
 )
 
+// discoveryLoop Discovery event loop.
 func (a *Agent) discoveryLoop() {
 	go func() {
 		// Instant fist "tick"
@@ -35,9 +37,14 @@ func (a *Agent) discoveryLoop() {
 	}()
 }
 
+// discoverAPIs Finds the APIs that are publishable.
 func (a *Agent) discoverAPIs() {
 	offset := 0
-	pageSize := 20
+	pageSize := a.discoveryPageSize
+
+	// Replacing asset cache rather than updating it
+	newAssetCache := cache.New()
+
 	for {
 		page := &anypoint.Page{Offset: offset, PageSize: pageSize}
 
@@ -47,6 +54,12 @@ func (a *Agent) discoverAPIs() {
 		}
 
 		for _, asset := range assets {
+			key := fmt.Sprintf("%d-%s", asset.ID, a.stage)
+			// Updating the existing cache to avoid racing while publishing
+			a.assetCache.Set(key, asset)
+			// Creating a clean cache to handle removed apis
+			newAssetCache.Set(key, asset)
+
 			svcDetails := a.getServiceDetails(&asset)
 			if svcDetails != nil {
 				for _, svc := range svcDetails {
@@ -61,8 +74,13 @@ func (a *Agent) discoverAPIs() {
 			offset += pageSize
 		}
 	}
+
+	// Replace the cache
+	a.assetCache = newAssetCache
 }
 
+// getServiceDetails gathers the ServiceDetail for a single Mulesoft Asset. Each Asset has multiple versions and
+// so can resolve to multiple ServiceDetails.
 func (a *Agent) getServiceDetails(asset *anypoint.Asset) []*ServiceDetail {
 	serviceDetails := []*ServiceDetail{}
 	for _, api := range asset.APIs {
@@ -86,16 +104,17 @@ func (a *Agent) getServiceDetail(asset *anypoint.Asset, api *anypoint.API) (*Ser
 		return nil, nil
 	}
 
+	// Change detection
 	checksum := a.checksum(asset) // Doing the asset not the API as the attribute is APIService level
-
 	if agent.IsAPIPublished(fmt.Sprint(asset.ID)) {
-		// Check if changed....cheaply
 		publishedChecksum := agent.GetAttributeOnPublishedAPI(fmt.Sprint(asset.ID), "checksum")
 		if checksum == publishedChecksum {
 			return nil, nil
 		}
 		log.Debugf("Change detected in published asset %s(%d)", asset.AssetID, api.ID)
 	}
+
+	// Potentially discoverable API, gather the details
 	log.Infof("Gathering details for %s(%d)", asset.AssetID, api.ID)
 
 	// Single asset has multiple versions
@@ -110,7 +129,7 @@ func (a *Agent) getServiceDetail(asset *anypoint.Asset, api *anypoint.API) (*Ser
 		return nil, err
 	}
 
-	exchangeFile, err := a.getExchangeAssetSpecFile(exchangeAsset)
+	exchangeFile, err := a.getExchangeAssetSpecFile(exchangeAsset) // SDK only supports OAS & WSDL
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +144,7 @@ func (a *Agent) getServiceDetail(asset *anypoint.Asset, api *anypoint.API) (*Ser
 	if err != nil {
 		return nil, err
 	}
-	specContent = a.specYAMLToJSON(specContent)
+	specContent = a.specYAMLToJSON(specContent) // SDK does not support YAML specifications
 
 	specType, err := a.getSpecType(exchangeFile, specContent)
 	if err != nil {
@@ -172,9 +191,7 @@ func (a *Agent) shouldDiscoverAPI(api *anypoint.API) bool {
 
 // doesAPIContainAnyMatchingTag checks if the API has any of the tags
 func (a *Agent) doesAPIContainAnyMatchingTag(tags []string, api *anypoint.API) bool {
-	apiTags := api.Tags
-
-	for _, apiTag := range apiTags {
+	for _, apiTag := range api.Tags {
 		apiTag = strings.ToLower(apiTag)
 		for _, tag := range tags {
 			if tag == apiTag {

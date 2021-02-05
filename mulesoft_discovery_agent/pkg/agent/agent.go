@@ -1,12 +1,14 @@
 package agent
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	coreagent "github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/apic"
+	"github.com/Axway/agent-sdk/pkg/cache"
 	utilErrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	log "github.com/Axway/agent-sdk/pkg/util/log"
@@ -26,29 +28,53 @@ type Agent struct {
 	stopAgent           chan bool
 	stopDiscovery       chan bool
 	stopPublish         chan bool
+	discoveryPageSize   int
+	publishBufferSize   int
+	assetCache          cache.Cache
 }
 
 // New creates a new agent
-func New(anypointClient anypoint.Client) (agent *Agent, err error) {
+func New() (agent *Agent, err error) {
 	cfg := config.GetConfig()
 
 	buffer := 5
+	assetCache := cache.New()
 	agent = &Agent{
 		discoveryTags:       cleanTags(cfg.MulesoftConfig.DiscoveryTags),
 		discoveryIgnoreTags: cleanTags(cfg.MulesoftConfig.DiscoveryIgnoreTags),
 		apicClient:          coreagent.GetCentralClient(),
-		anypointClient:      anypointClient,
+		anypointClient:      anypoint.NewClient(cfg.MulesoftConfig),
 		pollInterval:        cfg.MulesoftConfig.PollInterval,
+		stage:               cfg.MulesoftConfig.Environment,
 		apiChan:             make(chan *ServiceDetail, buffer),
 		stopAgent:           make(chan bool),
 		stopDiscovery:       make(chan bool),
 		stopPublish:         make(chan bool),
+		discoveryPageSize:   50,
+		assetCache:          assetCache,
 	}
 
-	if anypointClient == nil {
-		agent.anypointClient = anypoint.NewClient(cfg.MulesoftConfig)
-	}
 	return agent, nil
+}
+
+// onConfigChange apply configuation changes
+func (a *Agent) onConfigChange() {
+	cfg := config.GetConfig()
+
+	// Stop Discovery & Publish
+	a.stopDiscovery <- true
+	a.stopPublish <- true
+
+	a.stage = cfg.MulesoftConfig.Environment
+	a.discoveryTags = cleanTags(cfg.MulesoftConfig.DiscoveryTags)
+	a.discoveryIgnoreTags = cleanTags(cfg.MulesoftConfig.DiscoveryIgnoreTags)
+	a.apicClient = coreagent.GetCentralClient()
+	a.pollInterval = cfg.MulesoftConfig.PollInterval
+	a.anypointClient.OnConfigChange(cfg.MulesoftConfig)
+
+	// Restart Discovery & Publish
+	go a.discoveryLoop()
+	go a.publishLoop()
 }
 
 // CheckHealth - check the health of all clients associated with the agent
@@ -76,21 +102,16 @@ func (a *Agent) Run() {
 	}
 }
 
-// onConfigChange apply configuation changes
-func (a *Agent) onConfigChange() {
-	cfg := config.GetConfig()
-
-	a.stage = cfg.MulesoftConfig.Environment
-	a.discoveryTags = cleanTags(cfg.MulesoftConfig.DiscoveryTags)
-	a.discoveryIgnoreTags = cleanTags(cfg.MulesoftConfig.DiscoveryIgnoreTags)
-	a.apicClient = coreagent.GetCentralClient()
-	a.anypointClient.OnConfigChange(cfg.MulesoftConfig)
-}
-
 func (a *Agent) validateAPI(apiID, stageName string) bool {
-	return true
+	asset, err := a.assetCache.Get(fmt.Sprintf("%s-%s", apiID, stageName))
+	if err != nil {
+		log.Warnf("Unable to validate API: %s", err.Error())
+		return false
+	}
+	return asset != nil
 }
 
+// cleanTags splits the CSV and trims off whitespace
 func cleanTags(tagCSV string) []string {
 	clean := []string{}
 	tags := strings.Split(tagCSV, ",")

@@ -28,7 +28,7 @@ func init() {
 
 // run Callback that agent will call to process the execution
 func run() error {
-	discoveryAgent, err := agent.New(nil)
+	discoveryAgent, err := agent.New()
 	if err != nil {
 		return err
 	}

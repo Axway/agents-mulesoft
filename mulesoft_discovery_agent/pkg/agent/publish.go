@@ -6,6 +6,7 @@ import (
 	log "github.com/Axway/agent-sdk/pkg/util/log"
 )
 
+// publishLoop Publish event loop.
 func (a *Agent) publishLoop() {
 	for {
 		select {
@@ -20,20 +21,21 @@ func (a *Agent) publishLoop() {
 	}
 }
 
+// publish Publishes the API to Amplify Central.
 func (a *Agent) publish(serviceDetail *ServiceDetail) error {
-	log.Infof("Publishing API \"%s (%s)\" to AMPLIFY Central", serviceDetail.APIName, serviceDetail.ID)
+	log.Infof("Publishing API \"%s (%s)\" to Amplify Central", serviceDetail.APIName, serviceDetail.ID)
 
 	serviceBody, err := a.buildServiceBody(serviceDetail)
 	if err != nil {
-		log.Errorf("Error publishing API \"%s (%s)\" to AMPLIFY Central: %s", serviceDetail.APIName, serviceDetail.ID, err.Error())
+		log.Errorf("Error publishing API \"%s (%s)\" to Amplify Central: %s", serviceDetail.APIName, serviceDetail.ID, err.Error())
 		return err
 	}
 	err = agent.PublishAPI(serviceBody)
 	if err != nil {
-		log.Errorf("Error publishing API \"%s (%s)\" to AMPLIFY Central: %s", serviceDetail.APIName, serviceDetail.ID, err.Error())
+		log.Errorf("Error publishing API \"%s (%s)\" to Amplify Central: %s", serviceDetail.APIName, serviceDetail.ID, err.Error())
 		return err
 	}
-	log.Infof("Published API \"%s (%s)\" to AMPLIFY Central", serviceDetail.APIName, serviceDetail.ID)
+	log.Infof("Published API \"%s (%s)\" to Amplify Central", serviceDetail.APIName, serviceDetail.ID)
 	return err
 }
 
