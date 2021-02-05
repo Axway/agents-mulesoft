@@ -1,0 +1,11 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		},
+		{
+			"path": "../../../../../../pkg/mod/github.com/!axway/agent-sdk@v0.0.19-0.20210127074007-f4fb8434d124"
+		}
+	],
+	"settings": {}
+}
