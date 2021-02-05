@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"sort"
 	"strings"
 	"time"
@@ -83,7 +84,7 @@ func (a *Agent) getServiceDetails(asset *anypoint.Asset, freshAssetCache cache.C
 		// to ensure deletions are detected.
 		key := a.formatCacheKey(fmt.Sprint(api.ID), a.stage)
 		a.assetCache.Set(key, api)
-		freshAssetCache.Set(key, api)
+		freshAssetCache.Set(key, api) // Need to handle if the API exists but becomes undiscoverable
 
 		serviceDetail, err := a.getServiceDetail(asset, &api)
 		if err != nil {
@@ -102,6 +103,11 @@ func (a *Agent) getServiceDetail(asset *anypoint.Asset, api *anypoint.API) (*Ser
 	// Filtering
 	if !a.shouldDiscoverAPI(api) {
 		// Skip
+		return nil, nil
+	}
+
+	if api.EndpointURI == "" {
+		// If the API has no exposed endpoint we're not going to discover it.
 		return nil, nil
 	}
 
@@ -141,18 +147,9 @@ func (a *Agent) getServiceDetail(asset *anypoint.Asset, api *anypoint.API) (*Ser
 		return nil, nil
 	}
 
-	specContent, err := a.anypointClient.GetExchangeFileContent(exchangeFile)
+	specContent, specType, err := a.getSpecFromExchangeFile(api, exchangeFile)
 	if err != nil {
 		return nil, err
-	}
-	specContent = a.specYAMLToJSON(specContent) // SDK does not support YAML specifications
-
-	specType, err := a.getSpecType(exchangeFile, specContent)
-	if err != nil {
-		return nil, err
-	}
-	if specType == "" {
-		return nil, fmt.Errorf("Unknown spec type for \"%s(%s)\"", api.AssetID, api.AssetVersion)
 	}
 
 	icon, iconContentType, err := a.anypointClient.GetExchangeAssetIcon(exchangeAsset)
@@ -219,6 +216,36 @@ func (a *Agent) getExchangeAssetSpecFile(asset *anypoint.ExchangeAsset) (*anypoi
 	return &asset.Files[0], nil
 }
 
+// getSpecFromExchangeFile getst the spec content and injects the api endpoint.
+func (a *Agent) getSpecFromExchangeFile(api *anypoint.API, exchangeFile *anypoint.ExchangeFile) ([]byte, string, error) {
+	specContent, err := a.anypointClient.GetExchangeFileContent(exchangeFile)
+	if err != nil {
+		return nil, "", err
+	}
+
+	specContent = a.specYAMLToJSON(specContent) // SDK does not support YAML specifications
+	specType, err := a.getSpecType(exchangeFile, specContent)
+	if err != nil {
+		return nil, "", err
+	}
+	if specType == "" {
+		return nil, specType, fmt.Errorf("Unknown spec type for \"%s(%s)\"", api.AssetID, api.AssetVersion)
+	}
+
+	// Make a best effort to update the endpoints - required because the SDK is parsing from spec and not setting the
+	// endpoint information independently.
+	switch specType {
+	case apic.Oas2:
+		specContent, err = a.setOAS2Endpoint(api.EndpointURI, specContent)
+	case apic.Oas3:
+		specContent, err = a.setOAS3Endpoint(api.EndpointURI, specContent)
+	case apic.Wsdl:
+		specContent, err = a.setWSDLEndpoint(api.EndpointURI, specContent)
+	}
+
+	return specContent, specType, err
+}
+
 // specYAMLToJSON - if the spec is yaml convert it to json, SDK doesn't handle yaml.
 func (a *Agent) specYAMLToJSON(specContent []byte) []byte {
 	specMap := make(map[string]interface{})
@@ -279,4 +306,43 @@ func (a *Agent) getAuthPolicy(policies []anypoint.Policy) string {
 func (a *Agent) checksum(val interface{}, authPolicy string) string {
 	sum := sha256.Sum256([]byte(fmt.Sprintf("%v%s", val, authPolicy)))
 	return fmt.Sprintf("%x", sum)
+}
+
+func (a *Agent) setOAS2Endpoint(endpointURL string, specContent []byte) ([]byte, error) {
+	endpoint, err := url.Parse(endpointURL)
+	if err != nil {
+		return specContent, err
+	}
+
+	spec := make(map[string]interface{})
+	err = json.Unmarshal(specContent, &spec)
+	if err != nil {
+		return specContent, err
+	}
+
+	spec["host"] = endpoint.Host
+	spec["basePath"] = endpoint.Path
+	spec["schemes"] = []string{endpoint.Scheme}
+
+	return json.Marshal(spec)
+}
+
+func (a *Agent) setOAS3Endpoint(url string, specContent []byte) ([]byte, error) {
+	spec := make(map[string]interface{})
+
+	err := json.Unmarshal(specContent, &spec)
+	if err != nil {
+		return specContent, err
+	}
+
+	spec["servers"] = []interface{}{
+		map[string]string{"url": url},
+	}
+
+	return json.Marshal(spec)
+}
+
+func (a *Agent) setWSDLEndpoint(url string, specContent []byte) ([]byte, error) {
+	// TODO
+	return specContent, nil
 }
