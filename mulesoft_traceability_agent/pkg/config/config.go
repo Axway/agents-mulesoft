@@ -87,6 +87,7 @@ func (c *MulesoftConfig) ApplyResources(dataplaneResource *v1.ResourceInstance, 
 
 const (
 	pathAnypointExchangeURL   = "mulesoft.anypointExchangeUrl"
+	pathCachePath             = "mulesoft.cachePath"
 	pathPollInterval          = "mulesoft.pollInterval"
 	pathEnvironment           = "mulesoft.environment"
 	pathAuthUsername          = "mulesoft.auth.username"
@@ -98,7 +99,6 @@ const (
 	pathSSLMinVersion         = "mulesoft.ssl.minVersion"
 	pathSSLMaxVersion         = "mulesoft.ssl.maxVersion"
 	pathProxyURL              = "mulesoft.proxyUrl"
-	pathCachePath             = "mulesoft.cachePath"
 )
 
 // AddMulesoftConfigProperties - Adds the command properties needed for Mulesoft
@@ -108,8 +108,8 @@ func AddMulesoftConfigProperties(props properties.Properties) {
 	props.AddStringProperty(pathEnvironment, "", "Mulesoft Anypoint environment.")
 	props.AddStringProperty(pathAuthUsername, "", "Mulesoft username")
 	props.AddStringProperty(pathAuthPassword, "", "Mulesoft password")
-	props.AddDurationProperty(pathAuthLifetime, 60*time.Minute, "Mulesoft session lifetime")
 	props.AddStringProperty(pathCachePath, "/tmp", "Mulesoft Cache Path")
+	props.AddDurationProperty(pathAuthLifetime, 60*time.Minute, "Mulesoft session lifetime")
 
 	// ssl properties and command flags
 	props.AddStringSliceProperty(pathSSLNextProtos, []string{}, "List of supported application level protocols, comma separated")
