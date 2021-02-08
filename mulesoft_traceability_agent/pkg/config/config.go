@@ -41,7 +41,7 @@ type MulesoftConfig struct {
 	SessionLifetime     time.Duration     `config:"auth.lifetime"`
 	TLS                 corecfg.TLSConfig `config:"ssl"`
 	ProxyURL            string            `config:"proxyUrl"`
-	CachePath           string    `config:"cachePath"`
+	CachePath           string    		  `config:"cachePath"`
 }
 
 // NewMulesoftConfig creates an empty config.
@@ -74,7 +74,6 @@ func (c *MulesoftConfig) ValidateCfg() (err error) {
 		return errors.New("Invalid mulesoft configuration: pollInterval is invalid")
 	}
 	if _, err := os.Stat(c.CachePath); os.IsNotExist(err) {
-		// path/to/whatever does not exist
 		return errors.New("Invalid mulesoft cache path: path does not exist")
 	}
 	return
