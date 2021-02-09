@@ -13,6 +13,33 @@ As well as access to Amplify Central it is assume you have access to the [Muleso
 - Credentials with access to the organization the agents will attach to.
 - Mulesoft environment name to discover from (e.g. Sandbox)
 
+
+## Configuring the Discovery Agent
+
+The minimial configuration for the agent is:
+
+```
+central:
+  organizationID: <your organization id>
+  environment: <your amplify environment name>
+  auth:
+    clientID: <your service account client id>
+    privateKey: <path to your private_key.pem>
+    publicKey: <path to your public_key.pem>
+
+mulesoft:
+ environment: <your Mulesoft environment>
+ auth:
+  username: <your Mulesoft username>
+  password: <your Mulesoft password>
+```
+
+## Start the Discovery Agent
+
+```
+./mulesoft_discovery_agent --pathConfig <path to mulesoft_discovery_agent.yaml>
+```
+
 ## Configuration Variables
 The agents are environmentalized and, as with all Amplify Centrla agents, support reading the configuration from the environment, an env file, the CLI or a YAML configuration
 
@@ -98,29 +125,3 @@ The allowed cipher suites string values are allowed: ECDHE-ECDSA-AES-128-CBC-SHA
 
 The list of default cipher suites is: ECDHE-ECDSA-AES-256-GCM-SHA384, ECDHE-RSA-AES-256-GCM-SHA384, ECDHE-ECDSA-CHACHA20-POLY1305, ECDHE-RSA-CHACHA20-POLY1305, ECDHE-ECDSA-AES-128-GCM-SHA256, ECDHE-RSA-AES-128-GCM-SHA256, ECDHE-ECDSA-AES-128-CBC-SHA256, ECDHE-RSA-AES-128-CBC-SHA256
 
-
-## Configuring the Discovery Agent
-
-The minimial configuration for the agent is:
-
-```
-central:
-  organizationID: <your organization id>
-  environment: <your amplify environment name>
-  auth:
-    clientID: <your service account client id>
-    privateKey: <path to your private_key.pem>
-    publicKey: <path to your public_key.pem>
-
-mulesoft:
- environment: <your Mulesoft environment>
- auth:
-  username: <your Mulesoft username>
-  password: <your Mulesoft password>
-```
-
-## Start the Discovery Agent
-
-```
-./mulesoft_discovery_agent --pathConfig <path to mulesoft_discovery_agent.yaml>
-```
