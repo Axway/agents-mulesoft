@@ -31,10 +31,10 @@ archives:
       windows: Windows
       386: i386
       amd64: x86_64
+    wrap_in_directory: discovery_agent
     files:
       - mulesoft_discovery_agent.yaml
       - README.md
-      - img/*
 checksum:
   name_template: "discovery_checksums.txt"
 snapshot:
