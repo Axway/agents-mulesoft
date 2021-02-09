@@ -1,144 +1,126 @@
+# Amplify Mulesoft Anypoint Discovery Agent
 
-# Prerequisite
-1. Golang 
-2. Make
-3. Axway Amplify account
+## Prerequisites
+Install the agent and provision Amplify Central access as described in (https://github.com/Axway/agents-mulesoft/blob/main/README.md)[https://github.com/Axway/agents-mulesoft/blob/main/README.md].
 
-# Configure Axway Amplify 
+- Amplify organization id
+- Amplify Central environment name
+- Pubic/Private key pem files
+- Service account client id
 
-Navigate to https://platform.axway.com and authenticate or sign up for a trial account
+As well as access to Amplify Central it is assume you have access to the [Mulesoft Anypoint Platform](https://anypoint.mulesoft.com/exchange). You need:
 
-## Locate Amplify Organization ID
+- Credentials with access to the organization the agents will attach to.
+- Mulesoft environment name to discover from (e.g. Sandbox)
+
+## Configuration Variables
+The agents are environmentalized and, as with all Amplify Centrla agents, support reading the configuration from the environment, an env file, the CLI or a YAML configuration
+
+| Variable Name                                                      | YAML Path                                                           | Description                                                                                                                                                                                                                                                                                              | **Location** / _Default_                                             |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| CENTRAL_URL                                                        | central.url                                                         | The URL to the AMPLIFY Central instance being used for this discovery agent                                                                                                                                                                                                                              | _https://apicentral.axway.com_                                       |
+| CENTRAL_PLATFORMURL                                                | central.platformURL                                                 | The URL to the platform instance being used to get user information such as email address used for smtp notifications                                                                                                                                                                                    | _https://platform.axway.com_                                         |
+| CENTRAL_ORGANIZATIONID                                             | central.organizationID                                              | The Organization ID from AMPLIFY Central                                                                                                                                                                                                                                                                 | **Platform -> Click User -> Organization**                           |
+| CENTRAL_TEAM                                                       | central.team                                                        | The Team name in AMPLIFY Central that all published APIs will be linked to                                                                                                                                                                                                                               | **AMPLIFY Central -> Access -> Teams**                               |
+| CENTRAL_MODE                                                       | central.mode                                                        | How to send endpoints back to Central. (publishToEnvironment = API Server, publishToEnvironmentAndCatalog = API Server and Catalog)                                                                                                                                                                      | _publishToEnvironmentAndCatalog_                                     |
+| CENTRAL_ENVIRONMENT                                                | central.environment                                                 | Environment eventually set by download kit in AMPLIFY Central                                                                                                                                                                                                                                            | **Name of the AMPLIFY Central environment**                          |
+| CENTRAL_APPENDDATAPLANETOTITLE                                     | central.appenddataplanetotitle                                      | When true appends the data plane title to the Consumer Instance description and title. When false, nothing is changed                                                                                                                                                                                    | true                                                                 |
+| CENTRAL_AUTH_URL                                                   | central.auth.url                                                    | The URL used to authenticate for AMPLIFY Central                                                                                                                                                                                                                                                         | _https://login.axway.com/auth_                                       |
+| CENTRAL_AUTH_REALM                                                 | central.auth.realm                                                  | The Realm used to authenticate for AMPLIFY Central                                                                                                                                                                                                                                                       | _Broker_                                                             |
+| CENTRAL_AUTH_CLIENTID                                              | central.auth.clientId                                               | The DOSA ID of the AMPLIFY Central Service Account created                                                                                                                                                                                                                                               | **AMPLIFY Central -> Access -> Service Accounts**                    |
+| CENTRAL_AUTH_PRIVATEKEY                                            | central.auth.privateKey                                             | The private key file path from the commands above                                                                                                                                                                                                                                                        | _./private_key.pem_                                                  |
+| CENTRAL_AUTH_PUBLICKEY                                             | central.auth.publicKey                                              | The public key file path from the commands above                                                                                                                                                                                                                                                         | _./public_key.pem_                                                   |
+| CENTRAL_AUTH_KEYPASSWORD                                           | central.auth.keyPassword                                            | The password for the private key, if applicable                                                                                                                                                                                                                                                          |                                                                      |
+| CENTRAL_AUTH_TIMEOUT                                               | central.auth.timeout                                                | The timeout to wait for the authentication server to respond (ns - default, us, ms, s, m, h)                                                                                                                                                                                                             | _10s_                                                                |
+| CENTRAL_APISERVERVERSION                                           | central.apiServerVersion                                            | Version of the API Server that the agent will communicate with                                                                                                                                                                                                                                           | _v1alpha1_                                                           |
+| CENTRAL_SSL_MINVERSION                                             | central.ssl.minVersion                                              | String value for the minimum SSL/TLS version that is acceptable. If zero, empty TLS 1.0 is taken as the minimum. Allowed values are: TLS1.0, TLS1.1, TLS1.2, TLS1.3                                                                                                                                      | Internally, the value defaults toTLS1.2                              |
+| CENTRAL_SSL_MAXVERSION                                             | central.ssl.maxVersion                                              | String value for the maximum SSL/TLS version that is acceptable. If empty, then the maximum version supported by this package is used, which is currently TLS 1.3. Allowed values are: TLS1.0, TLS1.1, TLS1.2, TLS1.3                                                                                    | Internally, this value defaults to empty                             |
+| CENTRAL_SSL_CIPHERSUITES                                           | central.ssl.cipherSuites                                            | An array of strings. It is a list of supported cipher suites for TLS versions up to TLS 1.2. If CipherSuites is nil, a default list of secure cipher suites is used, with a preference order based on hardware performance. [See below](#supported-cipher-suites) for currently supported cipher suites. | [See below](#default-cipher-suites) for default cipher suite setting |
+| CENTRAL_SSL_NEXTPROTOS                                             | central.ssl.nestProtos                                              | An array of strings. It is a list of supported application level protocols, in order of preference, based on the ALPN protocol list. Allowed values are: h2, htp/1.0, http/1.1, h2c                                                                                                                      | Internally empty. Default negotiation.                               |
+| CENTRAL_SSL_INSECURESKIPVERIFY                                     | central.ssl.insecureSkipVerify                                      | InsecureSkipVerify controls whether a client verifies the server's certificate chain and host name. If InsecureSkipVerify is true, TLS accepts any certificate presented by the server and any host name in that certificate. In this mode, TLS is susceptible to man-in-the-middle attacks.             | Internally defaulted to false                                        |
+| CENTRAL_ADDITIONALTAGS                                             | central.additionalTags                                              | Additional tag names to publish separated by a comma                                                                                                                                                                                                                                                     |                                                                      |
+| CENTRAL_POLLINTERVAL                                               | central.pollInterval                                                | The frequency in which Central is polled for subscriptions (ns - default, us, ms, s, m, h)                                                                                                                                                                                                               | _60s_                                                                |
+| CENTRAL_PROXYURL                                                   | central.proxyUrl                                                    | The url for the proxy for Amplify Central (e.g. http://username:password@hostname:port). If empty, no proxy is defined.                                                                                                                                                                                  | Internally, this value defaults to empty                             |
+| CENTRAL_SUBSCRIPTIONS_APPROVAL_MODE                                | central.subscriptions.approval.mode                                 | The mode for approving subscriptions on AMPLIFY Central (manual, auto, webhook)                                                                                                                                                                                                                          | _manual_                                                             |
+| CENTRAL_SUBSCRIPTIONS_APPROVAL_WEBHOOK_URL                         | central.subscriptions.approval.webhook.url                          | The url for a subscription approval webhook (if any). CENTRAL_SUBSCRIPTIONS_APPROVAL_MODE must be set to "webhook" for webhooks to be invoked                                                                                                                                                            | Internally, this value defaults to empty                             |
+| CENTRAL_SUBSCRIPTIONS_APPROVAL_WEBHOOK_HEADERS                     | central.subscriptions.approval.webhook.headers                      | The headers to pass to the subscription approval webhook (if any).                                                                                                                                                                                                                                       | Internally, this value defaults to empty                             |
+| CENTRAL_SUBSCRIPTIONS_APPROVAL_WEBHOOK_AUTHSECRET                  | central.subscriptions.approval.webhook.authSecret                   | The authentication secret to pass to the subscription approval webhook (if any)                                                                                                                                                                                                                          | Internally, this value defaults to empty                             |
+| CENTRAL_SUBSCRIPTIONS_NOTIFICATIONS_WEBHOOK_URL                    | central.subscriptions.notifications.webhook.url                     | URL where the webhook server is defined                                                                                                                                                                                                                                                                  | Internally, this value defaults to empty                             |
+| CENTRAL_SUBSCRIPTIONS_NOTIFICATIONS_WEBHOOK_HEADERS                | central.subscriptions.notifications.webhook.headers                 | Information used to verify the webhook. Provided by the customer, and may include such information as contentType and Authorization.                                                                                                                                                                     | Internally, this value defaults to empty                             |
+| CENTRAL_SUBSCRIPTIONS_NOTIFICATIONS_SMTP_HOST                      | central.subscriptions.notifications.smtp.host                       | SMTP server where the email notifications will originate from                                                                                                                                                                                                                                            | Internally, this value defaults to empty                             |
+| CENTRAL_SUBSCRIPTIONS_NOTIFICATIONS_SMTP_PORT                      | central.subscriptions.notifications.smtp.port                       | Port of the SMTP server                                                                                                                                                                                                                                                                                  | Internally, this value defaults to empty                             |
+| CENTRAL_SUBSCRIPTIONS_NOTIFICATIONS_SMTP_FROMADDRESS               | central.subscriptions.notifications.smtp.fromaddress                | Email address which will represent the sender                                                                                                                                                                                                                                                            | Internally, this value defaults to empty                             |
+| CENTRAL_SUBSCRIPTIONS_NOTIFICATIONS_SMTP_USERNAME                  | central.subscriptions.notifications.smtp.username                   | Login user for the SMTP server                                                                                                                                                                                                                                                                           | Internally, this value defaults to empty                             |
+| CENTRAL_SUBSCRIPTIONS_NOTIFICATIONS_SMTP_PASSWORD                  | central.subscriptions.approval.notifications.smtp.password          | Login password for the SMTP server                                                                                                                                                                                                                                                                       | Internally, this value defaults to empty                             |
+| CENTRAL_SUBSCRIPTIONS_NOTIFICATIONS_SMTP_AUTHTYPE                  | central.subscriptions.approval.notifications.smtp.authtype          | The authentication type based on the email server.  You may have to refer to the email server properties and specifications                                                                                                                                                                              | Internally, this value defaults to empty                             |
+| CENTRAL_SUBSCRIPTIONS_NOTIFICATIONS_SMTP_SUBSCRIBE_SUBJECT         | central.subscriptions.approval.notifications.smtp.subscribe.subject | Subject of the email notification for action subscribe.                                                                                                                                                                                                                                                  | Internally, this value defaults to "Subscription Notification"       |
+| CENTRAL_SUBSCRIPTIONS_NOTIFICATIONS_SMTP_SUBSCRIBE_BODY            | central.subscriptions.approval.notifications.smtp.subscribe.body    | Body of the email notification for action subscribe.                                                                                                                                                                                                                                                     | Internally, this value defaults to "Subscription created for Catalog Item: <a href= ${catalogItemUrl}> ${catalogItemName}</a><br/>${authtemplate}<br/>" |
+| CENTRAL_SUBSCRIPTIONS_NOTIFICATIONS_SMTP_SUBSCRIBE_OAUTH           | central.subscriptions.notifications.smtp.subscribe.oauth            | Body of the email notification for action subscribe on OAuth authorization if your API is secured using OAuth token. You can obtain your token using grant_type=client_credentials with the following client_id=${clientID} and client_secret=${clientSecret}                                            | Internally, this value defaults to "Your API is secured using OAuth token. You can obtain your token using grant_type=client_credentials with the following client_id=<b>${clientID}</b> and client_secret=<b>${clientSecret}</b>" |
+| CENTRAL_SUBSCRIPTIONS_NOTIFICATIONS_SMTP_SUBSCRIBE_APIKEYS         | central.subscriptions.notifications.smtp.subscribe.apikeys          | Body of the email notification for action subscribe on APIKey authorization if your API is secured using an APIKey credential:header:{keyHeaderName}/value:${key}                                                                                                                                        | Internally, this value defaults to "Your API is secured using an APIKey credential: header: <b>${keyHeaderName}</b> / value: <b>${key}</b>" |
+| CENTRAL_SUBSCRIPTIONS_NOTIFICATIONS_SMTP_UNSUBSCRIBE_SUBJECT       | central.subscriptions.notifications.smtp.unsbuscribe.subject        | Subject of the email notification for action unsubscribe.                                                                                                                                                                                                                                                | Internally, this value defaults to "Subscription Removal Notification" |
+| CENTRAL_SUBSCRIPTIONS_NOTIFICATIONS_SMTP_UNSUBSCRIBE_BODY          | central.subscriptions.notifications.smtp.unsubscribe.body           | Body of the email notification for action unsubscribe.                                                                                                                                                                                                                                                   | Internally, this value defaults to "Subscription for Catalog Item: <a href= ${catalogItemUrl}> ${catalogItemName}</a> has been unsubscribed" |
+| CENTRAL_SUBSCRIPTIONS_NOTIFICATIONS_SMTP_SUBSCRIBEFAILED_SUBJECT   | central.subscriptions.notifications.smtp.subscribefailed.subject    | Subject of the email notification for action subscribe failed.                                                                                                                                                                                                                                           | Internally, this value defaults to "Subscription Failed Notification" |
+| CENTRAL_SUBSCRIPTIONS_NOTIFICATIONS_SMTP_SUBSCRIBEFAILED_BODY      | central.subscriptions.notifications.smtp.subscribedfailed.body      | Body of the email notification for action subscribe failed.                                                                                                                                                                                                                                              | Internally, this value defaults to "Could not subscribe to CatalogItem: <a href= ${catalogItemUrl}> ${catalogItemName}</a>" |
+| CENTRAL_SUBSCRIPTIONS_NOTIFICATIONS_SMTP_UNSUBSCRIBEFAILED_SUBJECT | central.subscriptions.notifications.smtp.unsubscribefailed.subject  | Subject of the email notification for action unsubscribe failed.                                                                                                                                                                                                                                         | Internally, this value defaults to "Subscription Removal Failed"     |
+| CENTRAL_SUBSCRIPTIONS_NOTIFICATIONS_SMTP_UNSUBSCRIBEFAILED_BODY    | central.subscriptions.notifications.smtp.unsbuscribedfailed.body    | Body of the email notification for action unsubscribe failed.                                                                                                                                                                                                                                            | Internally, this value defaults to "Could not unsubscribe to Catalog Item: <a href= ${catalogItemUrl}> ${catalogItemName}</a>" |
+| LOG_LEVEL                                                          | log.level                                                           | The log level for output messages (debug, info, warn, error)                                                                                                                                                                                                                                             | _info_                                                               |
+| LOG_FORMAT                                                         | log.format                                                          | The format to print log messages (json, line, package)                                                                                                                                                                                                                                                   | _json_                                                               |
+| LOG_OUTPUT                                                         | log.output                                                          | The output for the log lines (stdout, file, both)                                                                                                                                                                                                                                                        | _stdout_                                                             |
+| LOG_MASKEDVALUES                                                   | log.maskedValues                                                    | Comma-separated list of key words to identify within the agent config and used to mask its corresponding sensitive data. Key words are matched by whole words and are case sensitive                                                                                                                     | (empty value list)                                                   |
+| LOG_FILE_NAME                                                      | log.file.name                                                       | The name of the log files                                                                                                                                                                                                                                                                                | [[Agent executable name]].log                                        |
+| LOG_FILE_PATH                                                      | log.file.path                                                       | The path (relative or absolute) to save logs files, if output type file or both                                                                                                                                                                                                                          | _logs_                                                               |
+| LOG_FILE_ROTATEEVERYMEGABYTES                                      | log.file.rotateeverymegabytes                                       | The max size, in megabytes that a log file can grow to                                                                                                                                                                                                                                                   | _100_                                                                |
+| LOG_FILE_KEEPFILES                                                 | log.file.keepfiles                                                  | The max number of log file backups to keep                                                                                                                                                                                                                                                               | _7_                                                                  |
+| LOG_FILE_CLEANBACKUPS                                              | log.file.cleanbackups                                               | The max age of a backup file, in days                                                                                                                                                                                                                                                                    | _0_                                                                  |
+| MULESOFT_ANYPOINTEXCHANGEURL                                       | mulesoft.anypointExchangeUrl                                        | Mulesoft Anypoint Exchange URL                                                                                                                                                                                                                                                                           | https://anypoint.mulesoft.com                                        |
+| MULESOFT_AUTH_LIFETIME                                             | mulesoft.auth.lifetime                                              | The session lifetime. The agent will automatically refresh the access token as it approaches the end of its lifetime                                                                                                                                                                                     | 60m                                                                  |
+| MULESOFT_AUTH_USERNAME                                             | mulesoft.auth.username                                              | The Mulesoft Anypoint username created for this agent                                                                                                                                                                                                                                                    |                                                                      |
+| MULESOFT_AUTH_PASSWORD                                             | mulesoft.auth.password                                              | The password for the Mulesoft Anypoint username created for this agent                                                                                                                                                                                                                                   |                                                                      |
+| MULESOFT_DISCOVERYIGNORETAGS                                       | mulesoft.discoveryIgnoreTags                                        | Comma-separated black list of tags that, if any are present, will prevent an API being publised to Amplify Central. Take precedence over MULESOFT_DISCOVERYTAGS                                                                                                                                          | (empty tag list)                                                     |
+| MULESOFT_DISCOVERYTAGS                                             | mulesoft.discoveryTags                                              | Comma-separated list of tags that, if any are present, will allow an API to be publised to Amplify Central. All APIs are discovered if not tags are specified                                                                                                                                            | (empty tag list)                                                     |
+| MULESOFT_ENVIRONMENT                                               | mulesoft.environment                                                | The Mulesoft Anypoint Exchange the agent connects to, e.g. Sandbox.                                                                                                                                                                                                                                      |                                                                      |
+| MULESOFT_POLLINTERVAL                                              | mulesoft.pollInterval                                               | The frequency in which Mulesoft API Manager is polled for new endpoints.                                                                                                                                                                                                                                 | _30s_                                                                |
+| MULESOFT_SSL_MINVERSION                                            | mulesoft.ssl.minVersion                                             | String value for the minimum SSL/TLS version that is acceptable. If zero, empty TLS 1.0 is taken as the minimum. Allowed values are: TLS1.0, TLS1.1, TLS1.2, TLS1.3                                                                                                                                      | Internally, the value defaults toTLS1.2                              |
+| MULESOFT_SSL_MAXVERSION                                            | mulesoft.ssl.maxVersion                                             | String value for the maximum SSL/TLS version that is acceptable. If empty, then the maximum version supported by this package is used, which is currently TLS 1.3. Allowed values are: TLS1.0, TLS1.1, TLS1.2, TLS1.3                                                                                    | Internally, this value defaults to empty                             |
+| MULESOFT_SSL_CIPHERSUITES                                          | mulesoft.ssl.cipherSuites                                           | An array of strings. It is a list of supported cipher suites for TLS versions up to TLS 1.2. If CipherSuites is nil, a default list of secure cipher suites is used, with a preference order based on hardware performance. [See below](#supported-cipher-suites) for currently supported cipher suites. | [See below](#default-cipher-suites) for default cipher suite setting |
+| MULESOFT_SSL_NEXTPROTOS                                            | mulesoft.ssl.nestProtos                                             | An array of strings. It is a list of supported application level protocols, in order of preference, based on the ALPN protocol list. Allowed values are: h2, htp/1.0, http/1.1, h2c                                                                                                                      | Internally empty. Default negotiation.                               |
+| MULESOFT_SSL_INSECURESKIPVERIFY                                    | mulesoft.ssl.insecureSkipVerify                                     | InsecureSkipVerify controls whether a client verifies the server's certificate chain and host name. If InsecureSkipVerify is true, TLS accepts any certificate presented by the server and any host name in that certificate. In this mode, TLS is susceptible to man-in-the-middle attacks.             | Internally defaulted to false                                        |
+| MULESOFT_PROXYURL                                                  | mulesoft.proxyUrl                                                   | The url for the proxy for API Manager (e.g. http://username:password@hostname:port). If empty, no proxy is defined.                                                                                                                                                                                      | Internally, this value defaults to empty                             |
+| STATUS_PORT                                                        | status.port                                                         | The port that the healthcheck endpoint will listen on                                                                                                                                                                                                                                                    | _8989_                                                               |
+| STATUS_HEALTHCHECKINTERVAL                                         | status.healthCheckInterval                                          | Time in seconds between running periodic health checker (binary agents only). Allowed values are from 30 to 300 seconds.                                                                                                                                                                                 | _30s_                                                                |
+| STATUS_HEALTHCHECKPERIOD                                           | status.healthCheckPeriod                                            | Time in minutes allotted for services to be ready before exiting the agent. Allowed values are from 1 to 5 minutes.                                                                                                                                                                                      | _3m_                                                                 |
+
+### Supported Cipher Suites
+
+The allowed cipher suites string values are allowed: ECDHE-ECDSA-AES-128-CBC-SHA, ECDHE-ECDSA-AES-128-CBC-SHA256, ECDHE-ECDSA-AES-128-GCM-SHA256, ECDHE-ECDSA-AES-256-CBC-SHA, ECDHE-ECDSA-AES-256-GCM-SHA384, ECDHE-ECDSA-CHACHA20-POLY1305, ECDHE-ECDSA-RC4-128-SHA, ECDHE-RSA-3DES-CBC3-SHA, ECDHE-RSA-AES-128-CBC-SHA, ECDHE-RSA-AES-128-CBC-SHA256, ECDHE-RSA-AES-128-GCM-SHA256, ECDHE-RSA-AES-256-CBC-SHA, ECDHE-RSA-AES-256-GCM-SHA384, ECDHE-RSA-CHACHA20-POLY1305, ECDHE-RSA-RC4-128-SHA, RSA-RC4-128-SHA, RSA-3DES-CBC3-SHA, RSA-AES-128-CBC-SHA, RSA-AES-128-CBC-SHA256, RSA-AES-128-GCM-SHA256, RSA-AES-256-CBC-SHA, RSA-AES-256-GCM-SHA384, TLS-AES-128-GCM-SHA256, TLS-AES-256-GCM-SHA384, TLS-CHACHA20-POLY1305-SHA256
+
+### Default Cipher Suites
+
+The list of default cipher suites is: ECDHE-ECDSA-AES-256-GCM-SHA384, ECDHE-RSA-AES-256-GCM-SHA384, ECDHE-ECDSA-CHACHA20-POLY1305, ECDHE-RSA-CHACHA20-POLY1305, ECDHE-ECDSA-AES-128-GCM-SHA256, ECDHE-RSA-AES-128-GCM-SHA256, ECDHE-ECDSA-AES-128-CBC-SHA256, ECDHE-RSA-AES-128-CBC-SHA256
 
 
-<img src="./../img/WelcomeToAmplify.png" width="600">
+## Configuring the Discovery Agent
 
-Click on your profile in the top-right corner of the Welcome screen and select *Organization*
-
-
-<img src="./../img/OrganizationID.png" width="600">
-
-Note the value of the Organization ID
-
-## Create a Service Account
-Service Account are used by Amplify so that the Agents can connect to the Gateway without exposing client credentials
-
-Click the grid icon at the top-left of the UI and select *Central*
-
-Navigate to *Access -> Service Accounts*
-
-Click the `+Service Account` Button
-
-Add a name and a public key
-
-To generate a public key, you can install OpenSSL and run the commands:
-
-`openssl genpkey -algorithm RSA -out private_key.pem -pkeyopt rsa_keygen_bits:2048
-
-openssl rsa -pubout -in private_key.pem -out public_key.pem`
-
-<img src="./../img/ServiceAccount.png" width="600">
-
-Note the Client ID and Key ID values.
-
-## Create Environment
-The environment will represent the connected Mulesoft API Gateway within the Amplify platform
-
-Navigate to the Toplogy tab and clicn the `+Environment` Button
-
-Complete the configuration form, noting the value entered in the Name field. It must be all lowercase with no spaces as it will be used as an identifier to the agent configuration later.
-
-<img src="./../img/Environments.png" width="600">
-
-
-# Steps to implement discovery agent using this stub
-1. Locate the commented tag "CHANGE_HERE" for package import paths in all files and fix them to reference the path correctly.
-2. Run "make dep" to resolve the dependencies. This should resolve all dependency packages and vendor them under ./vendor directory
-3. Update Makefile to change the name of generated binary image from *apic_discovery_agent* to the desired name. Locate *apic_discovery_agent* string and replace with desired name
-4. Update pkg/cmd/root.go to change the name and description of the agent. Locate *apic_discovery_agent* and *Sample Discovery Agent* and replace to desired values
-5. Update pkg/config/config.go to define the gateway specific configuration
-    - Locate *gateway-section* and replace with the name of your gateway. Same string in pkg/cmd/root.go and sample YAML config file
-    - Define gateway specific config properties in *GatewayConfig* struct. Locate the struct variables *ConfigKey1* & struct *config_key_1* and add/replace desired config properties
-    - Add config validation. Locate *ValidateCfg()* method and update the implementation to add validation specific to gateway specific config.
-    - Update the config binding with command line flags in init(). Locate *gateway-section.config_key_1* and add replace desired config property bindings
-    - Update the initialization of gateway specific by parsing the binded properties. Locate *ConfigKey1* & *gateway-section.config_key_1* and add/replace desired config properties
-6. Update pkg/gateway/client.go to implement the logic to discover and fetch the details related of the APIs.
-    - Locate *DiscoverAPIs()* method and implement the logic
-    - Locate *buildServiceBody()* method and update the Set*() method according to the API definition from gateway
-7. Run "make build" to build the agent
-8. Rename *apic_discovery_agent.yaml* file to the desired agents name and setup the agent config in the file.
-9. Execute the agent by running the binary file generated under *bin* directory. The YAML config must be in the current working directory
-
-Example *apic_discover_agent.yaml* file
+The minimial configuration for the agent is:
 
 ```
 central:
-  organizationID: [Located in Amplify Central Organization]
-  environment: [Located in Amplify Central topology]
+  organizationID: <your organization id>
+  environment: <your amplify environment name>
   auth:
-    clientID: [Located in the Amplify Central Access/Service Accounts]
-    privateKey: [Private Key path you used to create the Access/Service Accounts]
-    publicKey: [Public Key path you used to create the Access/Service Accounts]
-
- 
+    clientID: <your service account client id>
+    privateKey: <path to your private_key.pem>
+    publicKey: <path to your public_key.pem>
 
 mulesoft:
- anypointExchangeUrl: https://anypoint.mulesoft.com
- environment: Sandbox
+ environment: <your Mulesoft environment>
  auth:
-  username: [Mulesoft username]
-  password: [Mulesoft password]
-  lifetime: 60m
-  ```
-
-# Start the Discovery Agent
-
-```
-./mulesoft_discovery_agent --pathConfig <path to apic_discovery_agent.yaml>
+  username: <your Mulesoft username>
+  password: <your Mulesoft password>
 ```
 
-# Subscription - TO-DO
-The subscrption mechanism has not been implemented in this release of the Discovery Agent.
-The steps required for adding subscription support could look like the following:
+## Start the Discovery Agent
 
-1. Check if newly discovered API has an applied security policy
 ```
-https://anypoint.mulesoft.com/apimanager/api/v1/organizations/{organizationId}/environments/{environmentId}/apis/{api-id}/policies
+./mulesoft_discovery_agent --pathConfig <path to mulesoft_discovery_agent.yaml>
 ```
-2. Check if API has SLA Tiers
-```
-https://anypoint.mulesoft.com/apimanager/api/v1/organizations/{organizationId}/environments/{environmentId}/apis/{environmentApiId}/tiers
-```
-3. Amplify CLI builds subscriptionDefinition using discovered SLA Tiers
-```
-…
-plan:
-   enum:
-      - Gold
-      - Silver
-… 
-```
-4. Amplify CLI builds API deployment file.  Associates ConsumerInstance with matching subscriptionDefinition
-5. When subsciption is approved, Amplify CLI uses discovered security policy to create an application and contract in Mulesoft API Gateway.
-```
-https://anypoint.mulesoft.com/exchange/api/v1/organizations/{organizationId}/applications
-
-JSON body:
-{
-  "name" : "AppName"
-}
-
-https://anypoint.mulesoft.com/apimanager/api/v1/organizations/{organizationId}/environments/{environmentId}/apis/{environmentApiId}/contracts
-
-JSON body:
-{
-    "applicationId": 3,
-    "partyId": "",
-    "partyName": "",
-    "acceptedTerms": false,
-    "requestedTierId": 48
-}
-```
-
-
-Reference: [SDK Documentation - Building Discovery Agent](https://github.com/Axway/agent-sdk/blob/main/docs/discovery/index.md), [Mulesoft API Manager API](https://anypoint.mulesoft.com/exchange/portals/anypoint-platform/f1e97bc6-315a-4490-82a7-23abe036327a.anypoint-platform/api-manager-api/minor/1.0/console/method/%231156/)
