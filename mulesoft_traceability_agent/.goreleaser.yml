@@ -7,7 +7,7 @@ before:
     - go get "github.com/Axway/agent-sdk@main"
 builds:
   - id: mulesoft_traceability_agent
-    binary: bin/mulesoft_traceability_agent
+    binary: mulesoft_traceability_agent
     main: ./main.go
     flags:
       - -tags=static_all
