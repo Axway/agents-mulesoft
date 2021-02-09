@@ -41,7 +41,7 @@ type MulesoftConfig struct {
 	SessionLifetime     time.Duration     `config:"auth.lifetime"`
 	TLS                 corecfg.TLSConfig `config:"ssl"`
 	ProxyURL            string            `config:"proxyUrl"`
-	CachePath           string    `config:"cachePath"`
+	CachePath           string            `config:"cachePath"`
 }
 
 // NewMulesoftConfig creates an empty config.
@@ -125,7 +125,7 @@ func ParseMulesoftConfig(props properties.Properties) *MulesoftConfig {
 	return &MulesoftConfig{
 		AnypointExchangeURL: props.StringPropertyValue(pathAnypointExchangeURL),
 		PollInterval:        props.DurationPropertyValue(pathPollInterval),
-		CachePath:			 props.StringPropertyValue(pathCachePath),
+		CachePath:           props.StringPropertyValue(pathCachePath),
 		Environment:         props.StringPropertyValue(pathEnvironment),
 		Username:            props.StringPropertyValue(pathAuthUsername),
 		Password:            props.StringPropertyValue(pathAuthPassword),

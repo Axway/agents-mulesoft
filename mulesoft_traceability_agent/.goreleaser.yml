@@ -31,6 +31,10 @@ archives:
       windows: Windows
       386: i386
       amd64: x86_64
+    wrap_in_directory: traceability_agent
+    files:
+      - mulesoft_traceability_agent.yaml
+      - README.md
 checksum:
   name_template: "traceability_checksums.txt"
 snapshot:
