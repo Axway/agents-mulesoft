@@ -36,15 +36,9 @@ func init() {
 		run,                           // Callback for executing the agent
 		corecfg.TraceabilityAgent,     // Agent Type (Discovery or Traceability)
 	)
-<<<<<<< HEAD
-	RootCmd.AddCommand(service.GenServiceCmd("pathConfig"))
-
-	config.AddMulesoftConfigProperties(RootCmd.GetProperties())
-=======
 	config.AddMulesoftConfigProperties(RootCmd.GetProperties())
 
 	RootCmd.AddCommand(service.GenServiceCmd("pathConfig"))
->>>>>>> origin/main
 
 }
 

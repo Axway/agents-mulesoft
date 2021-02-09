@@ -41,11 +41,7 @@ type MulesoftConfig struct {
 	SessionLifetime     time.Duration     `config:"auth.lifetime"`
 	TLS                 corecfg.TLSConfig `config:"ssl"`
 	ProxyURL            string            `config:"proxyUrl"`
-<<<<<<< HEAD
-	CachePath           string    		  `config:"cachePath"`
-=======
-	CachePath           string    `config:"cachePath"`
->>>>>>> origin/main
+	CachePath           string            `config:"cachePath"`
 }
 
 // NewMulesoftConfig creates an empty config.
@@ -78,10 +74,7 @@ func (c *MulesoftConfig) ValidateCfg() (err error) {
 		return errors.New("Invalid mulesoft configuration: pollInterval is invalid")
 	}
 	if _, err := os.Stat(c.CachePath); os.IsNotExist(err) {
-<<<<<<< HEAD
-=======
 		// path/to/whatever does not exist
->>>>>>> origin/main
 		return errors.New("Invalid mulesoft cache path: path does not exist")
 	}
 	return
@@ -95,10 +88,6 @@ func (c *MulesoftConfig) ApplyResources(dataplaneResource *v1.ResourceInstance, 
 
 const (
 	pathAnypointExchangeURL   = "mulesoft.anypointExchangeUrl"
-<<<<<<< HEAD
-	pathCachePath             = "mulesoft.cachePath"
-=======
->>>>>>> origin/main
 	pathPollInterval          = "mulesoft.pollInterval"
 	pathEnvironment           = "mulesoft.environment"
 	pathAuthUsername          = "mulesoft.auth.username"
@@ -110,10 +99,7 @@ const (
 	pathSSLMinVersion         = "mulesoft.ssl.minVersion"
 	pathSSLMaxVersion         = "mulesoft.ssl.maxVersion"
 	pathProxyURL              = "mulesoft.proxyUrl"
-<<<<<<< HEAD
-=======
 	pathCachePath             = "mulesoft.cachePath"
->>>>>>> origin/main
 )
 
 // AddMulesoftConfigProperties - Adds the command properties needed for Mulesoft
@@ -123,13 +109,8 @@ func AddMulesoftConfigProperties(props properties.Properties) {
 	props.AddStringProperty(pathEnvironment, "", "Mulesoft Anypoint environment.")
 	props.AddStringProperty(pathAuthUsername, "", "Mulesoft username")
 	props.AddStringProperty(pathAuthPassword, "", "Mulesoft password")
-<<<<<<< HEAD
-	props.AddStringProperty(pathCachePath, "/tmp", "Mulesoft Cache Path")
-	props.AddDurationProperty(pathAuthLifetime, 60*time.Minute, "Mulesoft session lifetime")
-=======
 	props.AddDurationProperty(pathAuthLifetime, 60*time.Minute, "Mulesoft session lifetime")
 	props.AddStringProperty(pathCachePath, "/tmp", "Mulesoft Cache Path")
->>>>>>> origin/main
 
 	// ssl properties and command flags
 	props.AddStringSliceProperty(pathSSLNextProtos, []string{}, "List of supported application level protocols, comma separated")
@@ -144,7 +125,7 @@ func ParseMulesoftConfig(props properties.Properties) *MulesoftConfig {
 	return &MulesoftConfig{
 		AnypointExchangeURL: props.StringPropertyValue(pathAnypointExchangeURL),
 		PollInterval:        props.DurationPropertyValue(pathPollInterval),
-		CachePath:			 props.StringPropertyValue(pathCachePath),
+		CachePath:           props.StringPropertyValue(pathCachePath),
 		Environment:         props.StringPropertyValue(pathEnvironment),
 		Username:            props.StringPropertyValue(pathAuthUsername),
 		Password:            props.StringPropertyValue(pathAuthPassword),
