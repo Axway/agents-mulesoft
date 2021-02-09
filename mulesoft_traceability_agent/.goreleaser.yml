@@ -7,7 +7,7 @@ before:
     - go get "github.com/Axway/agent-sdk@main"
 builds:
   - id: mulesoft_traceability_agent
-    binary: bin/mulesoft_traceability_agent
+    binary: mulesoft_traceability_agent
     main: ./main.go
     flags:
       - -tags=static_all
@@ -31,6 +31,10 @@ archives:
       windows: Windows
       386: i386
       amd64: x86_64
+    wrap_in_directory: traceability_agent
+    files:
+      - mulesoft_traceability_agent.yml
+      - README.md
 checksum:
   name_template: "traceability_checksums.txt"
 snapshot:

@@ -1,60 +1,97 @@
-# agents-mulesoft
+# Amplify Mulesoft Anypoint Agent
 
-This repo maintains the software allowing for an Axway Amplify agent to proxy dataplane api discovery, subscription and telemetry from Mulesoft Anypoint Platform to Axway Amplify  
+## Overview
 
-## Prerequisites
+This repository contains the Axway Amplify dataplane agents for the Mulesoft Anypoint platform. Thes agents connect your Mulesoft Anypoint dataplant to the Amplify Central management plane.
 
-* A go friendly environment with make 
+### Discovery
 
-# Getting started
+The Discovery agent is used to identify APIs in the Mulesoft API Manager and publish them to the Amplify Central.
 
-run `make`
+### Traceability
 
-## Create an environment in Central
+The traceability agent retrieve traffic and usage data from the Mulesoft API Manager analytics service and publishes it to the Amplify Central.
 
-Log into Amplify Central https://apicentral.axway.com
-Navigate to the Topology page
-Click the "Environment" button in the top right.
-Select "Other" for the gateway type.
-Provide a name and a title, such as "mulesoft-gateway" and then hit "Save" in the top right.
+## Getting Started
 
-## Create a DOSA Account
+The settup process is:
+- Download and install the agents.
+- Create a Service Account in Amplify Central for the agents to use.
+- Create an Environment in Amplify Central for the agents to publish too.
+- Configure and run the agents.
 
-Create a public and private key pair locally on your computer.
-```shell
-openssl genpkey -algorithm RSA -out private_key.pem -pkeyopt rsa_keygen_bits:2048
-openssl rsa -in private_key.pem -pubout -out public_key.pem
+### Downloading the Agents
+Download and unzip the [latest release](https://github.com/Axway/agents-mulesoft/releases/latest) of the *discovery agent* and the *traceability agent*.
+
 ```
-In Central, click the "Access" tab on the sidebar, which is the second to last tab.
-Click on "Service Accounts".
-Click the button in the top right that says "+ Service Account".
-Name the account and provide the public key.
+curl  -L https://github.com/Axway/agents-mulesoft/releases/download/v1.0.0/mulesoft_discovery_agent_1.0.0_Linux_x86_64.tar.gz --output - | tar xz
+curl  -L https://github.com/Axway/agents-mulesoft/releases/download/v1.0.0/mulesoft_traceability_agent_1.0.0_Linux_x86_64.tar.gz --output - | tar xz
+```
 
-## Find your Organization ID
+### Configure Axway Amplify Central
+Navigate to [https://platform.axway.com](https://platform.axway.com) and authenticate or sign up for a trial account.
 
-After making the environment click on your name in the top right. Select "Organization" from the dropdown.
-You will see a field called "Organization ID". This will be needed to connect the agents to your org.
+#### Locate Amplify Organization ID
 
-## Anypoint Platform
+<img src="./img/WelcomeToAmplify.png" width="600">
 
-//TODO
+Click on your profile in the top-right corner of the Welcome screen and select *Organization*.
 
-## Fill out the environment variables
+<img src="./img/OrganizationID.png" width="600">
 
-// TODO 
+Note the value of the Organization ID.
 
-# mulesoft Discovery Agent
+#### Create a Service Account
+Service Account are used by Amplify so that the Agents can connect securely to Amplify Central using private key credentials known only to the owner of the dataplane.
 
-//TODO
+##### Using the Axway CLI
+The creation of the service account requires a public/private key pair. The Axway CLI can automatically generate these and create the service account.
 
-# mulesoft Traceability Agent
+```
+$ amplify central create service-account
+WARNING: Creating a new DOSA account will overwrite any existing "private_key.pem" and "public_key.pem" files in this directory
+? Enter a new service account name:  ExampleSA
+Creating a new service account.
+New service account "ExampleSA" with clientId "DOSA_edf194aa2430422bace013ce46a31d4a" has been successfully created.
+The private key has been placed at /home/user/example/private_key.pem
+The public key has been placed at /home/user/example/public_key.pem
+```
 
-// TODO
+For more information on configuring the Axway CLI see [Getting started with Amplify Central CLI](https://docs.axway.com/bundle/axway-open-docs/page/docs/central/cli_central/index.html).
 
-## Build and run the binary
+##### Using the Amplify Central UI
+Click the grid icon at the top-left of the UI and select *Central*.
 
-//TODO
+Navigate to *Access -> Service Accounts*.
 
-# Development
+Click the `+Service Account` Button.
 
-//TODO
+Add a name and a public key.
+
+To generate a public key, you can install OpenSSL and run the commands:
+
+```
+openssl genpkey -algorithm RSA -out private_key.pem -pkeyopt rsa_keygen_bits:2048
+openssl rsa -pubout -in private_key.pem -out public_key.pem
+```
+
+<img src="./img/ServiceAccount.png" width="600">
+
+Note the Client ID value.
+
+### Create Environment
+The environment in Amplify Central is where the agent will publish the resources it discovers from Mulesoft Anypoint API Manager.
+
+Navigate to the Toplogy tab and click the `+Environment` Button
+
+Complete the configuration form, noting the value entered in the `Name` field. It must be all lowercase with no spaces as it will be used as an identifier to the agent configuration later.
+
+<img src="./img/Environments.png" width="600">
+
+### Agent Configuration
+To configure the agents see:
+- [Mulesoft Discovery Agent Configuration](./mulesoft_discovery_agent/README.md)
+- [Mulesoft Traceability Agent Configuration](./mulesoft_traceability_agent/README.md)
+
+## See Also
+Reference: [SDK Documentation - Building Discovery Agent](https://github.com/Axway/agent-sdk/blob/main/docs/discovery/index.md), [Mulesoft API Manager API](https://anypoint.mulesoft.com/exchange/portals/anypoint-platform/f1e97bc6-315a-4490-82a7-23abe036327a.anypoint-platform/api-manager-api/minor/1.0/console/method/%231156/)

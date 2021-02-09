@@ -1,6 +1,4 @@
-package gateway
-
-// CHANGE_HERE - Change the structures below to represent the log entry the agent is going to receive
+package agent
 
 // Headers - Type for request/response headers
 type Headers map[string]string

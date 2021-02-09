@@ -2,15 +2,15 @@ package cmd
 
 import (
 	corecmd "github.com/Axway/agent-sdk/pkg/cmd"
+	"github.com/Axway/agent-sdk/pkg/cmd/service"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 
+	"github.com/Axway/agents-mulesoft/mulesoft_discovery_agent/pkg/agent"
 	"github.com/Axway/agents-mulesoft/mulesoft_discovery_agent/pkg/config"
-	"github.com/Axway/agents-mulesoft/mulesoft_discovery_agent/pkg/gateway"
 )
 
 // RootCmd - Agent root command
 var RootCmd corecmd.AgentRootCmd
-var gatewayConfig *config.GatewayConfig
 
 func init() {
 	// Create new root command with callbacks to initialize the agent config and command execution.
@@ -22,43 +22,38 @@ func init() {
 		run,                        // Callback for executing the agent
 		corecfg.DiscoveryAgent,     // Agent Type (Discovery or Traceability)
 	)
-
-	// Get the root command properties and bind the config property in YAML definition
-	rootProps := RootCmd.GetProperties()
-	rootProps.AddStringProperty("gateway-section.specPath", "./apis/musical_instruments.json", "Sample Swagger specification path for discovery")
-	rootProps.AddStringProperty("gateway-section.config_key_1", "", "Config Key 1")
-	rootProps.AddStringProperty("gateway-section.config_key_2", "", "Config Key 1")
-	rootProps.AddStringProperty("gateway-section.config_key_3", "", "Config Key 3")
-
+	config.AddMulesoftConfigProperties(RootCmd.GetProperties())
+	RootCmd.AddCommand(service.GenServiceCmd("pathConfig"))
 }
 
-// Callback that agent will call to process the execution
+// run Callback that agent will call to process the execution
 func run() error {
-	gatewayClient, err := gateway.NewClient(gatewayConfig)
-	err = gatewayClient.DiscoverAPIs()
-	return err
+	discoveryAgent, err := agent.New()
+	if err != nil {
+		return err
+	}
+	err = discoveryAgent.CheckHealth()
+	if err != nil {
+		return err
+	}
+
+	discoveryAgent.Run()
+	return nil
 }
 
-// Callback that agent will call to initialize the config. CentralConfig is parsed by Agent SDK
+// initConfig Callback that agent will call to initialize the config. CentralConfig is parsed by Agent SDK
 // and passed to the callback allowing the agent code to access the central config
 func initConfig(centralConfig corecfg.CentralConfig) (interface{}, error) {
-	rootProps := RootCmd.GetProperties()
-	// Parse the config from bound properties and setup gateway config
-	gatewayConfig = &config.GatewayConfig{
-		SpecPath:   rootProps.StringPropertyValue("gateway-section.specPath"),
-		ConfigKey1: rootProps.StringPropertyValue("gateway-section.config_key_1"),
-		ConfigKey2: rootProps.StringPropertyValue("gateway-section.config_key_2"),
-		ConfigKey3: rootProps.StringPropertyValue("gateway-section.config_key_3"),
+	// default the data plane name
+	if centralConfig.GetDataPlaneName() == "" {
+		centralConfig.SetDataPlaneName("Mulesoft")
 	}
 
-	agentConfig := config.AgentConfig{
-		CentralCfg: centralConfig,
-		GatewayCfg: gatewayConfig,
+	conf := &config.AgentConfig{
+		CentralConfig:  centralConfig,
+		MulesoftConfig: config.ParseMulesoftConfig(RootCmd.GetProperties()),
 	}
-	return agentConfig, nil
-}
 
-// GetAgentConfig - Returns the agent config
-func GetAgentConfig() *config.GatewayConfig {
-	return gatewayConfig
+	config.SetConfig(conf)
+	return conf, nil
 }

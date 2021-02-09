@@ -3,3 +3,5 @@ bin
 dist
 .idea
 mulesoft_discovery_agent.iml
+demo
+__debug_bin
