@@ -2,6 +2,54 @@
 # Prerequisite
 1. Golang 
 2. Make
+3. Axway Amplify account
+
+# Configure Axway Amplify 
+
+Navigate to https://platform.axway.com and authenticate or sign up for a trial account
+
+## Locate Amplify Organization ID
+
+
+<img src="./../img/WelcomeToAmplify.png" width="600">
+
+Click on your profile in the top-right corner of the Welcome screen and select *Organization*
+
+
+<img src="./../img/OrganizationID.png" width="600">
+
+Note the value of the Organization ID
+
+## Create a Service Account
+Service Account are used by Amplify so that the Agents can connect to the Gateway without exposing client credentials
+
+Click the grid icon at the top-left of the UI and select *Central*
+
+Navigate to *Access -> Service Accounts*
+
+Click the `+Service Account` Button
+
+Add a name and a public key
+
+To generate a public key, you can install OpenSSL and run the commands:
+
+`openssl genpkey -algorithm RSA -out private_key.pem -pkeyopt rsa_keygen_bits:2048
+
+openssl rsa -pubout -in private_key.pem -out public_key.pem`
+
+<img src="./../img/ServiceAccount.png" width="600">
+
+Note the Client ID and Key ID values.
+
+## Create Environment
+The environment will represent the connected Mulesoft API Gateway within the Amplify platform
+
+Navigate to the Toplogy tab and clicn the `+Environment` Button
+
+Complete the configuration form, noting the value entered in the Name field. It must be all lowercase with no spaces as it will be used as an identifier to the agent configuration later.
+
+<img src="./../img/Environments.png" width="600">
+
 
 # Steps to implement discovery agent using this stub
 1. Locate the commented tag "CHANGE_HERE" for package import paths in all files and fix them to reference the path correctly.
@@ -19,6 +67,78 @@
     - Locate *buildServiceBody()* method and update the Set*() method according to the API definition from gateway
 7. Run "make build" to build the agent
 8. Rename *apic_discovery_agent.yaml* file to the desired agents name and setup the agent config in the file.
-9. Execute the agent by running the binary file generated under *bin* directory. The YAML config must be in the current working directory 
+9. Execute the agent by running the binary file generated under *bin* directory. The YAML config must be in the current working directory
 
-Reference: [SDK Documentation - Building Discovery Agent](https://github.com/Axway/agent-sdk/blob/main/docs/discovery/index.md)
+Example *apic_discover_agent.yaml* file
+
+```
+central:
+  organizationID: [Located in Amplify Central Organization]
+  environment: [Located in Amplify Central topology]
+  auth:
+    clientID: [Located in the Amplify Central Access/Service Accounts]
+    privateKey: [Private Key path you used to create the Access/Service Accounts]
+    publicKey: [Public Key path you used to create the Access/Service Accounts]
+
+ 
+
+mulesoft:
+ anypointExchangeUrl: https://anypoint.mulesoft.com
+ environment: Sandbox
+ auth:
+  username: [Mulesoft username]
+  password: [Mulesoft password]
+  lifetime: 60m
+  ```
+
+# Start the Discovery Agent
+
+```
+./mulesoft_discovery_agent --pathConfig <path to apic_discovery_agent.yaml>
+```
+
+# Subscription - TO-DO
+The subscrption mechanism has not been implemented in this release of the Discovery Agent.
+The steps required for adding subscription support could look like the following:
+
+1. Check if newly discovered API has an applied security policy
+```
+https://anypoint.mulesoft.com/apimanager/api/v1/organizations/{organizationId}/environments/{environmentId}/apis/{api-id}/policies
+```
+2. Check if API has SLA Tiers
+```
+https://anypoint.mulesoft.com/apimanager/api/v1/organizations/{organizationId}/environments/{environmentId}/apis/{environmentApiId}/tiers
+```
+3. Amplify CLI builds subscriptionDefinition using discovered SLA Tiers
+```
+…
+plan:
+   enum:
+      - Gold
+      - Silver
+… 
+```
+4. Amplify CLI builds API deployment file.  Associates ConsumerInstance with matching subscriptionDefinition
+5. When subsciption is approved, Amplify CLI uses discovered security policy to create an application and contract in Mulesoft API Gateway.
+```
+https://anypoint.mulesoft.com/exchange/api/v1/organizations/{organizationId}/applications
+
+JSON body:
+{
+  "name" : "AppName"
+}
+
+https://anypoint.mulesoft.com/apimanager/api/v1/organizations/{organizationId}/environments/{environmentId}/apis/{environmentApiId}/contracts
+
+JSON body:
+{
+    "applicationId": 3,
+    "partyId": "",
+    "partyName": "",
+    "acceptedTerms": false,
+    "requestedTierId": 48
+}
+```
+
+
+Reference: [SDK Documentation - Building Discovery Agent](https://github.com/Axway/agent-sdk/blob/main/docs/discovery/index.md), [Mulesoft API Manager API](https://anypoint.mulesoft.com/exchange/portals/anypoint-platform/f1e97bc6-315a-4490-82a7-23abe036327a.anypoint-platform/api-manager-api/minor/1.0/console/method/%231156/)

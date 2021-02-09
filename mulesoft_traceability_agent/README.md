@@ -1,9 +1,62 @@
 
+
 # Prerequisite
 1. Golang 
 2. Make
+3. Axway Amplify account
 
-# Steps to implement traceability agent using this stub
+# Configure Axway Amplify 
+
+Navigate to https://platform.axway.com and authenticate or sign up for a trial account
+
+If you have already created the *Envornmnet* for the Discovery Agent and wan tto connect the Telemertry Agent to the same environment then you can reuse the same Orgnaization and Environment configuration here.  If this is teh case then skip ahead to *Installing the Telemetry Agent*.
+
+## Locate Amplify Organization ID
+
+
+<img src="./../img/WelcomeToAmplify.png" width="600">
+
+Click on your profile in the top-right corner of the Welcome screen and select *Organization*
+
+
+<img src="./../img/OrganizationID.png" width="600">
+
+Note the value of the Organization ID
+
+## Create a Service Account
+Service Account are used by Amplify so that the Agents can connect to the Gateway without exposing client credentials
+
+Click the grid icon at the top-left of the UI and select *Central*
+
+Navigate to *Access -> Service Accounts*
+
+Click the `+Service Account` Button
+
+Add a name and a public key
+
+To generate a public key, you can install OpenSSL and run the commands:
+
+`openssl genpkey -algorithm RSA -out private_key.pem -pkeyopt rsa_keygen_bits:2048
+
+openssl rsa -pubout -in private_key.pem -out public_key.pem`
+
+<img src="./../img/ServiceAccount.png" width="600">
+
+Note the Client ID and Key ID values.
+
+## Create Environment
+The environment will represent the connected Mulesoft API Gateway within the Amplify platform
+
+Navigate to the Toplogy tab and clicn the `+Environment` Button
+
+Complete the configuration form, noting the value entered in the Name field. It must be all lowercase with no spaces as it will be used as an identifier to the agent configuration later.
+
+<img src="./../img/Environments.png" width="600">
+
+
+# Installing the Telemetry Agent
+
+## Steps to implement traceability agent using this stub
 1. Locate the commented tag "CHANGE_HERE" for package import paths in all files and fix them to reference the path correctly.
 2. Run "make dep" to resolve the dependencies. This should resolve all dependency packages and vendor them under ./vendor directory
 3. Update Makefile to change the name of generated binary image from *mulesoft_traceability_agent* to the desired name. Locate *mulesoft_traceability_agent* string and replace with desired name
