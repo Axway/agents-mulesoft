@@ -1,7 +1,7 @@
 # Amplify Mulesoft Anypoint Discovery Agent
 
 ## Prerequisites
-Install the agent and provision Amplify Central access as described in (https://github.com/Axway/agents-mulesoft/blob/main/README.md)[https://github.com/Axway/agents-mulesoft/blob/main/README.md].
+Install the agent and provision Amplify Central access as described in [https://github.com/Axway/agents-mulesoft/blob/main/README.md](https://github.com/Axway/agents-mulesoft/blob/main/README.md).
 
 - Amplify organization id
 - Amplify Central environment name
