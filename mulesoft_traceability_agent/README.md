@@ -8,7 +8,7 @@ Install the agent and provision Amplify Central access as described in [https://
 - Pubic/Private key pem files
 - Service account client id
 
-As well as access to Amplify Central it is assume you have access to the [Mulesoft Anypoint Platform](https://anypoint.mulesoft.com/exchange). You need:
+As well as access to Amplify Central it is assumed you have access to the [Mulesoft Anypoint Platform](https://anypoint.mulesoft.com/exchange). You need:
 
 - Credentials with access to the organization the agents will attach to.
 - Mulesoft environment name to discover from (e.g. Sandbox)
