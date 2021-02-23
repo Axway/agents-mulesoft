@@ -1,17 +1,38 @@
 mulesoft_traceability_agent:
   central:
+    # Amplify organization ID to which to publish the metrics. The value for organizationID can be found in Amplify Central Platform > Organization
+    # MUST BE CONFIGURED
     organizationID: "<AMPLIFY_ORG_ID>"
-    environment: <AMPLIFY_CENTRAL_ENVIRONMENT_NAME>
-    auth:
-        clientID: <AMPLIFY_CENTRAL_DOSA_CLIENT_ID>
-        privateKey: <AMPLIFY_CENTRAL_DOSA_PRIVATE_KEY_PATH>
-        publicKey: <AMPLIFY_CENTRAL_DOSA_PUBLIC_KEY_PATH>
 
+    # The name of the Amplify Central environment where the metrics will be published to
+    # MUST BE CONFIGURED
+    environment: <AMPLIFY_CENTRAL_ENVIRONMENT_NAME>
+
+    auth:
+      # The value for service account client Id can be found in Amplify Central > Access > Service account
+      # MUST BE CONFIGURED
+      clientID: <AMPLIFY_CENTRAL_DOSA_CLIENT_ID>
+
+      # The path to the public and private keys used for creating the service account
+      # Absolute path is recommended when installing as a Linux service
+      privateKey: <AMPLIFY_CENTRAL_DOSA_PRIVATE_KEY_PATH>
+      publicKey: <AMPLIFY_CENTRAL_DOSA_PUBLIC_KEY_PATH>
+
+#
+# Mulesoft connectivity
+#
 mulesoft:
-  environment: <Mulesoft environment, e.g. Sandbox>
+  # The Mulesoft Anypoint Exchange endpoint
+  #anypointExchangeUrl: https://anypoint.mulesoft.com
+  
+  # The Mulesoft environment to connect to.
+  environment: Sandbox
   auth:
-    username: <Mulesoft Username>
-    password: <Mulesoft Password>
+    # The credentials used to connect to Mulesoft
+    username: <USERNAME>
+    password: <PASSWORD>
+    # The session lifetime, access tokens are automatically refreshed at 75% of this time.
+    lifetime: <SESSION LIFETIME>
 
 # Condor Ingestion service
 output.traceability:
