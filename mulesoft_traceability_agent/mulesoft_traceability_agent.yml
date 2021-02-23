@@ -1,18 +1,17 @@
 mulesoft_traceability_agent:
- central:
-  organizationID: "<AMPLIFY_ORG_ID>"
-  environment: <AMPLIFY_CENTRAL_ENVIRONMENT_NAME>
-  auth:
-    clientID: <AMPLIFY_CENTRAL_DOSA_CLIENT_ID>
-    privateKey: <AMPLIFY_CENTRAL_DOSA_PRIVATE_KEY_PATH>
-    publicKey: <AMPLIFY_CENTRAL_DOSA_PUBLIC_KEY_PATH>
+  central:
+    organizationID: "<AMPLIFY_ORG_ID>"
+    environment: <AMPLIFY_CENTRAL_ENVIRONMENT_NAME>
+    auth:
+        clientID: <AMPLIFY_CENTRAL_DOSA_CLIENT_ID>
+        privateKey: <AMPLIFY_CENTRAL_DOSA_PRIVATE_KEY_PATH>
+        publicKey: <AMPLIFY_CENTRAL_DOSA_PUBLIC_KEY_PATH>
 
-  gateway-section:
-    logFile: ./logs/traffic.log
-    processOnInput: false
-    config_key_1: "value-1"
-    config_key_3: "value-2"
-    config_key_2: "value-3"
+mulesoft:
+  environment: <Mulesoft environment, e.g. Sandbox>
+  auth:
+    username: <Mulesoft Username>
+    password: <Mulesoft Password>
 
 # Condor Ingestion service
 output.traceability:
@@ -35,11 +34,16 @@ output.traceability:
   worker: 1
   pipelining: 0
   proxy_url: ${TRACEABILITY_PROXYURL:""}
-
+log:
+  level: debug
+  format: json
+  output: stdout
+  path: logs
+  maskedValues:
 logging:
   metrics:
     enabled: false
   # Send all logging output to stderr
   to_stderr: true
   # Set log level
-  level: ${LOG_LEVEL:"info"}
+  level: ${LOG_LEVEL:debug}
