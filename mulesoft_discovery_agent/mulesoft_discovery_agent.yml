@@ -32,7 +32,7 @@ mulesoft:
   #anypointExchangeUrl: https://anypoint.mulesoft.com
   
   # The Mulesoft environment to connect to.
-  #environment: Sandbox
+  environment: Sandbox
   auth:
     # The credentials used to connect to Mulesoft
     username: <USERNAME>
