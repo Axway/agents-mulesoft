@@ -1,8 +1,11 @@
-.PHONY: all clean lint build 
+.PHONY: all clean lint build
 
 WORKSPACE ?= $$(pwd)
 
 GO_PKG_LIST := $(shell go list ./... | grep -v /vendor/)
+
+download:
+	@go mod tidy && go mod download
 
 all: clean build
 
