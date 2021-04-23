@@ -3,7 +3,7 @@ module github.com/Axway/agents-mulesoft/mulesoft_discovery_agent
 go 1.13
 
 require (
-	github.com/Axway/agent-sdk v0.0.19-0.20210127074007-f4fb8434d124
+	github.com/Axway/agent-sdk v1.0.20210421
 	golang.org/x/sys v0.0.0-20210119212857-b64e53b001e4 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	sigs.k8s.io/yaml v1.2.0

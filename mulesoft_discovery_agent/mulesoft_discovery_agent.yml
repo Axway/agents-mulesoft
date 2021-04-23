@@ -30,7 +30,7 @@ central:
 mulesoft:
   # The Mulesoft Anypoint Exchange endpoint
   #anypointExchangeUrl: https://anypoint.mulesoft.com
-  
+
   # The Mulesoft environment to connect to.
   environment: Sandbox
   auth:
