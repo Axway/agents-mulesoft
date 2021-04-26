@@ -172,3 +172,36 @@ type ExchangeFile struct {
 	MainFile     string    `json:"mainFile"`
 	Generated    bool      `json:"isGenerated"`
 }
+
+// AnalyticsEvent -
+type AnalyticsEvent struct {
+	ClientIP           string    `json:"Client IP"`
+	APIID              string    `json:"API ID"`
+	APIName            string    `json:"API Name"`
+	APIVersionID       string    `json:"API Version ID"`
+	APIVersionName     string    `json:"API Version Name"`
+	ApplicationName    string    `json:"Application Name"`
+	MessageID          string    `json:"Message ID"`
+	Timestamp          time.Time `json:"Timestamp"`
+	RequestSize        int       `json:"Request Size"`
+	ResponseSize       int       `json:"Response Size"`
+	RequestOutcome     string    `json:"Request Outcome"`
+	Verb               string    `json:"Verb"`
+	ResourcePath       string    `json:"Resource Path"`
+	StatusCode         int       `json:"Status Code"`
+	UserAgentName      string    `json:"User Agent Name"`
+	UserAgentVersion   string    `json:"User Agent Version"`
+	Browser            string    `json:"Browser"`
+	OSFamily           string    `json:"OS Family"`
+	OSVersion          string    `json:"OS Version"`
+	OSMajorVersion     string    `json:"OS Major Version"`
+	OSMinorVersion     string    `json:"OS Minor Version"`
+	HardwarePlatform   string    `json:"Hardware Platform"`
+	Timezone           string    `json:"Timezone"`
+	City               string    `json:"City"`
+	Country            string    `json:"Country"`
+	Continent          string    `json:"Continent"`
+	PostalCode         string    `json:"Postal Code"`
+	ViolatedPolicyName string    `json:"Violated Policy Name"`
+	ResponseTime       int       `json:"Response Time"`
+}
