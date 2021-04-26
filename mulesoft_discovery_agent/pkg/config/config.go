@@ -8,9 +8,10 @@ import (
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 )
 
+var config *AgentConfig
+
 const (
 	pathAnypointExchangeURL   = "mulesoft.anypointExchangeUrl"
-	pathPollInterval          = "mulesoft.pollInterval"
 	pathEnvironment           = "mulesoft.environment"
 	pathDiscoveryTags         = "mulesoft.discoveryTags"
 	pathDiscoveryIgnoreTags   = "mulesoft.discoveryIgnoreTags"
@@ -24,8 +25,6 @@ const (
 	pathSSLMaxVersion         = "mulesoft.ssl.maxVersion"
 	pathProxyURL              = "mulesoft.proxyUrl"
 )
-
-var config *AgentConfig
 
 // SetConfig sets the global AgentConfig reference.
 func SetConfig(newConfig *AgentConfig) {
@@ -48,7 +47,6 @@ type MulesoftConfig struct {
 	corecfg.IConfigValidator
 	corecfg.IResourceConfigCallback
 	AnypointExchangeURL string            `config:"anypointExchangeUrl"`
-	PollInterval        time.Duration     `config:"pollInterval"`
 	DiscoveryTags       string            `config:"discoveryTags"`
 	DiscoveryIgnoreTags string            `config:"discoveryIgnoreTags"`
 	Environment         string            `config:"environment"`
@@ -77,17 +75,12 @@ func (c *MulesoftConfig) ValidateCfg() (err error) {
 		return errors.New("Invalid mulesoft configuration: environment is not configured")
 	}
 
-	if c.PollInterval == 0 {
-		return errors.New("Invalid mulesoft configuration: pollInterval is invalid")
-	}
-
 	return
 }
 
 // AddConfigProperties - Adds the command properties needed for Mulesoft
 func AddConfigProperties(props properties.Properties) {
 	props.AddStringProperty(pathAnypointExchangeURL, "https://anypoint.mulesoft.com", "Mulesoft Anypoint Exchange URL.")
-	props.AddDurationProperty(pathPollInterval, 30*time.Second, "The interval at which Mulesoft is checked for updates.")
 	props.AddStringProperty(pathEnvironment, "", "Mulesoft Anypoint environment.")
 	props.AddStringProperty(pathAuthUsername, "", "Mulesoft username.")
 	props.AddStringProperty(pathAuthPassword, "", "Mulesoft password.")
@@ -107,7 +100,6 @@ func AddConfigProperties(props properties.Properties) {
 func NewMulesoftConfig(props properties.Properties) *MulesoftConfig {
 	return &MulesoftConfig{
 		AnypointExchangeURL: props.StringPropertyValue(pathAnypointExchangeURL),
-		PollInterval:        props.DurationPropertyValue(pathPollInterval),
 		Environment:         props.StringPropertyValue(pathEnvironment),
 		Username:            props.StringPropertyValue(pathAuthUsername),
 		Password:            props.StringPropertyValue(pathAuthPassword),
