@@ -47,8 +47,8 @@ func run() error {
 // and passed to the callback allowing the agent code to access the central config
 func initConfig(centralConfig corecfg.CentralConfig) (interface{}, error) {
 	// default the data plane name
-	if centralConfig.GetDataPlaneName() == mulesoft {
-		centralConfig.SetDataPlaneName("")
+	if centralConfig.GetDataPlaneName() == "" {
+		centralConfig.SetDataPlaneName(mulesoft)
 	}
 
 	conf := &config.AgentConfig{
