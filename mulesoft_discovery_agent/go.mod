@@ -4,6 +4,8 @@ go 1.13
 
 require (
 	github.com/Axway/agent-sdk v1.0.20210421
+	github.com/sirupsen/logrus v1.8.1
+	github.com/stretchr/testify v1.6.1
 	golang.org/x/sys v0.0.0-20210119212857-b64e53b001e4 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	sigs.k8s.io/yaml v1.2.0

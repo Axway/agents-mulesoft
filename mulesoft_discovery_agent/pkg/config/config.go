@@ -4,9 +4,25 @@ import (
 	"errors"
 	"time"
 
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/cmd/properties"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
+)
+
+const (
+	pathAnypointExchangeURL   = "mulesoft.anypointExchangeUrl"
+	pathPollInterval          = "mulesoft.pollInterval"
+	pathEnvironment           = "mulesoft.environment"
+	pathDiscoveryTags         = "mulesoft.discoveryTags"
+	pathDiscoveryIgnoreTags   = "mulesoft.discoveryIgnoreTags"
+	pathAuthUsername          = "mulesoft.auth.username"
+	pathAuthPassword          = "mulesoft.auth.password"
+	pathAuthLifetime          = "mulesoft.auth.lifetime"
+	pathSSLNextProtos         = "mulesoft.ssl.nextProtos"
+	pathSSLInsecureSkipVerify = "mulesoft.ssl.insecureSkipVerify"
+	pathSSLCipherSuites       = "mulesoft.ssl.cipherSuites"
+	pathSSLMinVersion         = "mulesoft.ssl.minVersion"
+	pathSSLMaxVersion         = "mulesoft.ssl.maxVersion"
+	pathProxyURL              = "mulesoft.proxyUrl"
 )
 
 var config *AgentConfig
@@ -43,14 +59,6 @@ type MulesoftConfig struct {
 	ProxyURL            string            `config:"proxyUrl"`
 }
 
-// NewMulesoftConfig creates an empty config.
-func NewMulesoftConfig() MulesoftConfig {
-	return MulesoftConfig{
-		PollInterval: time.Minute,
-		TLS:          &corecfg.TLSConfiguration{},
-	}
-}
-
 // ValidateCfg - Validates the gateway config
 func (c *MulesoftConfig) ValidateCfg() (err error) {
 	if c.AnypointExchangeURL == "" {
@@ -76,31 +84,8 @@ func (c *MulesoftConfig) ValidateCfg() (err error) {
 	return
 }
 
-// ApplyResources - Applies the agent and dataplane resource to config
-func (c *MulesoftConfig) ApplyResources(dataplaneResource *v1.ResourceInstance, agentResource *v1.ResourceInstance) error {
-	// Currently there is not dataplane agent configuration for mulesoft.
-	return nil
-}
-
-const (
-	pathAnypointExchangeURL   = "mulesoft.anypointExchangeUrl"
-	pathPollInterval          = "mulesoft.pollInterval"
-	pathEnvironment           = "mulesoft.environment"
-	pathDiscoveryTags         = "mulesoft.discoveryTags"
-	pathDiscoveryIgnoreTags   = "mulesoft.discoveryIgnoreTags"
-	pathAuthUsername          = "mulesoft.auth.username"
-	pathAuthPassword          = "mulesoft.auth.password"
-	pathAuthLifetime          = "mulesoft.auth.lifetime"
-	pathSSLNextProtos         = "mulesoft.ssl.nextProtos"
-	pathSSLInsecureSkipVerify = "mulesoft.ssl.insecureSkipVerify"
-	pathSSLCipherSuites       = "mulesoft.ssl.cipherSuites"
-	pathSSLMinVersion         = "mulesoft.ssl.minVersion"
-	pathSSLMaxVersion         = "mulesoft.ssl.maxVersion"
-	pathProxyURL              = "mulesoft.proxyUrl"
-)
-
-// AddMulesoftConfigProperties - Adds the command properties needed for Mulesoft
-func AddMulesoftConfigProperties(props properties.Properties) {
+// AddConfigProperties - Adds the command properties needed for Mulesoft
+func AddConfigProperties(props properties.Properties) {
 	props.AddStringProperty(pathAnypointExchangeURL, "https://anypoint.mulesoft.com", "Mulesoft Anypoint Exchange URL.")
 	props.AddDurationProperty(pathPollInterval, 30*time.Second, "The interval at which Mulesoft is checked for updates.")
 	props.AddStringProperty(pathEnvironment, "", "Mulesoft Anypoint environment.")
@@ -118,8 +103,8 @@ func AddMulesoftConfigProperties(props properties.Properties) {
 	props.AddStringProperty(pathSSLMaxVersion, "0", "Maximum acceptable SSL/TLS protocol version.")
 }
 
-// ParseMulesoftConfig - parse the props and create an Mulesoft Configuration structure
-func ParseMulesoftConfig(props properties.Properties) *MulesoftConfig {
+// NewMulesoftConfig - parse the props and create an Mulesoft Configuration structure
+func NewMulesoftConfig(props properties.Properties) *MulesoftConfig {
 	return &MulesoftConfig{
 		AnypointExchangeURL: props.StringPropertyValue(pathAnypointExchangeURL),
 		PollInterval:        props.DurationPropertyValue(pathPollInterval),

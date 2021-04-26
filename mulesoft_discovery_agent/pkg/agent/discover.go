@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	"github.com/Axway/agent-sdk/pkg/cache"
@@ -82,7 +84,7 @@ func (a *Agent) getServiceDetails(asset *anypoint.Asset, freshAssetCache cache.C
 	for _, api := range asset.APIs {
 		// Cache - update the existing to ensure it contains anything new, but create fresh cache
 		// to ensure deletions are detected.
-		key := a.formatCacheKey(fmt.Sprint(api.ID), a.stage)
+		key := formatCacheKey(fmt.Sprint(api.ID), a.stage)
 		a.assetCache.Set(key, api)
 		freshAssetCache.Set(key, api) // Need to handle if the API exists but becomes undiscoverable
 
@@ -108,6 +110,10 @@ func (a *Agent) getServiceDetail(asset *anypoint.Asset, api *anypoint.API) (*Ser
 
 	if api.EndpointURI == "" {
 		// If the API has no exposed endpoint we're not going to discover it.
+		logrus.WithFields(logrus.Fields{
+			"component": "agent",
+			"asset":     api.AssetID,
+		}).Debugf("no exposed endpoint", api.AssetID)
 		return nil, nil
 	}
 
@@ -342,7 +348,7 @@ func (a *Agent) setOAS3Endpoint(url string, specContent []byte) ([]byte, error) 
 	return json.Marshal(spec)
 }
 
-func (a *Agent) setWSDLEndpoint(url string, specContent []byte) ([]byte, error) {
+func (a *Agent) setWSDLEndpoint(_ string, specContent []byte) ([]byte, error) {
 	// TODO
 	return specContent, nil
 }

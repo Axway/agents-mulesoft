@@ -11,9 +11,9 @@ import (
 	"github.com/Axway/agent-sdk/pkg/cache"
 	utilErrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
-	log "github.com/Axway/agent-sdk/pkg/util/log"
-	anypoint "github.com/Axway/agents-mulesoft/mulesoft_discovery_agent/pkg/anypoint"
-	config "github.com/Axway/agents-mulesoft/mulesoft_discovery_agent/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/util/log"
+	"github.com/Axway/agents-mulesoft/mulesoft_discovery_agent/pkg/anypoint"
+	"github.com/Axway/agents-mulesoft/mulesoft_discovery_agent/pkg/config"
 )
 
 // Agent links the mulesoft client and the gateway client.
@@ -34,9 +34,7 @@ type Agent struct {
 }
 
 // New creates a new agent
-func New() (agent *Agent, err error) {
-	cfg := config.GetConfig()
-
+func New(cfg *config.AgentConfig) (agent *Agent, err error) {
 	buffer := 5
 	assetCache := cache.New()
 	agent = &Agent{
@@ -57,7 +55,7 @@ func New() (agent *Agent, err error) {
 	return agent, nil
 }
 
-// onConfigChange apply configuation changes
+// onConfigChange apply configuration changes
 func (a *Agent) onConfigChange() {
 	cfg := config.GetConfig()
 
@@ -106,7 +104,7 @@ func (a *Agent) Run() {
 // performs cleanup on the API Central environment. The asset cache is populated by the
 // discovery loop.
 func (a *Agent) validateAPI(apiID, stageName string) bool {
-	asset, err := a.assetCache.Get(a.formatCacheKey(apiID, stageName))
+	asset, err := a.assetCache.Get(formatCacheKey(apiID, stageName))
 	if err != nil {
 		log.Warnf("Unable to validate API: %s", err.Error())
 		// If we can't validate it exists then assume it does until known otherwise.
@@ -129,6 +127,6 @@ func cleanTags(tagCSV string) []string {
 }
 
 // formatCacheKey ensure consistent naming of asset cache key
-func (a *Agent) formatCacheKey(apiID, stageName string) string {
+func formatCacheKey(apiID, stageName string) string {
 	return fmt.Sprintf("%s-%s", apiID, stageName)
 }

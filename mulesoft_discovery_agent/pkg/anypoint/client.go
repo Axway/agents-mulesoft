@@ -29,9 +29,7 @@ type Page struct {
 type Client interface {
 	OnConfigChange(mulesoftConfig *config.MulesoftConfig)
 	GetAccessToken() (string, *User, time.Duration, error)
-
 	GetEnvironmentByName(name string) (*Environment, error)
-
 	ListAssets(page *Page) ([]Asset, error)
 	GetPolicies(api *API) ([]Policy, error)
 	GetExchangeAsset(api *API) (*ExchangeAsset, error)
@@ -57,6 +55,7 @@ func NewClient(mulesoftConfig *config.MulesoftConfig) Client {
 
 	// Register the healthcheck
 	hc.RegisterHealthcheck("Mulesoft Anypoint Exchange", "mulesoft", client.healthcheck)
+	// TODO: handle error
 
 	return client
 }

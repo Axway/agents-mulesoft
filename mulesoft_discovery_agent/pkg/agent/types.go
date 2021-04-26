@@ -34,11 +34,15 @@ var specPreference = map[string]int{
 }
 
 // BySpecType implements sort.Interface for []ExchangeFile based on
-// prefered specification support.
+// preferred specification support.
 type BySpecType []anypoint.ExchangeFile
 
-func (a BySpecType) Len() int      { return len(a) }
-func (a BySpecType) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a BySpecType) Len() int {
+	return len(a)
+}
+func (a BySpecType) Swap(i, j int) {
+	a[i], a[j] = a[j], a[i]
+}
 func (a BySpecType) Less(i, j int) bool {
 	var ok bool
 	iVal := 0
