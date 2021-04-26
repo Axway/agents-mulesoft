@@ -1,6 +1,6 @@
 package discovery
 
-import anypoint "github.com/Axway/agents-mulesoft/pkg/anypoint"
+import "github.com/Axway/agents-mulesoft/pkg/anypoint"
 
 // ServiceDetail is the information for the ex
 type ServiceDetail struct {
