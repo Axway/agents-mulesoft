@@ -1,4 +1,4 @@
-package agent
+package discovery
 
 import (
 	"crypto/sha256"

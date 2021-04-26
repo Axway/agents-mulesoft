@@ -1,4 +1,4 @@
-package agent
+package discovery
 
 import anypoint "github.com/Axway/agents-mulesoft/mulesoft_discovery_agent/pkg/anypoint"
 

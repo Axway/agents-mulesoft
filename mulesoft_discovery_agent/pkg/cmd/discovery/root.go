@@ -1,12 +1,12 @@
-package cmd
+package discovery
 
 import (
 	corecmd "github.com/Axway/agent-sdk/pkg/cmd"
 	"github.com/Axway/agent-sdk/pkg/cmd/service"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 
-	"github.com/Axway/agents-mulesoft/mulesoft_discovery_agent/pkg/agent"
 	"github.com/Axway/agents-mulesoft/mulesoft_discovery_agent/pkg/config"
+	"github.com/Axway/agents-mulesoft/mulesoft_discovery_agent/pkg/discovery"
 )
 
 // RootCmd - Agent root command
@@ -30,7 +30,7 @@ func init() {
 
 // run Callback that agent will call to process the execution
 func run() error {
-	discoveryAgent, err := agent.New(config.GetConfig())
+	discoveryAgent, err := discovery.New(config.GetConfig())
 	if err != nil {
 		return err
 	}

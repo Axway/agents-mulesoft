@@ -2,9 +2,9 @@ central:
   organizationID: "252973553240348"
   environment: mulesoft
   mode: publishToEnvironmentAndCatalog
+  url: https://apicentral.axway.com
   platformURL: https://platform.axway.com
   pollInterval: 20s
-  url: https://apicentral.axway.com
   auth:
     clientID: DOSA_552cd5373107407ca543b2797c24d534
     privateKey: /Users/tjohnson/Public/repos/agents-mulesoft/private_key.pem

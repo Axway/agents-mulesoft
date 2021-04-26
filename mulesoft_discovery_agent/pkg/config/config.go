@@ -2,6 +2,9 @@ package config
 
 import (
 	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/cmd/properties"
@@ -24,6 +27,7 @@ const (
 	pathSSLMinVersion         = "mulesoft.ssl.minVersion"
 	pathSSLMaxVersion         = "mulesoft.ssl.maxVersion"
 	pathProxyURL              = "mulesoft.proxyUrl"
+	pathCachePath             = "mulesoft.cachePath"
 )
 
 // SetConfig sets the global AgentConfig reference.
@@ -47,14 +51,15 @@ type MulesoftConfig struct {
 	corecfg.IConfigValidator
 	corecfg.IResourceConfigCallback
 	AnypointExchangeURL string            `config:"anypointExchangeUrl"`
-	DiscoveryTags       string            `config:"discoveryTags"`
+	CachePath           string            `config:"cachePath"`
 	DiscoveryIgnoreTags string            `config:"discoveryIgnoreTags"`
+	DiscoveryTags       string            `config:"discoveryTags"`
 	Environment         string            `config:"environment"`
-	Username            string            `config:"auth.username"`
 	Password            string            `config:"auth.password"`
+	ProxyURL            string            `config:"proxyUrl"`
 	SessionLifetime     time.Duration     `config:"auth.lifetime"`
 	TLS                 corecfg.TLSConfig `config:"ssl"`
-	ProxyURL            string            `config:"proxyUrl"`
+	Username            string            `config:"auth.username"`
 }
 
 // ValidateCfg - Validates the gateway config
@@ -75,6 +80,10 @@ func (c *MulesoftConfig) ValidateCfg() (err error) {
 		return errors.New("Invalid mulesoft configuration: environment is not configured")
 	}
 
+	if _, err := os.Stat(c.CachePath); os.IsNotExist(err) {
+		return fmt.Errorf("invalid mulesoft cache path: path does not exist: %s", c.CachePath)
+	}
+	c.CachePath = filepath.Clean(c.CachePath)
 	return
 }
 
@@ -87,6 +96,7 @@ func AddConfigProperties(props properties.Properties) {
 	props.AddDurationProperty(pathAuthLifetime, 60*time.Minute, "Mulesoft session lifetime.")
 	props.AddStringProperty(pathDiscoveryTags, "", "APIs containing any of these tags are selected for discovery.")
 	props.AddStringProperty(pathDiscoveryIgnoreTags, "", "APIs containing any of these tags are ignored. Takes precedence over "+pathDiscoveryIgnoreTags+".")
+	props.AddStringProperty(pathCachePath, "/tmp", "Mulesoft Cache Path")
 
 	// ssl properties and command flags
 	props.AddStringSliceProperty(pathSSLNextProtos, []string{}, "List of supported application level protocols, comma separated.")
@@ -106,6 +116,7 @@ func NewMulesoftConfig(props properties.Properties) *MulesoftConfig {
 		SessionLifetime:     props.DurationPropertyValue(pathAuthLifetime),
 		DiscoveryTags:       props.StringPropertyValue(pathDiscoveryTags),
 		DiscoveryIgnoreTags: props.StringPropertyValue(pathDiscoveryIgnoreTags),
+		CachePath:           props.StringPropertyValue(pathCachePath),
 		TLS: &corecfg.TLSConfiguration{
 			NextProtos:         props.StringSlicePropertyValue(pathSSLNextProtos),
 			InsecureSkipVerify: props.BoolPropertyValue(pathSSLInsecureSkipVerify),

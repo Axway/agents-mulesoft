@@ -11,12 +11,18 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Axway/agent-sdk/pkg/cache"
+
 	agenterrors "github.com/Axway/agent-sdk/pkg/util/errors"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 
 	"github.com/Axway/agents-mulesoft/mulesoft_discovery_agent/pkg/config"
+)
+
+const (
+	CacheKeyTimeStamp = "LAST_RUN"
 )
 
 // Page describes the page query parameter
@@ -35,6 +41,7 @@ type Client interface {
 	GetExchangeAsset(api *API) (*ExchangeAsset, error)
 	GetExchangeAssetIcon(asset *ExchangeAsset) (icon string, contentType string, err error)
 	GetExchangeFileContent(file *ExchangeFile) (fileContent []byte, err error)
+	GetAnalyticsWindow() ([]AnalyticsEvent, error)
 }
 
 // anypointClient is the client for interacting with Mulesoft Anypoint.
@@ -46,11 +53,14 @@ type anypointClient struct {
 	apiClient   coreapi.Client
 	auth        Auth
 	environment *Environment
+	cache       cache.Cache
+	cachePath   string
 }
 
 // NewClient creates a new client for interacting with Mulesoft.
 func NewClient(mulesoftConfig *config.MulesoftConfig) Client {
 	client := &anypointClient{}
+	client.cachePath = formatCachePath(mulesoftConfig.CachePath)
 	client.OnConfigChange(mulesoftConfig)
 
 	// Register the healthcheck
@@ -71,6 +81,8 @@ func (c *anypointClient) OnConfigChange(mulesoftConfig *config.MulesoftConfig) {
 	c.password = mulesoftConfig.Password
 	c.lifetime = mulesoftConfig.SessionLifetime
 	c.apiClient = coreapi.NewClient(mulesoftConfig.TLS, mulesoftConfig.ProxyURL)
+	c.cachePath = formatCachePath(mulesoftConfig.CachePath)
+	c.cache = cache.Load(c.cachePath)
 
 	var err error
 	c.auth, err = NewAuth(c)
@@ -294,6 +306,45 @@ func (c *anypointClient) GetExchangeFileContent(file *ExchangeFile) (fileContent
 	return fileContent, err
 }
 
+// GetAnalyticsWindow lists the managed assets in Mulesoft: https://docs.qax.mulesoft.com/api-manager/2.x/analytics-event-api
+func (c *anypointClient) GetAnalyticsWindow() ([]AnalyticsEvent, error) {
+	startDate, endDate := c.getLastRun()
+	query := map[string]string{
+		"format":    "json",
+		"startDate": startDate,
+		"endDate":   endDate,
+		"fields":    "Application Name.Browser.City.Client IP.Continent.Country.Hardware Platform.Message ID.OS Family.OS Major Version.OS Minor Version.OS Version.Postal Code.Request Outcome.Request Size.Resource Path.Response Size.Response Time.Status Code.Timezone.User Agent Name.User Agent Version.Verb.Violated Policy Name",
+	}
+	headers := map[string]string{
+		"Authorization": "Bearer " + c.auth.GetToken(),
+	}
+
+	url := c.baseURL + "/analytics/1.0/" + c.auth.GetOrgID() + "/environments/" + c.environment.ID + "/events"
+	events := make([]AnalyticsEvent, 0)
+	request := coreapi.Request{
+		Method:      coreapi.GET,
+		URL:         url,
+		Headers:     headers,
+		QueryParams: query,
+	}
+	err := c.invokeJSON(request, &events)
+	return events, err
+
+}
+
+func (c *anypointClient) getLastRun() (string, string) {
+	tStamp, _ := c.cache.Get(CacheKeyTimeStamp)
+	now := time.Now()
+	tNow := now.Format(time.RFC3339)
+	if tStamp == nil {
+		tStamp = tNow
+	}
+	c.cache.Set(CacheKeyTimeStamp, tNow)
+	c.cache.Save(c.cachePath)
+	return tStamp.(string), tNow
+
+}
+
 func (c *anypointClient) invokeJSONGet(url string, page *Page, resp interface{}) error {
 	headers := map[string]string{
 		"Authorization": "Bearer " + c.auth.GetToken(),
@@ -352,4 +403,8 @@ func (c *anypointClient) invoke(request coreapi.Request) ([]byte, map[string][]s
 	}
 
 	return response.Body, response.Headers, nil
+}
+
+func formatCachePath(path string) string {
+	return fmt.Sprintf("%s/anypoint.cache", path)
 }
