@@ -23,7 +23,7 @@ type MuleEventEmitter struct {
 func NewMuleEventEmitter(gatewayCfg *config.AgentConfig, eventChannel chan string) (*MuleEventEmitter, error) {
 	return &MuleEventEmitter{
 		cfg:            gatewayCfg,
-		pollInterval:   gatewayCfg.MulesoftConfig.PollInterval,
+		pollInterval:   gatewayCfg.CentralConfig.GetPollInterval(),
 		done:           make(chan bool),
 		eventChannel:   eventChannel,
 		anypointClient: anypoint.NewClient(gatewayCfg.MulesoftConfig),
