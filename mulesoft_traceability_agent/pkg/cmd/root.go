@@ -36,7 +36,7 @@ func init() {
 		run,                           // Callback for executing the agent
 		corecfg.TraceabilityAgent,     // Agent Type (Discovery or Traceability)
 	)
-	config.AddMulesoftConfigProperties(RootCmd.GetProperties())
+	config.AddConfigProperties(RootCmd.GetProperties())
 
 	RootCmd.AddCommand(service.GenServiceCmd("pathConfig"))
 
@@ -53,7 +53,7 @@ func initConfig(centralConfig corecfg.CentralConfig) (interface{}, error) {
 
 	agentConfig := &config.AgentConfig{
 		CentralConfig:  centralConfig,
-		MulesoftConfig: config.ParseMulesoftConfig(RootCmd.GetProperties()),
+		MulesoftConfig: config.NewMulesoftConfig(RootCmd.GetProperties()),
 	}
 	config.SetConfig(agentConfig)
 	return agentConfig, nil

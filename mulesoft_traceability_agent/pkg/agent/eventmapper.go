@@ -83,7 +83,7 @@ func (m *EventMapper) buildHeaders(headers map[string]string) string {
 }
 
 func (m *EventMapper) createTransactionEvent(eventTime int64, txID string, txDetails anypoint.AnalyticsEvent, eventID, parentEventID, direction string) (*transaction.LogEvent, error) {
-	//TODO - Slim pickings on header data
+	// TODO - Slim pickings on header data
 	req := map[string]string{"User-AgentName": txDetails.UserAgentName}
 	res := map[string]string{"Request-Outcome": txDetails.RequestOutcome}
 	httpProtocolDetails, err := transaction.NewHTTPProtocolBuilder().
@@ -93,8 +93,6 @@ func (m *EventMapper) createTransactionEvent(eventTime int64, txID string, txDet
 		SetHost(txDetails.ClientIP).
 		SetHeaders(m.buildHeaders(req), m.buildHeaders(res)).
 		SetByteLength(txDetails.RequestSize, txDetails.ResponseSize).
-		//SetRemoteAddress("", txDetails.DesHost, txDetails.DestPort).
-		//SetLocalAddress(txDetails.SourceHost, txDetails.SourcePort).
 		Build()
 	if err != nil {
 		return nil, err
@@ -106,7 +104,7 @@ func (m *EventMapper) createTransactionEvent(eventTime int64, txID string, txDet
 		SetID(eventID).
 		SetParentID(parentEventID).
 		SetSource(txDetails.ClientIP + ":0").
-		SetDestination(txDetails.APIName). // TODO
+		SetDestination(txDetails.APIName).
 		SetDirection(direction).
 		SetStatus(m.getTransactionEventStatus(txDetails.StatusCode)).
 		SetProtocolDetail(httpProtocolDetails).

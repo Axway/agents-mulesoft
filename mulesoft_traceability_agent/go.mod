@@ -3,7 +3,7 @@ module github.com/Axway/agents-mulesoft/mulesoft_traceability_agent
 go 1.13
 
 require (
-	github.com/Axway/agent-sdk v0.0.19-0.20210127144125-60928b9248e9
+	github.com/Axway/agent-sdk v1.0.20210421
 	github.com/Shopify/sarama v1.26.4 // indirect
 	github.com/docker/docker v1.13.1 // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect

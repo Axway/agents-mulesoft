@@ -4,11 +4,9 @@ import (
 	coreagent "github.com/Axway/agent-sdk/pkg/agent"
 	agenterrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
+	"github.com/Axway/agents-mulesoft/mulesoft_traceability_agent/pkg/config"
 	"github.com/elastic/beats/v7/libbeat/beat"
 	"github.com/elastic/beats/v7/libbeat/common"
-	"github.com/elastic/beats/v7/libbeat/logp"
-
-	"github.com/Axway/agents-mulesoft/mulesoft_traceability_agent/pkg/config"
 )
 
 // Agent - mulesoft Beater configuration.
@@ -21,7 +19,7 @@ type Agent struct {
 }
 
 // New creates an instance of mulesoft_traceability_agent.
-func New(b *beat.Beat, cfg *common.Config) (beat.Beater, error) {
+func New(_ *beat.Beat, _ *common.Config) (beat.Beater, error) {
 	agentConfig := config.GetConfig()
 	bt := &Agent{
 		done:         make(chan struct{}),
@@ -43,9 +41,8 @@ func New(b *beat.Beat, cfg *common.Config) (beat.Beater, error) {
 	return bt, nil
 }
 
-// Run starts awsApigwTraceabilityAgent.
+// Run starts the Mulesoft traceability agent.
 func (bt *Agent) Run(b *beat.Beat) error {
-	logp.Info("mulesoft_traceability_agent is running! Hit CTRL-C to stop it.")
 	coreagent.OnConfigChange(bt.onConfigChange)
 
 	var err error
@@ -70,7 +67,7 @@ func (bt *Agent) Run(b *beat.Beat) error {
 	}
 }
 
-// onConfigChange apply configuation changes
+// onConfigChange apply configuration changes
 func (bt *Agent) onConfigChange() {
 	cfg := config.GetConfig()
 	bt.mule.OnConfigChange(cfg)

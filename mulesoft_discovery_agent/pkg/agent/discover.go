@@ -113,7 +113,7 @@ func (a *Agent) getServiceDetail(asset *anypoint.Asset, api *anypoint.API) (*Ser
 		logrus.WithFields(logrus.Fields{
 			"component": "agent",
 			"asset":     api.AssetID,
-		}).Debugf("no exposed endpoint", api.AssetID)
+		}).Debug("consumer endpoint not found")
 		return nil, nil
 	}
 
