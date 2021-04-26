@@ -12,8 +12,8 @@ import (
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	"github.com/Axway/agent-sdk/pkg/cache"
-	log "github.com/Axway/agent-sdk/pkg/util/log"
-	anypoint "github.com/Axway/agents-mulesoft/mulesoft_discovery_agent/pkg/anypoint"
+	"github.com/Axway/agent-sdk/pkg/util/log"
+	"github.com/Axway/agents-mulesoft/mulesoft_discovery_agent/pkg/anypoint"
 	"sigs.k8s.io/yaml"
 )
 
@@ -216,7 +216,7 @@ func (a *Agent) getExchangeAssetSpecFile(asset *anypoint.ExchangeAsset) (*anypoi
 	return &asset.Files[0], nil
 }
 
-// getSpecFromExchangeFile getst the spec content and injects the api endpoint.
+// getSpecFromExchangeFile gets the spec content and injects the api endpoint.
 func (a *Agent) getSpecFromExchangeFile(api *anypoint.API, exchangeFile *anypoint.ExchangeFile) ([]byte, string, error) {
 	specContent, err := a.anypointClient.GetExchangeFileContent(exchangeFile)
 	if err != nil {
