@@ -26,6 +26,7 @@ const (
 	pathSSLCipherSuites       = "mulesoft.ssl.cipherSuites"
 	pathSSLMinVersion         = "mulesoft.ssl.minVersion"
 	pathSSLMaxVersion         = "mulesoft.ssl.maxVersion"
+	pathPollInterval          = "mulesoft.pollInterval"
 	pathProxyURL              = "mulesoft.proxyUrl"
 	pathCachePath             = "mulesoft.cachePath"
 )
@@ -56,6 +57,7 @@ type MulesoftConfig struct {
 	DiscoveryTags       string            `config:"discoveryTags"`
 	Environment         string            `config:"environment"`
 	Password            string            `config:"auth.password"`
+	PollInterval        time.Duration     `config:"pollInterval"`
 	ProxyURL            string            `config:"proxyUrl"`
 	SessionLifetime     time.Duration     `config:"auth.lifetime"`
 	TLS                 corecfg.TLSConfig `config:"ssl"`
@@ -80,6 +82,10 @@ func (c *MulesoftConfig) ValidateCfg() (err error) {
 		return errors.New("Invalid mulesoft configuration: environment is not configured")
 	}
 
+	if c.PollInterval == 0 {
+		return errors.New("Invalid mulesoft configuration: pollInterval is invalid")
+	}
+
 	if _, err := os.Stat(c.CachePath); os.IsNotExist(err) {
 		return fmt.Errorf("invalid mulesoft cache path: path does not exist: %s", c.CachePath)
 	}
@@ -97,6 +103,7 @@ func AddConfigProperties(props properties.Properties) {
 	props.AddStringProperty(pathDiscoveryTags, "", "APIs containing any of these tags are selected for discovery.")
 	props.AddStringProperty(pathDiscoveryIgnoreTags, "", "APIs containing any of these tags are ignored. Takes precedence over "+pathDiscoveryIgnoreTags+".")
 	props.AddStringProperty(pathCachePath, "/tmp", "Mulesoft Cache Path")
+	props.AddDurationProperty(pathPollInterval, 30*time.Second, "The interval at which Mulesoft is checked for updates.")
 
 	// ssl properties and command flags
 	props.AddStringSliceProperty(pathSSLNextProtos, []string{}, "List of supported application level protocols, comma separated.")
@@ -110,13 +117,15 @@ func AddConfigProperties(props properties.Properties) {
 func NewMulesoftConfig(props properties.Properties) *MulesoftConfig {
 	return &MulesoftConfig{
 		AnypointExchangeURL: props.StringPropertyValue(pathAnypointExchangeURL),
-		Environment:         props.StringPropertyValue(pathEnvironment),
-		Username:            props.StringPropertyValue(pathAuthUsername),
-		Password:            props.StringPropertyValue(pathAuthPassword),
-		SessionLifetime:     props.DurationPropertyValue(pathAuthLifetime),
-		DiscoveryTags:       props.StringPropertyValue(pathDiscoveryTags),
-		DiscoveryIgnoreTags: props.StringPropertyValue(pathDiscoveryIgnoreTags),
 		CachePath:           props.StringPropertyValue(pathCachePath),
+		DiscoveryIgnoreTags: props.StringPropertyValue(pathDiscoveryIgnoreTags),
+		DiscoveryTags:       props.StringPropertyValue(pathDiscoveryTags),
+		Environment:         props.StringPropertyValue(pathEnvironment),
+		Password:            props.StringPropertyValue(pathAuthPassword),
+		PollInterval:        props.DurationPropertyValue(pathPollInterval),
+		ProxyURL: props.StringPropertyValue(pathProxyURL),
+		SessionLifetime:     props.DurationPropertyValue(pathAuthLifetime),
+		Username:            props.StringPropertyValue(pathAuthUsername),
 		TLS: &corecfg.TLSConfiguration{
 			NextProtos:         props.StringSlicePropertyValue(pathSSLNextProtos),
 			InsecureSkipVerify: props.BoolPropertyValue(pathSSLInsecureSkipVerify),
@@ -124,6 +133,5 @@ func NewMulesoftConfig(props properties.Properties) *MulesoftConfig {
 			MinVersion:         corecfg.TLSVersionAsValue(props.StringPropertyValue(pathSSLMinVersion)),
 			MaxVersion:         corecfg.TLSVersionAsValue(props.StringPropertyValue(pathSSLMaxVersion)),
 		},
-		ProxyURL: props.StringPropertyValue(pathProxyURL),
 	}
 }

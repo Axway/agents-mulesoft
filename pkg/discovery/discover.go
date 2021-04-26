@@ -24,7 +24,7 @@ func (a *Agent) discoveryLoop() {
 	go func() {
 		// Instant fist "tick"
 		a.discoverAPIs()
-		// Loop
+		logrus.Info("Starting poller for Mulesoft APIs")
 		ticker := time.NewTicker(a.pollInterval)
 		for {
 			select {

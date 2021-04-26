@@ -42,7 +42,7 @@ func New(cfg *config.AgentConfig) (agent *Agent, err error) {
 		discoveryIgnoreTags: cleanTags(cfg.MulesoftConfig.DiscoveryIgnoreTags),
 		apicClient:          coreagent.GetCentralClient(),
 		anypointClient:      anypoint.NewClient(cfg.MulesoftConfig),
-		pollInterval:        cfg.CentralConfig.GetPollInterval(),
+		pollInterval:        cfg.MulesoftConfig.PollInterval,
 		stage:               cfg.MulesoftConfig.Environment,
 		apiChan:             make(chan *ServiceDetail, buffer),
 		stopAgent:           make(chan bool),
@@ -67,7 +67,7 @@ func (a *Agent) onConfigChange() {
 	a.discoveryTags = cleanTags(cfg.MulesoftConfig.DiscoveryTags)
 	a.discoveryIgnoreTags = cleanTags(cfg.MulesoftConfig.DiscoveryIgnoreTags)
 	a.apicClient = coreagent.GetCentralClient()
-	a.pollInterval = cfg.CentralConfig.GetPollInterval()
+	a.pollInterval = cfg.MulesoftConfig.PollInterval
 	a.anypointClient.OnConfigChange(cfg.MulesoftConfig)
 
 	// Restart Discovery & Publish
