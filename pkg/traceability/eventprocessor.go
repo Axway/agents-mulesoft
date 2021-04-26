@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/Axway/agents-mulesoft/mulesoft_discovery_agent/pkg/anypoint"
+	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 
 	"github.com/Axway/agent-sdk/pkg/transaction"
 	"github.com/Axway/agent-sdk/pkg/util/log"
@@ -12,7 +12,7 @@ import (
 	"github.com/elastic/beats/v7/libbeat/beat"
 	"github.com/elastic/beats/v7/libbeat/publisher"
 
-	"github.com/Axway/agents-mulesoft/mulesoft_discovery_agent/pkg/config"
+	"github.com/Axway/agents-mulesoft/pkg/config"
 )
 
 // EventProcessor - represents the processor for received event to generate event(s) for AmplifyCentral

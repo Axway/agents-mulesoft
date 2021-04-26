@@ -4,7 +4,7 @@ import (
 	coreagent "github.com/Axway/agent-sdk/pkg/agent"
 	agenterrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
-	"github.com/Axway/agents-mulesoft/mulesoft_discovery_agent/pkg/config"
+	"github.com/Axway/agents-mulesoft/pkg/config"
 	"github.com/elastic/beats/v7/libbeat/beat"
 	"github.com/elastic/beats/v7/libbeat/common"
 )

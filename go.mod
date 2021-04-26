@@ -1,4 +1,4 @@
-module github.com/Axway/agents-mulesoft/mulesoft_discovery_agent
+module github.com/Axway/agents-mulesoft
 
 go 1.13
 

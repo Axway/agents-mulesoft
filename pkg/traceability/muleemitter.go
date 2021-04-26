@@ -6,8 +6,8 @@ import (
 
 	"github.com/elastic/beats/v7/libbeat/logp"
 
-	"github.com/Axway/agents-mulesoft/mulesoft_discovery_agent/pkg/anypoint"
-	"github.com/Axway/agents-mulesoft/mulesoft_discovery_agent/pkg/config"
+	"github.com/Axway/agents-mulesoft/pkg/anypoint"
+	"github.com/Axway/agents-mulesoft/pkg/config"
 )
 
 // MuleEventEmitter - Represents the Gateway client

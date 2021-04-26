@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Axway/agents-mulesoft/mulesoft_discovery_agent/pkg/cmd/discovery"
+	"github.com/Axway/agents-mulesoft/pkg/cmd/discovery"
 )
 
 func main() {

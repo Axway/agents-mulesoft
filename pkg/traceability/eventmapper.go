@@ -7,7 +7,7 @@ import (
 	"strconv"
 
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agents-mulesoft/mulesoft_discovery_agent/pkg/anypoint"
+	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/transaction"

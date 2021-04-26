@@ -18,7 +18,7 @@ jobs:
     - name: Discovery Release
       uses: goreleaser/goreleaser-action@master
       with:
-        workdir: ./mulesoft_discovery_agent
+        workdir: .
         args: release
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -35,7 +35,7 @@ jobs:
     - name: Traceability Release
       uses: goreleaser/goreleaser-action@master
       with:
-        workdir: ./mulesoft_traceability_agent
+        workdir: .
         args: release
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

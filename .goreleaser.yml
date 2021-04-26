@@ -4,7 +4,6 @@ before:
     - go mod download
     - go mod tidy
     - go mod vendor
-    - go get "github.com/Axway/agent-sdk@main"
 builds:
   - id: mulesoft_discovery_agent
     binary: mulesoft_discovery_agent

@@ -7,7 +7,7 @@ import (
 	// Required Import to setup factory for traceability transport
 	_ "github.com/Axway/agent-sdk/pkg/traceability"
 
-	"github.com/Axway/agents-mulesoft/mulesoft_discovery_agent/pkg/cmd/traceability"
+	"github.com/Axway/agents-mulesoft/pkg/cmd/traceability"
 )
 
 func main() {

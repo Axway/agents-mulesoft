@@ -21,9 +21,8 @@ update-sdk:
 	@export GOFLAGS="" && go get "github.com/Axway/agent-sdk@main"
 
 
-${WORKSPACE}/mulesoft_discovery_agent: lint
-	@go build -tags static_all -a -o ./bin/mulesoft_discovery_agent .
-	@go test ./...
+build-discovery:
+	@go build -o bin/discovery ./cmd/discovery/main.go
 
-build:${WORKSPACE}/mulesoft_discovery_agent
-	@echo "Build complete"
+build-trace:
+	@go build -o bin/traceability ./cmd/traceability/main.go

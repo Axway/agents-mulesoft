@@ -12,8 +12,8 @@ import (
 	utilErrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/util/log"
-	"github.com/Axway/agents-mulesoft/mulesoft_discovery_agent/pkg/anypoint"
-	"github.com/Axway/agents-mulesoft/mulesoft_discovery_agent/pkg/config"
+	"github.com/Axway/agents-mulesoft/pkg/anypoint"
+	"github.com/Axway/agents-mulesoft/pkg/config"
 )
 
 // Agent links the mulesoft client and the gateway client.

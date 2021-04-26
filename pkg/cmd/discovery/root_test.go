@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
-	"github.com/Axway/agents-mulesoft/mulesoft_discovery_agent/pkg/config"
+	"github.com/Axway/agents-mulesoft/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 

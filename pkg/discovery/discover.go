@@ -15,7 +15,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/util/log"
-	"github.com/Axway/agents-mulesoft/mulesoft_discovery_agent/pkg/anypoint"
+	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 	"sigs.k8s.io/yaml"
 )
 

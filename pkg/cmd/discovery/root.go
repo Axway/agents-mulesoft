@@ -5,8 +5,8 @@ import (
 	"github.com/Axway/agent-sdk/pkg/cmd/service"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 
-	"github.com/Axway/agents-mulesoft/mulesoft_discovery_agent/pkg/config"
-	"github.com/Axway/agents-mulesoft/mulesoft_discovery_agent/pkg/discovery"
+	"github.com/Axway/agents-mulesoft/pkg/config"
+	"github.com/Axway/agents-mulesoft/pkg/discovery"
 )
 
 // RootCmd - Agent root command

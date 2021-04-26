@@ -8,8 +8,8 @@ import (
 	libcmd "github.com/elastic/beats/v7/libbeat/cmd"
 	"github.com/elastic/beats/v7/libbeat/cmd/instance"
 
-	"github.com/Axway/agents-mulesoft/mulesoft_discovery_agent/pkg/config"
-	"github.com/Axway/agents-mulesoft/mulesoft_discovery_agent/pkg/traceability"
+	"github.com/Axway/agents-mulesoft/pkg/config"
+	"github.com/Axway/agents-mulesoft/pkg/traceability"
 )
 
 // RootCmd - Agent root command

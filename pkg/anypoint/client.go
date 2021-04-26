@@ -18,7 +18,7 @@ import (
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 
-	"github.com/Axway/agents-mulesoft/mulesoft_discovery_agent/pkg/config"
+	"github.com/Axway/agents-mulesoft/pkg/config"
 )
 
 const (
