@@ -29,7 +29,7 @@ func (a *Agent) publish(serviceDetail *ServiceDetail) error {
 
 	serviceBody, err := a.buildServiceBody(serviceDetail)
 	if err != nil {
-		log.Errorf("Error publishing API \"%s (%s)\" to Amplify Central: %s", serviceDetail.APIName, serviceDetail.ID, err.Error())
+		log.Errorf("Error building service body for API \"%s (%s)\": %s", serviceDetail.APIName, serviceDetail.ID, err.Error())
 		return err
 	}
 	err = agent.PublishAPI(serviceBody)

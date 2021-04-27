@@ -30,11 +30,9 @@ func init() {
 
 // run Callback that agent will call to process the execution
 func run() error {
-	discoveryAgent, err := discovery.New(config.GetConfig())
-	if err != nil {
-		return err
-	}
-	err = discoveryAgent.CheckHealth()
+	discoveryAgent := discovery.New(config.GetConfig())
+
+	err := discoveryAgent.CheckHealth()
 	if err != nil {
 		return err
 	}

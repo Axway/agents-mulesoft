@@ -34,7 +34,7 @@ type Agent struct {
 }
 
 // New creates a new agent
-func New(cfg *config.AgentConfig) (agent *Agent, err error) {
+func New(cfg *config.AgentConfig) (agent *Agent) {
 	buffer := 5
 	assetCache := cache.New()
 	agent = &Agent{
@@ -52,7 +52,7 @@ func New(cfg *config.AgentConfig) (agent *Agent, err error) {
 		assetCache:          assetCache,
 	}
 
-	return agent, nil
+	return agent
 }
 
 // onConfigChange apply configuration changes
