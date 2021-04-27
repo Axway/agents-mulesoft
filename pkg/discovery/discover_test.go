@@ -4,12 +4,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Axway/agents-mulesoft/pkg/anypoint"
+
 	"github.com/stretchr/testify/assert"
 
 	"github.com/Axway/agent-sdk/pkg/cache"
 
-	"github.com/Axway/agents-mulesoft/mulesoft_discovery_agent/pkg/anypoint"
-	"github.com/Axway/agents-mulesoft/mulesoft_discovery_agent/pkg/config"
+	"github.com/Axway/agents-mulesoft/pkg/config"
 
 	"github.com/stretchr/testify/mock"
 )
@@ -19,7 +20,7 @@ type mockAnypointClient struct {
 }
 
 func (m *mockAnypointClient) OnConfigChange(*config.MulesoftConfig) {
-
+	//noop
 }
 
 func (m *mockAnypointClient) GetAccessToken() (string, *anypoint.User, time.Duration, error) {

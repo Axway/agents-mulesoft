@@ -24,10 +24,8 @@ require (
 	github.com/spf13/afero v1.3.0 // indirect
 	github.com/spf13/cast v1.3.1 // indirect
 	github.com/stretchr/testify v1.6.1
-	golang.org/x/sys v0.0.0-20210119212857-b64e53b001e4 // indirect
 	gopkg.in/ini.v1 v1.57.0 // indirect
 	gopkg.in/jcmturner/gokrb5.v7 v7.5.0 // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
 	sigs.k8s.io/yaml v1.2.0
 )
 
