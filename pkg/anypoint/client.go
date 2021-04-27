@@ -44,8 +44,8 @@ type Client interface {
 	GetAnalyticsWindow() ([]AnalyticsEvent, error)
 }
 
-// anypointClient is the client for interacting with Mulesoft Anypoint.
-type anypointClient struct {
+// AnypointClient is the client for interacting with Mulesoft Anypoint.
+type AnypointClient struct {
 	baseURL     string
 	username    string
 	password    string
@@ -57,11 +57,18 @@ type anypointClient struct {
 	cachePath   string
 }
 
+type ClientOptions func(*AnypointClient)
+
 // NewClient creates a new client for interacting with Mulesoft.
-func NewClient(mulesoftConfig *config.MulesoftConfig) Client {
-	client := &anypointClient{}
+func NewClient(mulesoftConfig *config.MulesoftConfig, options ...ClientOptions) *AnypointClient {
+	client := &AnypointClient{}
 	client.cachePath = formatCachePath(mulesoftConfig.CachePath)
+
+	for _, o := range options {
+		o(client)
+	}
 	client.OnConfigChange(mulesoftConfig)
+
 
 	// Register the healthcheck
 	hc.RegisterHealthcheck("Mulesoft Anypoint Exchange", "mulesoft", client.healthcheck)
@@ -70,8 +77,7 @@ func NewClient(mulesoftConfig *config.MulesoftConfig) Client {
 	return client
 }
 
-// OnConfigChange updates the client when the configuration changes.
-func (c *anypointClient) OnConfigChange(mulesoftConfig *config.MulesoftConfig) {
+func (c *AnypointClient) OnConfigChange(mulesoftConfig *config.MulesoftConfig) {
 	if c.auth != nil {
 		c.auth.Stop()
 	}
@@ -80,7 +86,7 @@ func (c *anypointClient) OnConfigChange(mulesoftConfig *config.MulesoftConfig) {
 	c.username = mulesoftConfig.Username
 	c.password = mulesoftConfig.Password
 	c.lifetime = mulesoftConfig.SessionLifetime
-	c.apiClient = coreapi.NewClient(mulesoftConfig.TLS, mulesoftConfig.ProxyURL)
+	// c.apiClient = coreapi.NewClient(mulesoftConfig.TLS, mulesoftConfig.ProxyURL)
 	c.cachePath = formatCachePath(mulesoftConfig.CachePath)
 	c.cache = cache.Load(c.cachePath)
 
@@ -97,7 +103,7 @@ func (c *anypointClient) OnConfigChange(mulesoftConfig *config.MulesoftConfig) {
 }
 
 // healthcheck performs Mulesoft healthcheck.
-func (c *anypointClient) healthcheck(name string) (status *hc.Status) {
+func (c *AnypointClient) healthcheck(name string) (status *hc.Status) {
 	// Create the default status
 	status = &hc.Status{
 		Result: hc.OK,
@@ -121,7 +127,7 @@ func (c *anypointClient) healthcheck(name string) (status *hc.Status) {
 }
 
 // GetAccessToken gets an access token
-func (c *anypointClient) GetAccessToken() (string, *User, time.Duration, error) {
+func (c *AnypointClient) GetAccessToken() (string, *User, time.Duration, error) {
 	body := map[string]string{
 		"username": c.username,
 		"password": c.password,
@@ -167,12 +173,12 @@ func (c *anypointClient) GetAccessToken() (string, *User, time.Duration, error) 
 }
 
 // GetCurrentUser returns the current user.
-func (c *anypointClient) GetCurrentUser() (*User, error) {
+func (c *AnypointClient) GetCurrentUser() (*User, error) {
 	return c.getCurrentUser(c.auth.GetToken())
 }
 
 // getCurrentUser returns the current user. Used internally during authentication
-func (c *anypointClient) getCurrentUser(token string) (*User, error) {
+func (c *AnypointClient) getCurrentUser(token string) (*User, error) {
 	headers := map[string]string{
 		"Authorization": "Bearer " + token,
 	}
@@ -193,7 +199,7 @@ func (c *anypointClient) getCurrentUser(token string) (*User, error) {
 }
 
 // GetEnvironmentByName gets the Mulesoft environment with the specified name.
-func (c *anypointClient) GetEnvironmentByName(name string) (*Environment, error) {
+func (c *AnypointClient) GetEnvironmentByName(name string) (*Environment, error) {
 	headers := map[string]string{
 		"Authorization": "Bearer " + c.auth.GetToken(),
 	}
@@ -222,7 +228,7 @@ func (c *anypointClient) GetEnvironmentByName(name string) (*Environment, error)
 }
 
 // ListAssets lists the API Assets.
-func (c *anypointClient) ListAssets(page *Page) ([]Asset, error) {
+func (c *AnypointClient) ListAssets(page *Page) ([]Asset, error) {
 	var assetResult AssetSearch
 	url := c.baseURL + "/apimanager/api/v1/organizations/" + c.auth.GetOrgID() + "/environments/" + c.environment.ID + "/apis"
 	err := c.invokeJSONGet(url, page, &assetResult)
@@ -235,7 +241,7 @@ func (c *anypointClient) ListAssets(page *Page) ([]Asset, error) {
 }
 
 // GetPolicies lists the API policies.
-func (c *anypointClient) GetPolicies(api *API) ([]Policy, error) {
+func (c *AnypointClient) GetPolicies(api *API) ([]Policy, error) {
 	var policies []Policy
 	url := fmt.Sprintf("%s/apimanager/api/v1/organizations/%s/environments/%s/apis/%d/policies", c.baseURL, c.auth.GetOrgID(), c.environment.ID, api.ID)
 	err := c.invokeJSONGet(url, nil, &policies)
@@ -248,7 +254,7 @@ func (c *anypointClient) GetPolicies(api *API) ([]Policy, error) {
 }
 
 // GetExchangeAsset creates the AssetDetail form the Asset API.
-func (c *anypointClient) GetExchangeAsset(api *API) (*ExchangeAsset, error) {
+func (c *AnypointClient) GetExchangeAsset(api *API) (*ExchangeAsset, error) {
 	var exchangeAsset ExchangeAsset
 	url := fmt.Sprintf("%s/exchange/api/v2/assets/%s/%s/%s", c.baseURL, api.GroupID, api.AssetID, api.AssetVersion)
 	err := c.invokeJSONGet(url, nil, &exchangeAsset)
@@ -259,7 +265,7 @@ func (c *anypointClient) GetExchangeAsset(api *API) (*ExchangeAsset, error) {
 }
 
 // GetExchangeAssetIcon get the icon as a base64 encoded string from the Exchange Asset files.
-func (c *anypointClient) GetExchangeAssetIcon(asset *ExchangeAsset) (string, string, error) {
+func (c *AnypointClient) GetExchangeAssetIcon(asset *ExchangeAsset) (string, string, error) {
 	if asset.Icon == "" {
 		return "", "", nil
 	}
@@ -278,7 +284,7 @@ func (c *anypointClient) GetExchangeAssetIcon(asset *ExchangeAsset) (string, str
 
 // GetExchangeFileContent download the file from the ExternalLink reference. If the file is a zip file
 // and thre is a MainFile set then the content of the MainFile is returned.
-func (c *anypointClient) GetExchangeFileContent(file *ExchangeFile) (fileContent []byte, err error) {
+func (c *AnypointClient) GetExchangeFileContent(file *ExchangeFile) (fileContent []byte, err error) {
 	fileContent, _, err = c.invokeGet(file.ExternalLink)
 
 	if file.Packaging == "zip" && file.MainFile != "" {
@@ -307,7 +313,7 @@ func (c *anypointClient) GetExchangeFileContent(file *ExchangeFile) (fileContent
 }
 
 // GetAnalyticsWindow lists the managed assets in Mulesoft: https://docs.qax.mulesoft.com/api-manager/2.x/analytics-event-api
-func (c *anypointClient) GetAnalyticsWindow() ([]AnalyticsEvent, error) {
+func (c *AnypointClient) GetAnalyticsWindow() ([]AnalyticsEvent, error) {
 	startDate, endDate := c.getLastRun()
 	query := map[string]string{
 		"format":    "json",
@@ -332,7 +338,7 @@ func (c *anypointClient) GetAnalyticsWindow() ([]AnalyticsEvent, error) {
 
 }
 
-func (c *anypointClient) getLastRun() (string, string) {
+func (c *AnypointClient) getLastRun() (string, string) {
 	tStamp, _ := c.cache.Get(CacheKeyTimeStamp)
 	now := time.Now()
 	tNow := now.Format(time.RFC3339)
@@ -345,7 +351,7 @@ func (c *anypointClient) getLastRun() (string, string) {
 
 }
 
-func (c *anypointClient) invokeJSONGet(url string, page *Page, resp interface{}) error {
+func (c *AnypointClient) invokeJSONGet(url string, page *Page, resp interface{}) error {
 	headers := map[string]string{
 		"Authorization": "Bearer " + c.auth.GetToken(),
 	}
@@ -369,7 +375,7 @@ func (c *anypointClient) invokeJSONGet(url string, page *Page, resp interface{})
 	return c.invokeJSON(request, resp)
 }
 
-func (c *anypointClient) invokeJSON(request coreapi.Request, resp interface{}) error {
+func (c *AnypointClient) invokeJSON(request coreapi.Request, resp interface{}) error {
 	body, _, err := c.invoke(request)
 	if err != nil {
 		return agenterrors.Wrap(ErrCommunicatingWithGateway, err.Error())
@@ -382,7 +388,7 @@ func (c *anypointClient) invokeJSON(request coreapi.Request, resp interface{}) e
 	return nil
 }
 
-func (c *anypointClient) invokeGet(url string) ([]byte, map[string][]string, error) {
+func (c *AnypointClient) invokeGet(url string) ([]byte, map[string][]string, error) {
 	request := coreapi.Request{
 		Method:      coreapi.GET,
 		URL:         url,
@@ -393,7 +399,7 @@ func (c *anypointClient) invokeGet(url string) ([]byte, map[string][]string, err
 	return c.invoke(request)
 }
 
-func (c *anypointClient) invoke(request coreapi.Request) ([]byte, map[string][]string, error) {
+func (c *AnypointClient) invoke(request coreapi.Request) ([]byte, map[string][]string, error) {
 	response, err := c.apiClient.Send(request)
 	if err != nil {
 		return nil, nil, agenterrors.Wrap(ErrCommunicatingWithGateway, err.Error())
@@ -407,4 +413,11 @@ func (c *anypointClient) invoke(request coreapi.Request) ([]byte, map[string][]s
 
 func formatCachePath(path string) string {
 	return fmt.Sprintf("%s/anypoint.cache", path)
+}
+
+// SetClient replaces the default apiClient with anything that implements the Client interface. Can be used for writing tests.
+func SetClient(c coreapi.Client) ClientOptions {
+	return func(ac *AnypointClient) {
+		ac.apiClient = c
+	}
 }

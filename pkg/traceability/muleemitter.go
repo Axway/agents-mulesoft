@@ -20,13 +20,13 @@ type MuleEventEmitter struct {
 }
 
 // NewMuleEventEmitter - Creates a new Gateway Client
-func NewMuleEventEmitter(gatewayCfg *config.AgentConfig, eventChannel chan string) (*MuleEventEmitter, error) {
+func NewMuleEventEmitter(gatewayCfg *config.AgentConfig, eventChannel chan string, client anypoint.Client) (*MuleEventEmitter, error) {
 	return &MuleEventEmitter{
 		cfg:            gatewayCfg,
 		pollInterval:   gatewayCfg.MulesoftConfig.PollInterval,
 		done:           make(chan bool),
 		eventChannel:   eventChannel,
-		anypointClient: anypoint.NewClient(gatewayCfg.MulesoftConfig),
+		anypointClient: client,
 	}, nil
 }
 

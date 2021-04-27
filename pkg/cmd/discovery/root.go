@@ -5,6 +5,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/cmd/service"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 
+	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 	"github.com/Axway/agents-mulesoft/pkg/config"
 	"github.com/Axway/agents-mulesoft/pkg/discovery"
 )
@@ -30,8 +31,9 @@ func init() {
 
 // run Callback that agent will call to process the execution
 func run() error {
-	discoveryAgent := discovery.New(config.GetConfig())
-
+	cfg := config.GetConfig()
+	client := anypoint.NewClient(cfg.MulesoftConfig)
+	discoveryAgent :=  discovery.New(cfg, client)
 	err := discoveryAgent.CheckHealth()
 	if err != nil {
 		return err

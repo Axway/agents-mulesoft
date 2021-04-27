@@ -27,7 +27,7 @@ func (m *mockAnypointClient) GetAccessToken() (string, *anypoint.User, time.Dura
 	return "", nil, 0, nil
 }
 
-func (m *mockAnypointClient) GetEnvironmentByName(name string) (*anypoint.Environment, error) {
+func (m *mockAnypointClient) GetEnvironmentByName(_ string) (*anypoint.Environment, error) {
 	return nil, nil
 }
 
@@ -64,7 +64,7 @@ func (m *mockAnypointClient) GetExchangeAsset(*anypoint.API) (*anypoint.Exchange
 	}, nil
 }
 
-func (m *mockAnypointClient) GetExchangeAssetIcon(asset *anypoint.ExchangeAsset) (icon string, contentType string, err error) {
+func (m *mockAnypointClient) GetExchangeAssetIcon(_ *anypoint.ExchangeAsset) (icon string, contentType string, err error) {
 	return "", "", nil
 }
 
@@ -83,7 +83,6 @@ func TestDiscoverAPIs(t *testing.T) {
 	mac := &mockAnypointClient{}
 	assetCache := cache.New()
 	buffer := 5
-
 	a := Agent{
 		discoveryPageSize: 1,
 		anypointClient:    mac,

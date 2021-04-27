@@ -4,6 +4,7 @@ go 1.13
 
 require (
 	github.com/Axway/agent-sdk v1.0.20210421
+	github.com/Axway/agents-mulesoft/mulesoft_discovery_agent v0.0.0-20210423202411-12425c6347de
 	github.com/Shopify/sarama v1.26.4 // indirect
 	github.com/docker/docker v1.13.1 // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect

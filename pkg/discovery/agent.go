@@ -34,14 +34,14 @@ type Agent struct {
 }
 
 // New creates a new agent
-func New(cfg *config.AgentConfig) (agent *Agent) {
+func New(cfg *config.AgentConfig, client anypoint.Client) (agent *Agent) {
 	buffer := 5
 	assetCache := cache.New()
 	agent = &Agent{
 		discoveryTags:       cleanTags(cfg.MulesoftConfig.DiscoveryTags),
 		discoveryIgnoreTags: cleanTags(cfg.MulesoftConfig.DiscoveryIgnoreTags),
 		apicClient:          coreagent.GetCentralClient(),
-		anypointClient:      anypoint.NewClient(cfg.MulesoftConfig),
+		anypointClient:      client,
 		pollInterval:        cfg.MulesoftConfig.PollInterval,
 		stage:               cfg.MulesoftConfig.Environment,
 		apiChan:             make(chan *ServiceDetail, buffer),

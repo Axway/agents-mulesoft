@@ -50,7 +50,6 @@ func run() error {
 // Callback that agent will call to initialize the config. CentralConfig is parsed by Agent SDK
 // and passed to the callback allowing the agent code to access the central config
 func initConfig(centralConfig corecfg.CentralConfig) (interface{}, error) {
-
 	agentConfig := &config.AgentConfig{
 		CentralConfig:  centralConfig,
 		MulesoftConfig: config.NewMulesoftConfig(RootCmd.GetProperties()),

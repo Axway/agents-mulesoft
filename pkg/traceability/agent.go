@@ -4,6 +4,7 @@ import (
 	coreagent "github.com/Axway/agent-sdk/pkg/agent"
 	agenterrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
+	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 	"github.com/Axway/agents-mulesoft/pkg/config"
 	"github.com/elastic/beats/v7/libbeat/beat"
 	"github.com/elastic/beats/v7/libbeat/common"
@@ -28,7 +29,8 @@ func New(_ *beat.Beat, _ *common.Config) (beat.Beater, error) {
 
 	var err error
 	bt.eventProcessor = NewEventProcessor(agentConfig)
-	bt.mule, err = NewMuleEventEmitter(agentConfig, bt.eventChannel)
+	client := anypoint.NewClient(agentConfig.MulesoftConfig)
+	bt.mule, err = NewMuleEventEmitter(agentConfig, bt.eventChannel, client)
 	if err != nil {
 		return nil, err
 	}
