@@ -267,3 +267,40 @@ func TestSetOAS2Endpoint(t *testing.T) {
 		})
 	}
 }
+
+func TestSetOAS3Endpoint(t *testing.T) {
+	a := getAgent()
+
+	tests := []struct {
+		name        string
+		url         string
+		specContent []byte
+		result      []byte
+		err         error
+	}{
+		{
+			name:        "Should return error if the spec content is not a valid JSON",
+			url:         "google.com",
+			specContent: []byte("google.com"),
+			result:      []byte("google.com"),
+			err:         fmt.Errorf("invalid character 'g' looking for beginning of value"),
+		},
+		{
+			name:        "Should return spec that has OAS3 endpoint set",
+			url:         "google.com",
+			specContent: []byte("{\"openapi\": \"3.0.1\"}"),
+			result:      []byte("{\"openapi\":\"3.0.1\",\"servers\":[{\"url\":\"google.com\"}]}"),
+			err:         nil,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			spec, err := a.setOAS3Endpoint(tc.url, tc.specContent)
+			if err != nil {
+				assert.Equal(t, tc.err.Error(), err.Error())
+			}
+			assert.Equal(t, tc.result, spec)
+		})
+	}
+}
