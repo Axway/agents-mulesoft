@@ -2,6 +2,7 @@ package traceability
 
 import (
 	coreagent "github.com/Axway/agent-sdk/pkg/agent"
+	"github.com/Axway/agent-sdk/pkg/transaction"
 	agenterrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
@@ -13,8 +14,8 @@ import (
 // Agent - mulesoft Beater configuration.
 type Agent struct {
 	done           chan struct{}
-	mule           *MuleEventEmitter
-	eventProcessor *EventProcessor
+	mule           MuleEmitter
+	eventProcessor Processor
 	client         beat.Client
 	eventChannel   chan string
 }
@@ -28,7 +29,8 @@ func New(_ *beat.Beat, _ *common.Config) (beat.Beater, error) {
 	}
 
 	var err error
-	bt.eventProcessor = NewEventProcessor(agentConfig)
+	eventGen := transaction.NewEventGenerator()
+	bt.eventProcessor = NewEventProcessor(agentConfig, eventGen)
 	client := anypoint.NewClient(agentConfig.MulesoftConfig)
 	bt.mule, err = NewMuleEventEmitter(agentConfig, bt.eventChannel, client)
 	if err != nil {

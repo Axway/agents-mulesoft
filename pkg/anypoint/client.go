@@ -63,14 +63,14 @@ type ClientOptions func(*AnypointClient)
 func NewClient(mulesoftConfig *config.MulesoftConfig, options ...ClientOptions) *AnypointClient {
 	client := &AnypointClient{}
 	client.cachePath = formatCachePath(mulesoftConfig.CachePath)
+	// Create a new client before invoking additional options, which may want to override the client
+	client.apiClient = coreapi.NewClient(mulesoftConfig.TLS, mulesoftConfig.ProxyURL)
 
 	for _, o := range options {
 		o(client)
 	}
 	client.OnConfigChange(mulesoftConfig)
 
-
-	// Register the healthcheck
 	hc.RegisterHealthcheck("Mulesoft Anypoint Exchange", "mulesoft", client.healthcheck)
 	// TODO: handle error
 
@@ -86,7 +86,6 @@ func (c *AnypointClient) OnConfigChange(mulesoftConfig *config.MulesoftConfig) {
 	c.username = mulesoftConfig.Username
 	c.password = mulesoftConfig.Password
 	c.lifetime = mulesoftConfig.SessionLifetime
-	// c.apiClient = coreapi.NewClient(mulesoftConfig.TLS, mulesoftConfig.ProxyURL)
 	c.cachePath = formatCachePath(mulesoftConfig.CachePath)
 	c.cache = cache.Load(c.cachePath)
 

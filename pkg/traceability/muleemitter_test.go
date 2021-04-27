@@ -2,40 +2,19 @@ package traceability
 
 import (
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/Axway/agent-sdk/pkg/api"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 	"github.com/Axway/agents-mulesoft/pkg/config"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-	"testing"
-	"time"
 )
 
-type mockClient struct{
-	mock.Mock
-}
-
-func Test_MuleEventEmitter_Start(t *testing.T) {
-	ac := &config.AgentConfig{
-		CentralConfig:  corecfg.NewCentralConfig(corecfg.TraceabilityAgent),
-		MulesoftConfig: &config.MulesoftConfig{
-			PollInterval: 1*time.Second,
-		},
-	}
-	eventCh := make(chan string)
+func Test_MuleEventEmitter(t *testing.T) {
 	mc := &mockClient{}
-	apClient := anypoint.NewClient(ac.MulesoftConfig, anypoint.SetClient(mc))
-	emitter, err := NewMuleEventEmitter(ac, eventCh, apClient)
-	assert.NotNil(t, emitter)
-	assert.Nil(t, err)
-	emitter.Start()
-	e := <-eventCh
-	assert.NotEmpty(t, e)
-}
-
-func (mc *mockClient) Send(request api.Request) (*api.Response, error) {
-	reqs := map[string]*api.Response{
+	mc.reqs = map[string]*api.Response{
 		"/accounts/login": {
 			Code:    200,
 			Body:    []byte("{\"access_token\":\"abc123\"}"),
@@ -77,7 +56,35 @@ func (mc *mockClient) Send(request api.Request) (*api.Response, error) {
 			Body: []byte(`[{}]`),
 		},
 	}
-	req, ok := reqs[request.URL]
+
+	ac := &config.AgentConfig{
+		CentralConfig: corecfg.NewCentralConfig(corecfg.TraceabilityAgent),
+		MulesoftConfig: &config.MulesoftConfig{
+			PollInterval: 1 * time.Second,
+		},
+	}
+
+	apClient := anypoint.NewClient(ac.MulesoftConfig, anypoint.SetClient(mc))
+	eventCh := make(chan string)
+	emitter, err := NewMuleEventEmitter(ac, eventCh, apClient)
+
+	assert.NotNil(t, emitter)
+	assert.Nil(t, err)
+
+	emitter.Start()
+
+	e := <-eventCh
+	assert.NotEmpty(t, e)
+
+	emitter.Stop()
+}
+
+type mockClient struct {
+	reqs map[string]*api.Response
+}
+
+func (mc *mockClient) Send(request api.Request) (*api.Response, error) {
+	req, ok := mc.reqs[request.URL]
 	if ok {
 		return req, nil
 	} else {

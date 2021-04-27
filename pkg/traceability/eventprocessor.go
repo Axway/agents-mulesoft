@@ -15,6 +15,11 @@ import (
 	"github.com/Axway/agents-mulesoft/pkg/config"
 )
 
+type Processor interface {
+	Process(events []publisher.Event) []publisher.Event
+	ProcessRaw(rawEventData []byte) []beat.Event
+}
+
 // EventProcessor - represents the processor for received event to generate event(s) for AmplifyCentral
 // The event processing can be done either when the beat input receives the log entry or before the beat transport
 // publishes the event to transport.
@@ -31,10 +36,10 @@ type EventProcessor struct {
 }
 
 // NewEventProcessor - return a new EventProcessor
-func NewEventProcessor(gateway *config.AgentConfig) *EventProcessor {
+func NewEventProcessor(gateway *config.AgentConfig, eventGenerator transaction.EventGenerator) *EventProcessor {
 	ep := &EventProcessor{
 		cfg:            gateway,
-		eventGenerator: transaction.NewEventGenerator(),
+		eventGenerator: eventGenerator,
 		eventMapper:    &EventMapper{},
 	}
 	return ep

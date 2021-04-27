@@ -10,6 +10,12 @@ import (
 	"github.com/Axway/agents-mulesoft/pkg/config"
 )
 
+type MuleEmitter interface {
+	Start()
+	Stop()
+	OnConfigChange(gatewayCfg *config.AgentConfig)
+}
+
 // MuleEventEmitter - Represents the Gateway client
 type MuleEventEmitter struct {
 	cfg            *config.AgentConfig
