@@ -335,7 +335,6 @@ func (c *AnypointClient) GetAnalyticsWindow() ([]AnalyticsEvent, error) {
 	}
 	err := c.invokeJSON(request, &events)
 	return events, err
-
 }
 
 func (c *AnypointClient) getLastRun() (string, string) {
