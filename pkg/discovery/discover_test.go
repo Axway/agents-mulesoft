@@ -1,6 +1,8 @@
 package discovery
 
 import (
+	"fmt"
+	"net/url"
 	"testing"
 	"time"
 
@@ -44,7 +46,7 @@ func (m *mockAnypointClient) ListAssets(*anypoint.Page) ([]anypoint.Asset, error
 	return assets, nil
 }
 
-func (m *mockAnypointClient) GetPolicies(api *anypoint.API) ([]anypoint.Policy, error) {
+func (m *mockAnypointClient) GetPolicies(*anypoint.API) ([]anypoint.Policy, error) {
 	return nil, nil
 }
 
@@ -79,11 +81,12 @@ func (m *mockAnypointClient) GetAnalyticsWindow() ([]anypoint.AnalyticsEvent, er
 	return nil, nil
 }
 
-func TestDiscoverAPIs(t *testing.T) {
+func getAgent() Agent {
 	mac := &mockAnypointClient{}
 	assetCache := cache.New()
 	buffer := 5
-	a := Agent{
+
+	return Agent{
 		discoveryPageSize: 1,
 		anypointClient:    mac,
 		stage:             "Sandbox",
@@ -92,6 +95,10 @@ func TestDiscoverAPIs(t *testing.T) {
 		pollInterval:      time.Second,
 		apiChan:           make(chan *ServiceDetail, buffer),
 	}
+}
+
+func TestDiscoverAPIs(t *testing.T) {
+	a := getAgent()
 
 	go func() {
 		a.discoverAPIs()
@@ -152,6 +159,111 @@ func TestShouldDiscoverAPIBasedOnTags(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			assert.Equal(t, tc.expected, tc.a.shouldDiscoverAPI(tc.api))
+		})
+	}
+}
+
+func TestGetExchangeAssetSpecFile(t *testing.T) {
+	a := getAgent()
+
+	tests := []struct {
+		name      string
+		asset     *anypoint.ExchangeAsset
+		exchgfile *anypoint.ExchangeFile
+		err       error
+	}{
+		{
+			name: "Should return nil and no error if the Exchange asset has no files",
+			asset: &anypoint.ExchangeAsset{
+				Name:  "Sample exchange asset 1",
+				Files: nil,
+			},
+			exchgfile: nil,
+			err:       nil,
+		},
+		{
+			name: "Should return nil and no error if the Exchange asset has a file that is not of expected classifier",
+			asset: &anypoint.ExchangeAsset{
+				Name: "Sample exchange asset 2",
+				Files: []anypoint.ExchangeFile{{
+					Classifier: "oas3",
+				},
+				},
+			},
+			exchgfile: nil,
+			err:       nil,
+		},
+		{
+			name: "Should return an exchange asset if it has a file that is of expected classifier",
+			asset: &anypoint.ExchangeAsset{
+				Name: "Sample exchange asset 3",
+				Files: []anypoint.ExchangeFile{{
+					Classifier: "oas",
+				},
+				},
+			},
+			exchgfile: &anypoint.ExchangeFile{
+				Classifier: "oas",
+			},
+			err: nil,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			sd, err := a.getExchangeAssetSpecFile(tc.asset)
+			assert.Equal(t, tc.exchgfile, sd)
+			assert.Equal(t, tc.err, err)
+		})
+	}
+}
+
+func TestSetOAS2Endpoint(t *testing.T) {
+	a := getAgent()
+
+	tests := []struct {
+		name        string
+		endPointURL string
+		specContent []byte
+		result      []byte
+		err         error
+	}{
+		{
+			name:        "Should return error if Endpoint URL is not valid",
+			endPointURL: "postgres://user:abc{def=ghi@sdf.com:5432",
+			specContent: []byte("{\"basePath\":\"google.com\",\"host\":\"\",\"schemes\":[\"\"],\"swagger\":\"2.0\"}"),
+			result:      []byte("{\"basePath\":\"google.com\",\"host\":\"\",\"schemes\":[\"\"],\"swagger\":\"2.0\"}"),
+			err: &url.Error{
+				Op:  "parse",
+				URL: "postgres://user:abc{def=ghi@sdf.com:5432",
+				Err: fmt.Errorf("net/url: invalid userinfo"),
+			},
+		},
+		{
+			name:        "Should return error if the spec content is not a valid JSON",
+			endPointURL: "http://google.com",
+			specContent: []byte("google.com"),
+			result:      []byte("google.com"),
+			err:         fmt.Errorf("invalid character 'g' looking for beginning of value"),
+		},
+		{
+			name:        "Should return spec that has OAS2 endpoint set",
+			endPointURL: "http://google.com",
+			specContent: []byte("{\"basePath\":\"google.com\",\"host\":\"\",\"schemes\":[\"\"],\"swagger\":\"2.0\"}"),
+			result:      []byte("{\"basePath\":\"\",\"host\":\"google.com\",\"schemes\":[\"http\"],\"swagger\":\"2.0\"}"),
+			err:         nil,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			spec, err := a.setOAS2Endpoint(tc.endPointURL, tc.specContent)
+
+			if err != nil {
+				assert.Equal(t, tc.err.Error(), err.Error())
+			}
+
+			assert.Equal(t, tc.result, spec)
 		})
 	}
 }
