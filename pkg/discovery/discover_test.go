@@ -111,7 +111,7 @@ func TestDiscoverAPIs(t *testing.T) {
 		assert.Equal(t, "oas2", sd.ResourceType)
 		assert.Equal(t, "6789", sd.ID)
 		assert.Equal(t, []byte("{\"basePath\":\"google.com\",\"host\":\"\",\"schemes\":[\"\"],\"swagger\":\"2.0\"}"), sd.APISpec)
-		assert.Equal(t, map[string]string{"checksum": "648a87a1bbb677d5e80e7f6969f368f8cd58322bbd3b3327381f9302d99a8359"}, sd.ServiceAttributes)
+		assert.Equal(t, map[string]string{"checksum": "c3aad4f6ae04e69c1ff4f1d81abf40e8cae91acd22e16a798ac9a88a932286a7"}, sd.ServiceAttributes)
 
 	case <-time.After(time.Second * 1):
 		t.Errorf("Timed out waiting for the discovery")
