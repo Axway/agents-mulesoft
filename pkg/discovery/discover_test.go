@@ -10,8 +10,6 @@ import (
 
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 
-	"github.com/Axway/agent-sdk/pkg/apic"
-
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 
 	"github.com/stretchr/testify/assert"
@@ -41,11 +39,13 @@ func (m *mockAnypointClient) GetEnvironmentByName(_ string) (*anypoint.Environme
 
 func (m *mockAnypointClient) ListAssets(*anypoint.Page) ([]anypoint.Asset, error) {
 	assets := []anypoint.Asset{{
-		ID:   12345,
-		Name: "asset1",
+		ID:                12345,
+		Name:              "asset1",
+		ExchangeAssetName: "dummyasset",
 		APIs: []anypoint.API{{
 			ID:          6789,
 			EndpointURI: "google.com",
+			AssetID:     "12345",
 		}},
 	}}
 
@@ -105,10 +105,13 @@ func TestDiscoverAPIs(t *testing.T) {
 
 	select {
 	case sd := <-a.apiChan:
-		assert.Equal(t, sd.Stage, a.stage)
-		assert.Equal(t, sd.ResourceType, "oas2")
-		assert.Equal(t, sd.ID, "6789")
-		assert.Equal(t, sd.APISpec, []byte("{\"basePath\":\"google.com\",\"host\":\"\",\"schemes\":[\"\"],\"swagger\":\"2.0\"}"))
+		assert.Equal(t, "dummyasset", sd.Title)
+		assert.Equal(t, a.stage, sd.Stage)
+		assert.Equal(t, "12345", sd.APIName)
+		assert.Equal(t, "oas2", sd.ResourceType)
+		assert.Equal(t, "6789", sd.ID)
+		assert.Equal(t, []byte("{\"basePath\":\"google.com\",\"host\":\"\",\"schemes\":[\"\"],\"swagger\":\"2.0\"}"), sd.APISpec)
+		assert.Equal(t, map[string]string{"checksum": "648a87a1bbb677d5e80e7f6969f368f8cd58322bbd3b3327381f9302d99a8359"}, sd.ServiceAttributes)
 
 	case <-time.After(time.Second * 1):
 		t.Errorf("Timed out waiting for the discovery")
@@ -256,8 +259,9 @@ func TestGetServiceDetailWhenExchangeAssetSpecFileIsEmpty(t *testing.T) {
 		AssetVersion: "89",
 	}
 
-	sd, _ := agent.getServiceDetail(asset, a)
+	sd, err := agent.getServiceDetail(asset, a)
 	assert.Nil(t, sd)
+	assert.Nil(t, err)
 }
 
 func TestGetServiceDetailFailsWhenGetSpecFromExchangeFileFails(t *testing.T) {
@@ -366,6 +370,15 @@ func TestShouldDiscoverAPIBasedOnTags(t *testing.T) {
 			a:        Agent{},
 			api:      &anypoint.API{Tags: []string{}},
 			expected: true,
+		},
+		{
+			name: "Should not discover if API has both - a tag to be discovered and a tag to be ignored",
+			a: Agent{
+				discoveryIgnoreTags: []string{"donotdiscover"},
+				discoveryTags:       []string{"discover"},
+			},
+			api:      &anypoint.API{Tags: []string{"discover", "donotdiscover"}},
+			expected: false,
 		},
 	}
 
@@ -477,35 +490,6 @@ func TestSetOAS2Endpoint(t *testing.T) {
 			}
 
 			assert.Equal(t, tc.result, spec)
-		})
-	}
-}
-
-func TestGetAuthPolicy(t *testing.T) {
-	a := getAgent()
-
-	tests := []struct {
-		name     string
-		policies []anypoint.Policy
-		expected string
-	}{
-		{
-			name:     "Should return pass-through if no policies exist",
-			policies: nil,
-			expected: apic.Passthrough,
-		},
-		{
-			name: "Should return verify-api-key if such a policy exists",
-			policies: []anypoint.Policy{{
-				PolicyTemplateID: "client-id-enforcement",
-			}},
-			expected: apic.Apikey,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.expected, a.getAuthPolicy(tc.policies))
 		})
 	}
 }
