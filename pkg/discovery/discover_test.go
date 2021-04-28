@@ -59,15 +59,8 @@ func (m *mockAnypointClient) GetPolicies(*anypoint.API) ([]anypoint.Policy, erro
 func (m *mockAnypointClient) GetExchangeAsset(*anypoint.API) (*anypoint.ExchangeAsset, error) {
 	return &anypoint.ExchangeAsset{
 		Files: []anypoint.ExchangeFile{{
-			Classifier:   "oas",
-			Packaging:    "",
-			DownloadURL:  "",
-			ExternalLink: "",
-			MD5:          "",
-			SHA1:         "",
-			CreatedDate:  time.Time{},
-			MainFile:     "",
-			Generated:    false,
+			Classifier: "oas",
+			Generated:  false,
 		}},
 	}, nil
 }
@@ -135,25 +128,15 @@ func (mc *mockClient) Send(request api.Request) (*api.Response, error) {
 	}
 }
 
-func TestGetServiceDetail(t *testing.T) {
-	// TODO add more test cases here
-	ac := &config.AgentConfig{
-		CentralConfig: corecfg.NewCentralConfig(corecfg.TraceabilityAgent),
-		MulesoftConfig: &config.MulesoftConfig{
-			PollInterval: 1 * time.Second,
-		},
-	}
-
-	mc := &mockClient{}
-	mc.reqs = map[string]*api.Response{
-		"/accounts/login": {
-			Code:    200,
-			Body:    []byte("{\"access_token\":\"abc123\"}"),
-			Headers: nil,
-		},
-		"/accounts/api/me": {
-			Code: 200,
-			Body: []byte(`{
+var mapOfResponses = map[string]*api.Response{
+	"/accounts/login": {
+		Code:    200,
+		Body:    []byte("{\"access_token\":\"abc123\"}"),
+		Headers: nil,
+	},
+	"/accounts/api/me": {
+		Code: 200,
+		Body: []byte(`{
 					"user":{
 						"identityType": "idtype",
 						"id": "123",
@@ -168,10 +151,10 @@ func TestGetServiceDetail(t *testing.T) {
 						}
 					}
 				}`),
-		},
-		"/accounts/api/organizations/333/environments": {
-			Code: 200,
-			Body: []byte(`{
+	},
+	"/accounts/api/organizations/333/environments": {
+		Code: 200,
+		Body: []byte(`{
 					"data": [{
 						"id": "111",
 						"name": "Sandbox",
@@ -181,23 +164,168 @@ func TestGetServiceDetail(t *testing.T) {
 					}],
 					"total": 1
 				}`),
-		},
-		"/apimanager/api/v1/organizations/333/environments/111/apis/456/policies": {
-			Code: 400,
-			Body: []byte(`[{}]`),
+	},
+}
+
+func buildAgentWithCustomMockAnypointClient() (*Agent, *mockClient) {
+	ac := &config.AgentConfig{
+		CentralConfig: corecfg.NewCentralConfig(corecfg.TraceabilityAgent),
+		MulesoftConfig: &config.MulesoftConfig{
+			PollInterval: 1 * time.Second,
 		},
 	}
+
+	mc := &mockClient{}
+	mc.reqs = make(map[string]*api.Response)
+	for k, v := range mapOfResponses {
+		mc.reqs[k] = v
+	}
+
 	apClient := anypoint.NewClient(ac.MulesoftConfig, anypoint.SetClient(mc))
 	agent := New(ac, apClient)
 
+	return agent, mc
+}
+
+func TestGetServiceDetailFailsWhenGetPoliciesFails(t *testing.T) {
+	agent, mc := buildAgentWithCustomMockAnypointClient()
+
+	mc.reqs["/apimanager/api/v1/organizations/333/environments/111/apis/456/policies"] = &api.Response{
+		Code: 400,
+		Body: nil,
+	}
+
 	asset := &anypoint.Asset{}
 
-	api := &anypoint.API{
+	a := &anypoint.API{
 		ID:          456,
 		EndpointURI: "google.com",
 	}
 
-	_, err := agent.getServiceDetail(asset, api)
+	_, err := agent.getServiceDetail(asset, a)
+	assert.NotNil(t, err)
+}
+
+func TestGetServiceDetailFailsWhenGetExchangeAssetFails(t *testing.T) {
+	agent, mc := buildAgentWithCustomMockAnypointClient()
+
+	mc.reqs["/apimanager/api/v1/organizations/333/environments/111/apis/456/policies"] = &api.Response{
+		Code: 200,
+		Body: []byte(`[{}]`),
+	}
+
+	mc.reqs["/exchange/api/v2/assets/123/456/89"] = &api.Response{
+		Code: 400,
+		Body: nil,
+	}
+
+	asset := &anypoint.Asset{}
+
+	a := &anypoint.API{
+		ID:           456,
+		EndpointURI:  "google.com",
+		GroupID:      "123",
+		AssetID:      "456",
+		AssetVersion: "89",
+	}
+
+	_, err := agent.getServiceDetail(asset, a)
+	assert.NotNil(t, err)
+}
+
+func TestGetServiceDetailWhenExchangeAssetSpecFileIsEmpty(t *testing.T) {
+	agent, mc := buildAgentWithCustomMockAnypointClient()
+
+	mc.reqs["/apimanager/api/v1/organizations/333/environments/111/apis/456/policies"] = &api.Response{
+		Code: 200,
+		Body: []byte(`[{}]`),
+	}
+
+	mc.reqs["/exchange/api/v2/assets/123/456/89"] = &api.Response{
+		Code: 200,
+		Body: []byte("{\"Files\": [{}]}"),
+	}
+
+	asset := &anypoint.Asset{}
+
+	a := &anypoint.API{
+		ID:           456,
+		EndpointURI:  "google.com",
+		GroupID:      "123",
+		AssetID:      "456",
+		AssetVersion: "89",
+	}
+
+	sd, _ := agent.getServiceDetail(asset, a)
+	assert.Nil(t, sd)
+}
+
+func TestGetServiceDetailFailsWhenGetSpecFromExchangeFileFails(t *testing.T) {
+	agent, mc := buildAgentWithCustomMockAnypointClient()
+
+	mc.reqs["/apimanager/api/v1/organizations/333/environments/111/apis/456/policies"] = &api.Response{
+		Code: 200,
+		Body: []byte(`[{}]`),
+	}
+
+	mc.reqs["/exchange/api/v2/assets/123/456/89"] = &api.Response{
+		Code: 200,
+		Body: []byte("{\"Files\": [{\"Classifier\":\"oas\",\"Generated\":false, \"ExternalLink\": \"https://localhost/swagger.json\"}]}"),
+	}
+
+	mc.reqs["https://localhost/swagger.json"] = &api.Response{
+		Code: 400,
+		Body: nil,
+	}
+
+	asset := &anypoint.Asset{}
+
+	a := &anypoint.API{
+		ID:           456,
+		EndpointURI:  "google.com",
+		GroupID:      "123",
+		AssetID:      "456",
+		AssetVersion: "89",
+	}
+
+	_, err := agent.getServiceDetail(asset, a)
+	assert.NotNil(t, err)
+}
+
+func TestGetServiceDetailFailsWhenGetExchangeAssetIconFails(t *testing.T) {
+	agent, mc := buildAgentWithCustomMockAnypointClient()
+
+	mc.reqs["/apimanager/api/v1/organizations/333/environments/111/apis/456/policies"] = &api.Response{
+		Code: 200,
+		Body: []byte(`[{}]`),
+	}
+
+	mc.reqs["/exchange/api/v2/assets/123/456/89"] = &api.Response{
+		Code: 200,
+		Body: []byte("{\"Icon\": \"blahblah.com\", \"Files\": [{\"Classifier\":\"oas\",\"Generated\":false, \"ExternalLink\": \"https://localhost/swagger.json\"}]}"),
+	}
+
+	mc.reqs["https://localhost/swagger.json"] = &api.Response{
+		Code: 200,
+		Body: []byte("{\"basePath\":\"google.com\",\"host\":\"\",\"schemes\":[\"\"],\"swagger\":\"2.0\"}"),
+	}
+
+	mc.reqs["blahblah.com"] = &api.Response{
+		Code: 400,
+		Body: nil,
+	}
+
+	asset := &anypoint.Asset{}
+
+	a := &anypoint.API{
+		ID:           456,
+		EndpointURI:  "google.com",
+		GroupID:      "123",
+		AssetID:      "456",
+		AssetVersion: "89",
+	}
+
+	_, err := agent.getServiceDetail(asset, a)
 	assert.NotNil(t, err)
 }
 

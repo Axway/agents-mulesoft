@@ -278,7 +278,7 @@ func (c *AnypointClient) GetExchangeAssetIcon(asset *ExchangeAsset) (string, str
 		contentType = val[0]
 	}
 
-	return base64.StdEncoding.EncodeToString([]byte(iconBuffer)), contentType, nil
+	return base64.StdEncoding.EncodeToString(iconBuffer), contentType, nil
 }
 
 // GetExchangeFileContent download the file from the ExternalLink reference. If the file is a zip file
