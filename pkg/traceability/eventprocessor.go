@@ -89,7 +89,7 @@ func (p *EventProcessor) ProcessRaw(rawEventData []byte) []beat.Event {
 	}
 	events := make([]beat.Event, 0)
 	for _, logEvent := range logEvents {
-		// Generates the beat.Event with attributes by Amplifyingestion service
+		// Generates the beat.Event with attributes by Amplify ingestion service
 		event, err := p.eventGenerator.CreateEvent(*logEvent, time.Now(), nil, nil, nil)
 		if err != nil {
 			log.Error(err.Error())

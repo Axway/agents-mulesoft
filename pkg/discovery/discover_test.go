@@ -172,7 +172,7 @@ var mapOfResponses = map[string]*api.Response{
 
 func buildAgentWithCustomMockAnypointClient() (*Agent, *mockClient) {
 	ac := &config.AgentConfig{
-		CentralConfig: corecfg.NewCentralConfig(corecfg.TraceabilityAgent),
+		CentralConfig: corecfg.NewCentralConfig(corecfg.DiscoveryAgent),
 		MulesoftConfig: &config.MulesoftConfig{
 			PollInterval: 1 * time.Second,
 		},

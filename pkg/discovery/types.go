@@ -4,25 +4,25 @@ import "github.com/Axway/agents-mulesoft/pkg/anypoint"
 
 // ServiceDetail is the information for the ex
 type ServiceDetail struct {
-	ID                string
-	Title             string
-	Version           string
 	APIName           string
-	URL               string
-	Stage             string
-	Description       string
-	AuthPolicy        string
 	APISpec           []byte
+	APIUpdateSeverity string
+	AuthPolicy        string
+	Description       string
 	Documentation     []byte
-	Tags              []string
+	ID                string
 	Image             string
 	ImageContentType  string
 	ResourceType      string
-	SubscriptionName  string
-	APIUpdateSeverity string
+	ServiceAttributes map[string]string
+	Stage             string
 	State             string
 	Status            string
-	ServiceAttributes map[string]string
+	SubscriptionName  string
+	Tags              []string
+	Title             string
+	URL               string
+	Version           string
 }
 
 var specPreference = map[string]int{

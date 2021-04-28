@@ -27,6 +27,7 @@ require (
 	github.com/stretchr/testify v1.6.1
 	gopkg.in/ini.v1 v1.57.0 // indirect
 	gopkg.in/jcmturner/gokrb5.v7 v7.5.0 // indirect
+	gopkg.in/yaml.v2 v2.4.0
 	sigs.k8s.io/yaml v1.2.0
 )
 

@@ -164,18 +164,18 @@ func (a *Agent) getServiceDetail(asset *anypoint.Asset, api *anypoint.API) (*Ser
 	}
 
 	return &ServiceDetail{
-		ID:                fmt.Sprint(api.ID),
-		Title:             asset.ExchangeAssetName,
-		Version:           api.AssetVersion,
 		APIName:           api.AssetID,
-		Stage:             a.stage,
 		APISpec:           specContent,
-		ResourceType:      specType,
 		AuthPolicy:        authPolicy,
+		ID:                fmt.Sprint(api.ID),
 		Image:             icon,
 		ImageContentType:  iconContentType,
-		Tags:              api.Tags,
+		ResourceType:      specType,
 		ServiceAttributes: map[string]string{"checksum": checksum},
+		Stage:             a.stage,
+		Tags:              api.Tags,
+		Title:             asset.ExchangeAssetName,
+		Version:           api.AssetVersion,
 	}, nil
 }
 

@@ -50,24 +50,28 @@ func (a *Agent) buildServiceBody(service *ServiceDetail) (apic.ServiceBody, erro
 		}
 	}
 	return apic.NewServiceBodyBuilder().
-		SetID(service.ID).
-		SetTitle(fmt.Sprintf("%s (%s)", service.Title, service.Version)).
 		SetAPIName(service.APIName).
-		SetURL(service.URL).
-		SetStage(service.Stage).
-		SetDescription(service.Description).
-		SetVersion(service.Version).
-		SetAuthPolicy(service.AuthPolicy).
 		SetAPISpec(service.APISpec).
+		SetAPIUpdateSeverity(service.APIUpdateSeverity).
+		SetAuthPolicy(service.AuthPolicy).
+		SetDescription(service.Description).
 		SetDocumentation(service.Documentation).
-		SetTags(tags).
+		SetID(service.ID).
 		SetImage(service.Image).
 		SetImageContentType(service.ImageContentType).
 		SetResourceType(service.ResourceType).
-		SetSubscriptionName(service.SubscriptionName).
-		SetAPIUpdateSeverity(service.APIUpdateSeverity).
+		SetServiceAttribute(service.ServiceAttributes).
+		SetStage(service.Stage).
 		SetState(service.State).
 		SetStatus(service.Status).
-		SetServiceAttribute(service.ServiceAttributes).
+		SetSubscriptionName(service.SubscriptionName).
+		SetTags(tags).
+		SetTitle(FormatServiceTitle(service.Title, service.Version)).
+		SetURL(service.URL).
+		SetVersion(service.Version).
 		Build()
+}
+
+func FormatServiceTitle(title, version string) string {
+	return fmt.Sprintf("%s (%s)", title, version)
 }

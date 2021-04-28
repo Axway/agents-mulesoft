@@ -6,7 +6,8 @@ import (
 	"net/http"
 	"strconv"
 
-	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	"github.com/Axway/agents-mulesoft/pkg/discovery"
+
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
@@ -15,19 +16,9 @@ import (
 )
 
 // EventMapper -
-type EventMapper struct {
-}
+type EventMapper struct{}
 
 func (m *EventMapper) processMapping(anypointAnalyticsEvent anypoint.AnalyticsEvent) ([]*transaction.LogEvent, error) {
-	item, err := agent.GetAPICache().GetItem(anypointAnalyticsEvent.APIVersionID)
-	if err != nil {
-		return nil, err
-	}
-	if item == nil {
-		// API not in central
-		return nil, nil
-	}
-
 	centralCfg := agent.GetCentralConfig()
 
 	eventTime := anypointAnalyticsEvent.Timestamp.UnixNano() / 1000000
@@ -82,7 +73,14 @@ func (m *EventMapper) buildHeaders(headers map[string]string) string {
 	return string(jsonHeader)
 }
 
-func (m *EventMapper) createTransactionEvent(eventTime int64, txID string, txDetails anypoint.AnalyticsEvent, eventID, parentEventID, direction string) (*transaction.LogEvent, error) {
+func (m *EventMapper) createTransactionEvent(
+	eventTime int64,
+	txID string,
+	txDetails anypoint.AnalyticsEvent,
+	eventID,
+	parentEventID,
+	direction string,
+) (*transaction.LogEvent, error) {
 	// TODO - Slim pickings on header data
 	req := map[string]string{"User-AgentName": txDetails.UserAgentName}
 	res := map[string]string{"Request-Outcome": txDetails.RequestOutcome}
@@ -111,22 +109,26 @@ func (m *EventMapper) createTransactionEvent(eventTime int64, txID string, txDet
 		Build()
 }
 
-func (m *EventMapper) createSummaryEvent(eventTime int64, txID string, anypointAnalyticsEvent anypoint.AnalyticsEvent, teamID string) (*transaction.LogEvent, error) {
-	statusCode := anypointAnalyticsEvent.StatusCode
-	method := anypointAnalyticsEvent.Verb
-	uri := anypointAnalyticsEvent.ResourcePath // TODO
-	host := anypointAnalyticsEvent.ClientIP
-
-	res, _ := agent.GetAPICache().Get(anypointAnalyticsEvent.APIVersionID)
-	resInstance := res.(apiV1.ResourceInstance)
+func (m *EventMapper) createSummaryEvent(
+	eventTime int64,
+	txID string,
+	event anypoint.AnalyticsEvent,
+	teamID string,
+) (*transaction.LogEvent, error) {
+	statusCode := event.StatusCode
+	method := event.Verb
+	uri := event.ResourcePath
+	host := event.ClientIP
+	versionID := event.APIVersionID
+	name := event.APIName
 
 	return transaction.NewTransactionSummaryBuilder().
 		SetTimestamp(eventTime).
 		SetTransactionID(txID).
 		SetStatus(m.getTransactionSummaryStatus(statusCode), strconv.Itoa(statusCode)).
-		SetDuration(anypointAnalyticsEvent.ResponseTime).
+		SetDuration(event.ResponseTime).
 		SetTeam(teamID).
 		SetEntryPoint("http", method, uri, host).
-		SetProxy(transaction.FormatProxyID(anypointAnalyticsEvent.APIVersionID), resInstance.ResourceMeta.Title, 1).
+		SetProxy(transaction.FormatProxyID(versionID), discovery.FormatServiceTitle(name, versionID), 1).
 		Build()
 }
