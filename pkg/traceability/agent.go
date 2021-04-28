@@ -13,11 +13,11 @@ import (
 
 // Agent - mulesoft Beater configuration.
 type Agent struct {
-	done           chan struct{}
-	mule           MuleEmitter
-	eventProcessor Processor
 	client         beat.Client
+	done           chan struct{}
 	eventChannel   chan string
+	eventProcessor Processor
+	mule           MuleEmitter
 }
 
 // New creates an instance of mulesoft_traceability_agent.

@@ -18,19 +18,19 @@ import (
 
 // Agent links the mulesoft client and the gateway client.
 type Agent struct {
-	stage               string
-	discoveryTags       []string
-	discoveryIgnoreTags []string
 	anypointClient      anypoint.Client
 	apicClient          apic.Client
-	pollInterval        time.Duration
 	apiChan             chan *ServiceDetail
+	assetCache          cache.Cache
+	discoveryIgnoreTags []string
+	discoveryPageSize   int
+	discoveryTags       []string
+	pollInterval        time.Duration
+	publishBufferSize   int
+	stage               string
 	stopAgent           chan bool
 	stopDiscovery       chan bool
 	stopPublish         chan bool
-	discoveryPageSize   int
-	publishBufferSize   int
-	assetCache          cache.Cache
 }
 
 // New creates a new agent
@@ -38,18 +38,18 @@ func New(cfg *config.AgentConfig, client anypoint.Client) (agent *Agent) {
 	buffer := 5
 	assetCache := cache.New()
 	agent = &Agent{
-		discoveryTags:       cleanTags(cfg.MulesoftConfig.DiscoveryTags),
-		discoveryIgnoreTags: cleanTags(cfg.MulesoftConfig.DiscoveryIgnoreTags),
-		apicClient:          coreagent.GetCentralClient(),
 		anypointClient:      client,
+		apicClient:          coreagent.GetCentralClient(),
+		apiChan:             make(chan *ServiceDetail, buffer),
+		assetCache:          assetCache,
+		discoveryIgnoreTags: cleanTags(cfg.MulesoftConfig.DiscoveryIgnoreTags),
+		discoveryPageSize:   50,
+		discoveryTags:       cleanTags(cfg.MulesoftConfig.DiscoveryTags),
 		pollInterval:        cfg.MulesoftConfig.PollInterval,
 		stage:               cfg.MulesoftConfig.Environment,
-		apiChan:             make(chan *ServiceDetail, buffer),
 		stopAgent:           make(chan bool),
 		stopDiscovery:       make(chan bool),
 		stopPublish:         make(chan bool),
-		discoveryPageSize:   50,
-		assetCache:          assetCache,
 	}
 
 	return agent

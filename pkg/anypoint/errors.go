@@ -16,8 +16,7 @@ var (
 	ErrParsingResponse          = errors.New(3004, "could not parse the body of the response from Mulesoft")
 	ErrCommunicatingWithGateway = errors.New(3005, "could not make request to Mulesoft")
 	ErrMarshallingBody          = errors.New(3006, "could not create the body of the request to Mulesoft")
-
-	ErrAuthentication = errors.New(3401, "authentication failed")
+	ErrAuthentication           = errors.New(3401, "authentication failed")
 )
 
 type apiErrorResponse map[string][]apiError

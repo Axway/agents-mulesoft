@@ -18,11 +18,11 @@ type MuleEmitter interface {
 
 // MuleEventEmitter - Represents the Gateway client
 type MuleEventEmitter struct {
-	cfg            *config.AgentConfig
 	anypointClient anypoint.Client
-	pollInterval   time.Duration
+	cfg            *config.AgentConfig
 	done           chan bool
 	eventChannel   chan string
+	pollInterval   time.Duration
 }
 
 // NewMuleEventEmitter - Creates a new Gateway Client
