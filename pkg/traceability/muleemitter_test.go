@@ -79,6 +79,7 @@ func Test_MuleEventEmitter(t *testing.T) {
 	emitter.Stop()
 }
 
+// TODO May be make export this mockClient so that the discovery package can reuse it?
 type mockClient struct {
 	reqs map[string]*api.Response
 }

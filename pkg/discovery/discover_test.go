@@ -6,6 +6,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Axway/agent-sdk/pkg/api"
+
+	corecfg "github.com/Axway/agent-sdk/pkg/config"
+
+	"github.com/Axway/agent-sdk/pkg/apic"
+
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 
 	"github.com/stretchr/testify/assert"
@@ -114,6 +120,85 @@ func TestDiscoverAPIs(t *testing.T) {
 	case <-time.After(time.Second * 1):
 		t.Errorf("Timed out waiting for the discovery")
 	}
+}
+
+type mockClient struct {
+	reqs map[string]*api.Response
+}
+
+func (mc *mockClient) Send(request api.Request) (*api.Response, error) {
+	req, ok := mc.reqs[request.URL]
+	if ok {
+		return req, nil
+	} else {
+		return nil, fmt.Errorf("no request found for %s", request.URL)
+	}
+}
+
+func TestGetServiceDetail(t *testing.T) {
+	// TODO add more test cases here
+	ac := &config.AgentConfig{
+		CentralConfig: corecfg.NewCentralConfig(corecfg.TraceabilityAgent),
+		MulesoftConfig: &config.MulesoftConfig{
+			PollInterval: 1 * time.Second,
+		},
+	}
+
+	mc := &mockClient{}
+	mc.reqs = map[string]*api.Response{
+		"/accounts/login": {
+			Code:    200,
+			Body:    []byte("{\"access_token\":\"abc123\"}"),
+			Headers: nil,
+		},
+		"/accounts/api/me": {
+			Code: 200,
+			Body: []byte(`{
+					"user":{
+						"identityType": "idtype",
+						"id": "123",
+						"username": "name",
+						"firstName": "first",
+						"lastName": "last",
+						"email": "email",
+						"organization": {
+							"id": "333",
+							"name": "org1",
+							"domain": "abc.com"
+						}
+					}
+				}`),
+		},
+		"/accounts/api/organizations/333/environments": {
+			Code: 200,
+			Body: []byte(`{
+					"data": [{
+						"id": "111",
+						"name": "Sandbox",
+						"organizationId": "333",
+						"type": "fake",
+						"clientId": "abc123"
+					}],
+					"total": 1
+				}`),
+		},
+		"/apimanager/api/v1/organizations/333/environments/111/apis/456/policies": {
+			Code: 400,
+			Body: []byte(`[{}]`),
+		},
+	}
+	apClient := anypoint.NewClient(ac.MulesoftConfig, anypoint.SetClient(mc))
+	agent := New(ac, apClient)
+
+	asset := &anypoint.Asset{}
+
+	api := &anypoint.API{
+		ID:          456,
+		EndpointURI: "google.com",
+	}
+
+	_, err := agent.getServiceDetail(asset, api)
+	assert.NotNil(t, err)
 }
 
 func TestShouldDiscoverAPIBasedOnTags(t *testing.T) {
@@ -264,6 +349,35 @@ func TestSetOAS2Endpoint(t *testing.T) {
 			}
 
 			assert.Equal(t, tc.result, spec)
+		})
+	}
+}
+
+func TestGetAuthPolicy(t *testing.T) {
+	a := getAgent()
+
+	tests := []struct {
+		name     string
+		policies []anypoint.Policy
+		expected string
+	}{
+		{
+			name:     "Should return pass-through if no policies exist",
+			policies: nil,
+			expected: apic.Passthrough,
+		},
+		{
+			name: "Should return verify-api-key if such a policy exists",
+			policies: []anypoint.Policy{{
+				PolicyTemplateID: "client-id-enforcement",
+			}},
+			expected: apic.Apikey,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expected, a.getAuthPolicy(tc.policies))
 		})
 	}
 }
