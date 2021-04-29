@@ -49,6 +49,10 @@ type AnalyticsClient interface {
 	OnConfigChange(mulesoftConfig *config.MulesoftConfig)
 }
 
+type AuthClient interface {
+	GetAccessToken() (string, *User, time.Duration, error)
+}
+
 // AnypointClient is the client for interacting with Mulesoft Anypoint.
 type AnypointClient struct {
 	baseURL     string

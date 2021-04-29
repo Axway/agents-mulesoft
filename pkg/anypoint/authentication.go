@@ -17,12 +17,12 @@ type Auth interface {
 type auth struct {
 	token    string
 	user     *User
-	client   Client
+	client   AuthClient
 	stopChan chan struct{}
 }
 
 // NewAuth creates a new authentication token
-func NewAuth(client Client) (Auth, error) {
+func NewAuth(client AuthClient) (Auth, error) {
 	a := &auth{
 		stopChan: make(chan struct{}),
 	}
