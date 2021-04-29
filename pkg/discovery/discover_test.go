@@ -376,8 +376,6 @@ func TestShouldDiscoverAPIBasedOnTags(t *testing.T) {
 }
 
 func TestGetExchangeAssetSpecFile(t *testing.T) {
-	a := getAgent()
-
 	tests := []struct {
 		name      string
 		asset     *anypoint.ExchangeAsset
@@ -423,7 +421,7 @@ func TestGetExchangeAssetSpecFile(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			sd, err := a.getExchangeAssetSpecFile(tc.asset)
+			sd, err := getExchangeAssetSpecFile(tc.asset)
 			assert.Equal(t, tc.exchgfile, sd)
 			assert.Equal(t, tc.err, err)
 		})
@@ -431,8 +429,6 @@ func TestGetExchangeAssetSpecFile(t *testing.T) {
 }
 
 func TestSetOAS2Endpoint(t *testing.T) {
-	a := getAgent()
-
 	tests := []struct {
 		name        string
 		endPointURL string
@@ -469,7 +465,7 @@ func TestSetOAS2Endpoint(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			spec, err := a.setOAS2Endpoint(tc.endPointURL, tc.specContent)
+			spec, err := setOAS2Endpoint(tc.endPointURL, tc.specContent)
 
 			if err != nil {
 				assert.Equal(t, tc.err.Error(), err.Error())
@@ -481,8 +477,6 @@ func TestSetOAS2Endpoint(t *testing.T) {
 }
 
 func TestSetOAS3Endpoint(t *testing.T) {
-	a := getAgent()
-
 	tests := []struct {
 		name        string
 		url         string
@@ -508,7 +502,7 @@ func TestSetOAS3Endpoint(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			spec, err := a.setOAS3Endpoint(tc.url, tc.specContent)
+			spec, err := setOAS3Endpoint(tc.url, tc.specContent)
 			if err != nil {
 				assert.Equal(t, tc.err.Error(), err.Error())
 			}
