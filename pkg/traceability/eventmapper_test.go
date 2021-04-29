@@ -105,13 +105,3 @@ func Test_buildHeaders(t *testing.T) {
 	res := buildHeaders(h)
 	assert.Equal(t, "{\"Authorization\":\"abc123\",\"User-Agent\":\"MulesoftTraceability\"}", res)
 }
-
-func TestEventMapper_createTransactionEvent(t *testing.T) {
-	// mapper := &EventMapper{}
-	// i := 1000
-	// mapper.createTransactionEvent(int64(i), "1")
-}
-
-func TestEventMapper_createSummaryEvent(t *testing.T) {
-	// mapper := &EventMapper{}
-}
