@@ -1,13 +1,13 @@
 mulesoft_traceability_agent:
   central:
-    organizationID: "<Amplify_ORG_ID>"
-    environment: <Amplify_CENTRAL_ENVIRONMENT_NAME>
+    organizationID: "252973553240348"
+    environment: mulesoft
     url: https://apicentral.axway.com
     platformURL: https://platform.axway.com
     auth:
-      clientID: <Amplify_CENTRAL_DOSA_CLIENT_ID>
-      privateKey: <Amplify_CENTRAL_DOSA_PRIVATE_KEY_PATH>
-      publicKey: <Amplify_CENTRAL_DOSA_PUBLIC_KEY_PATH>
+      clientID: DOSA_552cd5373107407ca543b2797c24d534
+      privateKey: /Users/tjohnson/Public/repos/agents-mulesoft/private_key.pem
+      publicKey: /Users/tjohnson/Public/repos/agents-mulesoft/public_key.pem
       realm: Broker
       timeout: 10s
       url: https://login.axway.com/auth
@@ -15,10 +15,10 @@ mulesoft_traceability_agent:
 mulesoft:
   environment: Sandbox
   cachePath: "/tmp"
-  pollInterval: 20s
+  pollInterval: 4s
   auth:
-    username: <USERNAME>
-    password: <PASSWORD>
+    username: tsjohnson
+    password: "!vB%RRe5^qV6"
 
 output.traceability:
   enabled: true

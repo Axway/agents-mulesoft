@@ -30,7 +30,7 @@ func New(_ *beat.Beat, _ *common.Config) (beat.Beater, error) {
 
 	var err error
 	eventGen := transaction.NewEventGenerator()
-	bt.eventProcessor = NewEventProcessor(agentConfig, eventGen)
+	bt.eventProcessor = NewEventProcessor(agentConfig, eventGen, &EventMapper{})
 	client := anypoint.NewClient(agentConfig.MulesoftConfig)
 	bt.mule, err = NewMuleEventEmitter(agentConfig, bt.eventChannel, client)
 	if err != nil {
@@ -46,40 +46,40 @@ func New(_ *beat.Beat, _ *common.Config) (beat.Beater, error) {
 }
 
 // Run starts the Mulesoft traceability agent.
-func (bt *Agent) Run(b *beat.Beat) error {
-	coreagent.OnConfigChange(bt.onConfigChange)
+func (a *Agent) Run(b *beat.Beat) error {
+	coreagent.OnConfigChange(a.onConfigChange)
 
 	var err error
-	bt.client, err = b.Publisher.Connect()
+	a.client, err = b.Publisher.Connect()
 	if err != nil {
 		coreagent.UpdateStatus(coreagent.AgentFailed, err.Error())
 		return err
 	}
 
-	go bt.mule.Start()
+	go a.mule.Start()
 
 	for {
 		select {
-		case <-bt.done:
-			bt.mule.Stop()
+		case <-a.done:
+			a.mule.Stop()
 			return nil
-		case event := <-bt.eventChannel:
-			eventsToPublish := bt.eventProcessor.ProcessRaw([]byte(event))
-			bt.client.PublishAll(eventsToPublish)
+		case event := <-a.eventChannel:
+			eventsToPublish := a.eventProcessor.ProcessRaw([]byte(event))
+			a.client.PublishAll(eventsToPublish)
 
 		}
 	}
 }
 
 // onConfigChange apply configuration changes
-func (bt *Agent) onConfigChange() {
+func (a *Agent) onConfigChange() {
 	cfg := config.GetConfig()
-	bt.mule.OnConfigChange(cfg)
+	a.mule.OnConfigChange(cfg)
 }
 
 // Stop stops customLogTraceabilityAgent.
-func (bt *Agent) Stop() {
-	bt.client.Close()
-	bt.mule.Stop()
-	close(bt.done)
+func (a *Agent) Stop() {
+	a.client.Close()
+	a.mule.Stop()
+	close(a.done)
 }

@@ -65,7 +65,6 @@ func (me *MuleEventEmitter) pollForEvents() {
 					}
 					me.eventChannel <- string(j)
 				}
-
 			}
 		}
 	}()

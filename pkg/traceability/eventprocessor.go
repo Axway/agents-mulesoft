@@ -32,21 +32,23 @@ type Processor interface {
 type EventProcessor struct {
 	cfg            *config.AgentConfig
 	eventGenerator transaction.EventGenerator
-	eventMapper    *EventMapper
+	eventMapper    Mapper
 }
 
-// NewEventProcessor - return a new EventProcessor
-func NewEventProcessor(gateway *config.AgentConfig, eventGenerator transaction.EventGenerator) *EventProcessor {
+func NewEventProcessor(gateway *config.AgentConfig,
+	eventGenerator transaction.EventGenerator,
+	mapper Mapper,
+) *EventProcessor {
 	ep := &EventProcessor{
 		cfg:            gateway,
 		eventGenerator: eventGenerator,
-		eventMapper:    &EventMapper{},
+		eventMapper:    mapper,
 	}
 	return ep
 }
 
 // Process - callback set as output event processor that gets invoked by transport publisher to process the received events
-func (p *EventProcessor) Process(events []publisher.Event) []publisher.Event {
+func (ep *EventProcessor) Process(events []publisher.Event) []publisher.Event {
 	newEvents := make([]publisher.Event, 0)
 	for _, event := range events {
 		// Get the message from the log file
@@ -59,7 +61,7 @@ func (p *EventProcessor) Process(events []publisher.Event) []publisher.Event {
 		eventMsg, ok := eventMsgFieldVal.(string)
 		if ok {
 			// Unmarshal the message into the struct representing traffic log entry in gateway logs
-			beatEvents := p.ProcessRaw([]byte(eventMsg))
+			beatEvents := ep.ProcessRaw([]byte(eventMsg))
 			if beatEvents != nil {
 				for _, beatEvent := range beatEvents {
 					publisherEvent := publisher.Event{
@@ -74,7 +76,7 @@ func (p *EventProcessor) Process(events []publisher.Event) []publisher.Event {
 }
 
 // ProcessRaw - process the received log entry and returns the event to be published to Amplifyingestion service
-func (p *EventProcessor) ProcessRaw(rawEventData []byte) []beat.Event {
+func (ep *EventProcessor) ProcessRaw(rawEventData []byte) []beat.Event {
 	var gatewayTrafficLogEntry anypoint.AnalyticsEvent
 	err := json.Unmarshal(rawEventData, &gatewayTrafficLogEntry)
 	if err != nil {
@@ -82,7 +84,7 @@ func (p *EventProcessor) ProcessRaw(rawEventData []byte) []beat.Event {
 		return nil
 	}
 	// Map the log entry to log event structure expected by AmplifyCentral Observer
-	logEvents, err := p.eventMapper.processMapping(gatewayTrafficLogEntry)
+	logEvents, err := ep.eventMapper.ProcessMapping(gatewayTrafficLogEntry)
 	if err != nil {
 		log.Error(err.Error())
 		return nil
@@ -90,7 +92,7 @@ func (p *EventProcessor) ProcessRaw(rawEventData []byte) []beat.Event {
 	events := make([]beat.Event, 0)
 	for _, logEvent := range logEvents {
 		// Generates the beat.Event with attributes by Amplify ingestion service
-		event, err := p.eventGenerator.CreateEvent(*logEvent, time.Now(), nil, nil, nil)
+		event, err := ep.eventGenerator.CreateEvent(*logEvent, time.Now(), nil, nil, nil)
 		if err != nil {
 			log.Error(err.Error())
 		} else {

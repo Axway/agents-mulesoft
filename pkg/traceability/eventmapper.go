@@ -15,26 +15,30 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
+type Mapper interface {
+	ProcessMapping(anypointAnalyticsEvent anypoint.AnalyticsEvent) ([]*transaction.LogEvent, error)
+}
+
 // EventMapper -
 type EventMapper struct{}
 
-func (m *EventMapper) processMapping(anypointAnalyticsEvent anypoint.AnalyticsEvent) ([]*transaction.LogEvent, error) {
+func (em *EventMapper) ProcessMapping(anypointAnalyticsEvent anypoint.AnalyticsEvent) ([]*transaction.LogEvent, error) {
 	centralCfg := agent.GetCentralConfig()
 
 	eventTime := anypointAnalyticsEvent.Timestamp.UnixNano() / 1000000
 	txID := fmt.Sprintf("%s-%s", anypointAnalyticsEvent.APIVersionID, anypointAnalyticsEvent.MessageID)
 	txEventID := anypointAnalyticsEvent.MessageID
-	transInboundLogEventLeg, err := m.createTransactionEvent(eventTime, txID, anypointAnalyticsEvent, txEventID+"-leg0", "", "Inbound")
+	transInboundLogEventLeg, err := em.createTransactionEvent(eventTime, txID, anypointAnalyticsEvent, txEventID+"-leg0", "", "Inbound")
 	if err != nil {
 		return nil, err
 	}
 
-	transOutboundLogEventLeg, err := m.createTransactionEvent(eventTime, txID, anypointAnalyticsEvent, txEventID+"-leg1", txEventID+"-leg0", "Outbound")
+	transOutboundLogEventLeg, err := em.createTransactionEvent(eventTime, txID, anypointAnalyticsEvent, txEventID+"-leg1", txEventID+"-leg0", "Outbound")
 	if err != nil {
 		return nil, err
 	}
 
-	transSummaryLogEvent, err := m.createSummaryEvent(eventTime, txID, anypointAnalyticsEvent, centralCfg.GetTeamID())
+	transSummaryLogEvent, err := em.createSummaryEvent(eventTime, txID, anypointAnalyticsEvent, centralCfg.GetTeamID())
 	if err != nil {
 		return nil, err
 	}
@@ -46,14 +50,14 @@ func (m *EventMapper) processMapping(anypointAnalyticsEvent anypoint.AnalyticsEv
 	}, nil
 }
 
-func (m *EventMapper) getTransactionEventStatus(code int) transaction.TxEventStatus {
+func (em *EventMapper) getTransactionEventStatus(code int) transaction.TxEventStatus {
 	if code >= 400 {
 		return transaction.TxEventStatusFail
 	}
-	return transaction.TxEventStatusFail
+	return transaction.TxEventStatusPass
 }
 
-func (m *EventMapper) getTransactionSummaryStatus(statusCode int) transaction.TxSummaryStatus {
+func (em *EventMapper) getTransactionSummaryStatus(statusCode int) transaction.TxSummaryStatus {
 	transSummaryStatus := transaction.TxSummaryStatusUnknown
 	if statusCode >= http.StatusOK && statusCode < http.StatusBadRequest {
 		transSummaryStatus = transaction.TxSummaryStatusSuccess
@@ -65,15 +69,16 @@ func (m *EventMapper) getTransactionSummaryStatus(statusCode int) transaction.Tx
 	return transSummaryStatus
 }
 
-func (m *EventMapper) buildHeaders(headers map[string]string) string {
+func (em *EventMapper) buildHeaders(headers map[string]string) string {
 	jsonHeader, err := json.Marshal(headers)
 	if err != nil {
 		log.Error(err.Error())
+		return ""
 	}
 	return string(jsonHeader)
 }
 
-func (m *EventMapper) createTransactionEvent(
+func (em *EventMapper) createTransactionEvent(
 	eventTime int64,
 	txID string,
 	txDetails anypoint.AnalyticsEvent,
@@ -89,7 +94,7 @@ func (m *EventMapper) createTransactionEvent(
 		SetMethod(txDetails.Verb).
 		SetStatus(txDetails.StatusCode, http.StatusText(txDetails.StatusCode)).
 		SetHost(txDetails.ClientIP).
-		SetHeaders(m.buildHeaders(req), m.buildHeaders(res)).
+		SetHeaders(em.buildHeaders(req), em.buildHeaders(res)).
 		SetByteLength(txDetails.RequestSize, txDetails.ResponseSize).
 		Build()
 	if err != nil {
@@ -104,12 +109,12 @@ func (m *EventMapper) createTransactionEvent(
 		SetSource(txDetails.ClientIP + ":0").
 		SetDestination(txDetails.APIName).
 		SetDirection(direction).
-		SetStatus(m.getTransactionEventStatus(txDetails.StatusCode)).
+		SetStatus(em.getTransactionEventStatus(txDetails.StatusCode)).
 		SetProtocolDetail(httpProtocolDetails).
 		Build()
 }
 
-func (m *EventMapper) createSummaryEvent(
+func (em *EventMapper) createSummaryEvent(
 	eventTime int64,
 	txID string,
 	event anypoint.AnalyticsEvent,
@@ -119,16 +124,16 @@ func (m *EventMapper) createSummaryEvent(
 	method := event.Verb
 	uri := event.ResourcePath
 	host := event.ClientIP
-	versionID := event.APIVersionID
+	version := event.APIVersionName
 	name := event.APIName
 
 	return transaction.NewTransactionSummaryBuilder().
 		SetTimestamp(eventTime).
 		SetTransactionID(txID).
-		SetStatus(m.getTransactionSummaryStatus(statusCode), strconv.Itoa(statusCode)).
+		SetStatus(em.getTransactionSummaryStatus(statusCode), strconv.Itoa(statusCode)).
 		SetDuration(event.ResponseTime).
 		SetTeam(teamID).
 		SetEntryPoint("http", method, uri, host).
-		SetProxy(transaction.FormatProxyID(versionID), discovery.FormatServiceTitle(name, versionID), 1).
+		SetProxy(transaction.FormatProxyID(version), discovery.FormatServiceTitle(name, version), 1).
 		Build()
 }
