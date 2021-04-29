@@ -117,19 +117,6 @@ func TestDiscoverAPIs(t *testing.T) {
 	}
 }
 
-type mockClient struct {
-	reqs map[string]*api.Response
-}
-
-func (mc *mockClient) Send(request api.Request) (*api.Response, error) {
-	req, ok := mc.reqs[request.URL]
-	if ok {
-		return req, nil
-	} else {
-		return nil, fmt.Errorf("no request found for %s", request.URL)
-	}
-}
-
 var mapOfResponses = map[string]*api.Response{
 	"/accounts/login": {
 		Code:    200,
@@ -169,7 +156,7 @@ var mapOfResponses = map[string]*api.Response{
 	},
 }
 
-func buildAgentWithCustomMockAnypointClient() (*Agent, *mockClient) {
+func buildAgentWithCustomMockAnypointClient() (*Agent, *anypoint.MockClient) {
 	ac := &config.AgentConfig{
 		CentralConfig: corecfg.NewCentralConfig(corecfg.DiscoveryAgent),
 		MulesoftConfig: &config.MulesoftConfig{
@@ -177,10 +164,10 @@ func buildAgentWithCustomMockAnypointClient() (*Agent, *mockClient) {
 		},
 	}
 
-	mc := &mockClient{}
-	mc.reqs = make(map[string]*api.Response)
+	mc := &anypoint.MockClient{}
+	mc.Reqs = make(map[string]*api.Response)
 	for k, v := range mapOfResponses {
-		mc.reqs[k] = v
+		mc.Reqs[k] = v
 	}
 
 	apClient := anypoint.NewClient(ac.MulesoftConfig, anypoint.SetClient(mc))
@@ -192,7 +179,7 @@ func buildAgentWithCustomMockAnypointClient() (*Agent, *mockClient) {
 func TestGetServiceDetailFailsWhenGetPoliciesFails(t *testing.T) {
 	agent, mc := buildAgentWithCustomMockAnypointClient()
 
-	mc.reqs["/apimanager/api/v1/organizations/333/environments/111/apis/456/policies"] = &api.Response{
+	mc.Reqs["/apimanager/api/v1/organizations/333/environments/111/apis/456/policies"] = &api.Response{
 		Code: 400,
 		Body: nil,
 	}
@@ -211,12 +198,12 @@ func TestGetServiceDetailFailsWhenGetPoliciesFails(t *testing.T) {
 func TestGetServiceDetailFailsWhenGetExchangeAssetFails(t *testing.T) {
 	agent, mc := buildAgentWithCustomMockAnypointClient()
 
-	mc.reqs["/apimanager/api/v1/organizations/333/environments/111/apis/456/policies"] = &api.Response{
+	mc.Reqs["/apimanager/api/v1/organizations/333/environments/111/apis/456/policies"] = &api.Response{
 		Code: 200,
 		Body: []byte(`[{}]`),
 	}
 
-	mc.reqs["/exchange/api/v2/assets/123/456/89"] = &api.Response{
+	mc.Reqs["/exchange/api/v2/assets/123/456/89"] = &api.Response{
 		Code: 400,
 		Body: nil,
 	}
@@ -238,12 +225,12 @@ func TestGetServiceDetailFailsWhenGetExchangeAssetFails(t *testing.T) {
 func TestGetServiceDetailWhenExchangeAssetSpecFileIsEmpty(t *testing.T) {
 	agent, mc := buildAgentWithCustomMockAnypointClient()
 
-	mc.reqs["/apimanager/api/v1/organizations/333/environments/111/apis/456/policies"] = &api.Response{
+	mc.Reqs["/apimanager/api/v1/organizations/333/environments/111/apis/456/policies"] = &api.Response{
 		Code: 200,
 		Body: []byte(`[{}]`),
 	}
 
-	mc.reqs["/exchange/api/v2/assets/123/456/89"] = &api.Response{
+	mc.Reqs["/exchange/api/v2/assets/123/456/89"] = &api.Response{
 		Code: 200,
 		Body: []byte("{\"Files\": [{}]}"),
 	}
@@ -266,17 +253,17 @@ func TestGetServiceDetailWhenExchangeAssetSpecFileIsEmpty(t *testing.T) {
 func TestGetServiceDetailFailsWhenGetSpecFromExchangeFileFails(t *testing.T) {
 	agent, mc := buildAgentWithCustomMockAnypointClient()
 
-	mc.reqs["/apimanager/api/v1/organizations/333/environments/111/apis/456/policies"] = &api.Response{
+	mc.Reqs["/apimanager/api/v1/organizations/333/environments/111/apis/456/policies"] = &api.Response{
 		Code: 200,
 		Body: []byte(`[{}]`),
 	}
 
-	mc.reqs["/exchange/api/v2/assets/123/456/89"] = &api.Response{
+	mc.Reqs["/exchange/api/v2/assets/123/456/89"] = &api.Response{
 		Code: 200,
 		Body: []byte("{\"Files\": [{\"Classifier\":\"oas\",\"Generated\":false, \"ExternalLink\": \"https://localhost/swagger.json\"}]}"),
 	}
 
-	mc.reqs["https://localhost/swagger.json"] = &api.Response{
+	mc.Reqs["https://localhost/swagger.json"] = &api.Response{
 		Code: 400,
 		Body: nil,
 	}
@@ -298,22 +285,22 @@ func TestGetServiceDetailFailsWhenGetSpecFromExchangeFileFails(t *testing.T) {
 func TestGetServiceDetailFailsWhenGetExchangeAssetIconFails(t *testing.T) {
 	agent, mc := buildAgentWithCustomMockAnypointClient()
 
-	mc.reqs["/apimanager/api/v1/organizations/333/environments/111/apis/456/policies"] = &api.Response{
+	mc.Reqs["/apimanager/api/v1/organizations/333/environments/111/apis/456/policies"] = &api.Response{
 		Code: 200,
 		Body: []byte(`[{}]`),
 	}
 
-	mc.reqs["/exchange/api/v2/assets/123/456/89"] = &api.Response{
+	mc.Reqs["/exchange/api/v2/assets/123/456/89"] = &api.Response{
 		Code: 200,
 		Body: []byte("{\"Icon\": \"blahblah.com\", \"Files\": [{\"Classifier\":\"oas\",\"Generated\":false, \"ExternalLink\": \"https://localhost/swagger.json\"}]}"),
 	}
 
-	mc.reqs["https://localhost/swagger.json"] = &api.Response{
+	mc.Reqs["https://localhost/swagger.json"] = &api.Response{
 		Code: 200,
 		Body: []byte("{\"basePath\":\"google.com\",\"host\":\"\",\"schemes\":[\"\"],\"swagger\":\"2.0\"}"),
 	}
 
-	mc.reqs["blahblah.com"] = &api.Response{
+	mc.Reqs["blahblah.com"] = &api.Response{
 		Code: 400,
 		Body: nil,
 	}

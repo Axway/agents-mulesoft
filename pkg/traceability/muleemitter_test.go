@@ -1,7 +1,6 @@
 package traceability
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -13,8 +12,8 @@ import (
 )
 
 func Test_MuleEventEmitter(t *testing.T) {
-	mc := &mockClient{}
-	mc.reqs = map[string]*api.Response{
+	mc := &anypoint.MockClient{}
+	mc.Reqs = map[string]*api.Response{
 		"/accounts/login": {
 			Code:    200,
 			Body:    []byte("{\"access_token\":\"abc123\"}"),
@@ -77,18 +76,4 @@ func Test_MuleEventEmitter(t *testing.T) {
 	assert.NotEmpty(t, e)
 
 	emitter.Stop()
-}
-
-// TODO May be make export this mockClient so that the discovery package can reuse it?
-type mockClient struct {
-	reqs map[string]*api.Response
-}
-
-func (mc *mockClient) Send(request api.Request) (*api.Response, error) {
-	req, ok := mc.reqs[request.URL]
-	if ok {
-		return req, nil
-	} else {
-		return nil, fmt.Errorf("no request found for %s", request.URL)
-	}
 }

@@ -44,6 +44,11 @@ type Client interface {
 	GetAnalyticsWindow() ([]AnalyticsEvent, error)
 }
 
+type AnalyticsClient interface {
+	GetAnalyticsWindow() ([]AnalyticsEvent, error)
+	OnConfigChange(mulesoftConfig *config.MulesoftConfig)
+}
+
 // AnypointClient is the client for interacting with Mulesoft Anypoint.
 type AnypointClient struct {
 	baseURL     string

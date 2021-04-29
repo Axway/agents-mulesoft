@@ -45,8 +45,7 @@ func Test_buildServiceBody(t *testing.T) {
 		URL:               "https://petstore3.us-e2.cloudhub.io",
 		Version:           "1.0.0",
 	}
-	agent := &Agent{}
-	apicSvc, err := agent.buildServiceBody(sd)
+	apicSvc, err := buildServiceBody(sd)
 	assert.Nil(t, err)
 	assert.Equal(t, sd.APIName, apicSvc.APIName)
 	assert.Equal(t, sd.APISpec, apicSvc.SpecDefinition)

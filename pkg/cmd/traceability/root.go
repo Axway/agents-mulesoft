@@ -24,7 +24,7 @@ func init() {
 	}
 
 	// Initialize the beat command
-	beatCmd = libcmd.GenRootCmdWithSettings(traceability.New, settings)
+	beatCmd = libcmd.GenRootCmdWithSettings(traceability.NewBeater, settings)
 	cmd := beatCmd.Command
 	// Wrap the beat command with the agent command processor with callbacks to initialize the agent config and command execution.
 	// The first parameter identifies the name of the yaml file that agent will look for to load the config

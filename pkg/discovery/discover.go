@@ -19,6 +19,10 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
+type APIDiscovery interface {
+	DiscoveryLoop()
+}
+
 // discoveryLoop Discovery event loop.
 func (a *Agent) discoveryLoop() {
 	go func() {
@@ -110,10 +114,7 @@ func (a *Agent) getServiceDetail(asset *anypoint.Asset, api *anypoint.API) (*Ser
 
 	if api.EndpointURI == "" {
 		// If the API has no exposed endpoint we're not going to discover it.
-		logrus.WithFields(logrus.Fields{
-			"component": "agent",
-			"asset":     api.AssetID,
-		}).Debug("consumer endpoint not found")
+		logrus.Debugf("consumer endpoint not found for %s", api.AssetID)
 		return nil, nil
 	}
 
@@ -122,10 +123,10 @@ func (a *Agent) getServiceDetail(asset *anypoint.Asset, api *anypoint.API) (*Ser
 	if err != nil {
 		return nil, err
 	}
-	authPolicy := a.getAuthPolicy(policies)
+	authPolicy := getAuthPolicy(policies)
 
 	// Change detection (asset + policies)
-	checksum := a.checksum(api, authPolicy)
+	checksum := checksum(api, authPolicy)
 	if agent.IsAPIPublished(fmt.Sprint(api.ID)) {
 		publishedChecksum := agent.GetAttributeOnPublishedAPI(fmt.Sprint(api.ID), "checksum")
 		if checksum == publishedChecksum {
@@ -142,7 +143,7 @@ func (a *Agent) getServiceDetail(asset *anypoint.Asset, api *anypoint.API) (*Ser
 		return nil, err
 	}
 
-	exchangeFile, err := a.getExchangeAssetSpecFile(exchangeAsset) // SDK only supports OAS & WSDL
+	exchangeFile, err := getExchangeAssetSpecFile(exchangeAsset) // SDK only supports OAS & WSDL
 	if err != nil {
 		return nil, err
 	}
@@ -181,33 +182,50 @@ func (a *Agent) getServiceDetail(asset *anypoint.Asset, api *anypoint.API) (*Ser
 
 // shouldDiscoverAPI - callback used determine if the API should be pushed to Central or not
 func (a *Agent) shouldDiscoverAPI(api *anypoint.API) bool {
-	if a.doesAPIContainAnyMatchingTag(a.discoveryIgnoreTags, api) {
+	if doesAPIContainAnyMatchingTag(a.discoveryIgnoreTags, api) {
 		return false // ignore
 	}
 
 	if len(a.discoveryTags) > 0 {
-		if !a.doesAPIContainAnyMatchingTag(a.discoveryTags, api) {
+		if !doesAPIContainAnyMatchingTag(a.discoveryTags, api) {
 			return false // ignore
 		}
 	}
 	return true
 }
 
-// doesAPIContainAnyMatchingTag checks if the API has any of the tags
-func (a *Agent) doesAPIContainAnyMatchingTag(tags []string, api *anypoint.API) bool {
-	for _, apiTag := range api.Tags {
-		apiTag = strings.ToLower(apiTag)
-		for _, tag := range tags {
-			if tag == apiTag {
-				return true
-			}
-		}
+// getSpecFromExchangeFile gets the spec content and injects the api endpoint.
+func (a *Agent) getSpecFromExchangeFile(api *anypoint.API, exchangeFile *anypoint.ExchangeFile) ([]byte, string, error) {
+	specContent, err := a.anypointClient.GetExchangeFileContent(exchangeFile)
+	if err != nil {
+		return nil, "", err
 	}
-	return false
+
+	specContent = specYAMLToJSON(specContent) // SDK does not support YAML specifications
+	specType, err := getSpecType(exchangeFile, specContent)
+	if err != nil {
+		return nil, "", err
+	}
+	if specType == "" {
+		return nil, specType, fmt.Errorf("Unknown spec type for \"%s(%s)\"", api.AssetID, api.AssetVersion)
+	}
+
+	// Make a best effort to update the endpoints - required because the SDK is parsing from spec and not setting the
+	// endpoint information independently.
+	switch specType {
+	case apic.Oas2:
+		specContent, err = setOAS2Endpoint(api.EndpointURI, specContent)
+	case apic.Oas3:
+		specContent, err = setOAS3Endpoint(api.EndpointURI, specContent)
+	case apic.Wsdl:
+		specContent, err = setWSDLEndpoint(api.EndpointURI, specContent)
+	}
+
+	return specContent, specType, err
 }
 
 // getExchangeAssetSpecFile gets the file entry for the Assets spec.
-func (a *Agent) getExchangeAssetSpecFile(asset *anypoint.ExchangeAsset) (*anypoint.ExchangeFile, error) {
+func getExchangeAssetSpecFile(asset *anypoint.ExchangeAsset) (*anypoint.ExchangeFile, error) {
 	if asset.Files == nil || len(asset.Files) == 0 {
 		return nil, nil
 	}
@@ -222,38 +240,8 @@ func (a *Agent) getExchangeAssetSpecFile(asset *anypoint.ExchangeAsset) (*anypoi
 	return &asset.Files[0], nil
 }
 
-// getSpecFromExchangeFile gets the spec content and injects the api endpoint.
-func (a *Agent) getSpecFromExchangeFile(api *anypoint.API, exchangeFile *anypoint.ExchangeFile) ([]byte, string, error) {
-	specContent, err := a.anypointClient.GetExchangeFileContent(exchangeFile)
-	if err != nil {
-		return nil, "", err
-	}
-
-	specContent = a.specYAMLToJSON(specContent) // SDK does not support YAML specifications
-	specType, err := a.getSpecType(exchangeFile, specContent)
-	if err != nil {
-		return nil, "", err
-	}
-	if specType == "" {
-		return nil, specType, fmt.Errorf("Unknown spec type for \"%s(%s)\"", api.AssetID, api.AssetVersion)
-	}
-
-	// Make a best effort to update the endpoints - required because the SDK is parsing from spec and not setting the
-	// endpoint information independently.
-	switch specType {
-	case apic.Oas2:
-		specContent, err = a.setOAS2Endpoint(api.EndpointURI, specContent)
-	case apic.Oas3:
-		specContent, err = a.setOAS3Endpoint(api.EndpointURI, specContent)
-	case apic.Wsdl:
-		specContent, err = a.setWSDLEndpoint(api.EndpointURI, specContent)
-	}
-
-	return specContent, specType, err
-}
-
 // specYAMLToJSON - if the spec is yaml convert it to json, SDK doesn't handle yaml.
-func (a *Agent) specYAMLToJSON(specContent []byte) []byte {
+func specYAMLToJSON(specContent []byte) []byte {
 	specMap := make(map[string]interface{})
 	err := json.Unmarshal(specContent, &specMap)
 	if err == nil {
@@ -275,7 +263,7 @@ func (a *Agent) specYAMLToJSON(specContent []byte) []byte {
 }
 
 // getSpecType determines the correct resource type for the asset.
-func (a *Agent) getSpecType(file *anypoint.ExchangeFile, specContent []byte) (string, error) {
+func getSpecType(file *anypoint.ExchangeFile, specContent []byte) (string, error) {
 	if file.Classifier == "wsdl" {
 		return apic.Wsdl, nil
 	} else if specContent != nil {
@@ -294,7 +282,7 @@ func (a *Agent) getSpecType(file *anypoint.ExchangeFile, specContent []byte) (st
 }
 
 // getAuthPolicy gets the authentication policy type.
-func (a *Agent) getAuthPolicy(policies []anypoint.Policy) string {
+func getAuthPolicy(policies []anypoint.Policy) string {
 	if policies == nil || len(policies) == 0 {
 		return apic.Passthrough
 	}
@@ -308,13 +296,7 @@ func (a *Agent) getAuthPolicy(policies []anypoint.Policy) string {
 	return apic.Passthrough
 }
 
-// checksum generates a checksum for the api for change detection
-func (a *Agent) checksum(val interface{}, authPolicy string) string {
-	sum := sha256.Sum256([]byte(fmt.Sprintf("%v%s", val, authPolicy)))
-	return fmt.Sprintf("%x", sum)
-}
-
-func (a *Agent) setOAS2Endpoint(endpointURL string, specContent []byte) ([]byte, error) {
+func setOAS2Endpoint(endpointURL string, specContent []byte) ([]byte, error) {
 	endpoint, err := url.Parse(endpointURL)
 	if err != nil {
 		return specContent, err
@@ -333,7 +315,7 @@ func (a *Agent) setOAS2Endpoint(endpointURL string, specContent []byte) ([]byte,
 	return json.Marshal(spec)
 }
 
-func (a *Agent) setOAS3Endpoint(url string, specContent []byte) ([]byte, error) {
+func setOAS3Endpoint(url string, specContent []byte) ([]byte, error) {
 	spec := make(map[string]interface{})
 
 	err := json.Unmarshal(specContent, &spec)
@@ -348,7 +330,26 @@ func (a *Agent) setOAS3Endpoint(url string, specContent []byte) ([]byte, error) 
 	return json.Marshal(spec)
 }
 
-func (a *Agent) setWSDLEndpoint(_ string, specContent []byte) ([]byte, error) {
+func setWSDLEndpoint(_ string, specContent []byte) ([]byte, error) {
 	// TODO
 	return specContent, nil
+}
+
+// checksum generates a checksum for the api for change detection
+func checksum(val interface{}, authPolicy string) string {
+	sum := sha256.Sum256([]byte(fmt.Sprintf("%v%s", val, authPolicy)))
+	return fmt.Sprintf("%x", sum)
+}
+
+// doesAPIContainAnyMatchingTag checks if the API has any of the tags
+func doesAPIContainAnyMatchingTag(tags []string, api *anypoint.API) bool {
+	for _, apiTag := range api.Tags {
+		apiTag = strings.ToLower(apiTag)
+		for _, tag := range tags {
+			if tag == apiTag {
+				return true
+			}
+		}
+	}
+	return false
 }

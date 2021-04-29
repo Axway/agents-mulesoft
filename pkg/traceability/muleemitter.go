@@ -10,7 +10,7 @@ import (
 	"github.com/Axway/agents-mulesoft/pkg/config"
 )
 
-type MuleEmitter interface {
+type Emitter interface {
 	Start()
 	Stop()
 	OnConfigChange(gatewayCfg *config.AgentConfig)
@@ -18,25 +18,25 @@ type MuleEmitter interface {
 
 // MuleEventEmitter - Represents the Gateway client
 type MuleEventEmitter struct {
-	anypointClient anypoint.Client
-	cfg            *config.AgentConfig
-	done           chan bool
-	eventChannel   chan string
-	pollInterval   time.Duration
+	client       anypoint.AnalyticsClient
+	cfg          *config.AgentConfig
+	done         chan bool
+	eventChannel chan string
+	pollInterval time.Duration
 }
 
 // NewMuleEventEmitter - Creates a new Gateway Client
 func NewMuleEventEmitter(
 	gatewayCfg *config.AgentConfig,
 	eventChannel chan string,
-	client anypoint.Client,
+	client anypoint.AnalyticsClient,
 ) (*MuleEventEmitter, error) {
 	return &MuleEventEmitter{
-		cfg:            gatewayCfg,
-		pollInterval:   gatewayCfg.MulesoftConfig.PollInterval,
-		done:           make(chan bool),
-		eventChannel:   eventChannel,
-		anypointClient: client,
+		cfg:          gatewayCfg,
+		pollInterval: gatewayCfg.MulesoftConfig.PollInterval,
+		done:         make(chan bool),
+		eventChannel: eventChannel,
+		client:       client,
 	}, nil
 }
 
@@ -54,7 +54,7 @@ func (me *MuleEventEmitter) pollForEvents() {
 			case <-me.done:
 				return
 			case <-ticker.C:
-				events, err := me.anypointClient.GetAnalyticsWindow()
+				events, err := me.client.GetAnalyticsWindow()
 				if err != nil {
 					logp.Warn("Client Failure: %s", err.Error())
 				}
@@ -77,5 +77,5 @@ func (me *MuleEventEmitter) Stop() {
 
 // OnConfigChange -
 func (me *MuleEventEmitter) OnConfigChange(gatewayCfg *config.AgentConfig) {
-	me.anypointClient.OnConfigChange(gatewayCfg.MulesoftConfig)
+	me.client.OnConfigChange(gatewayCfg.MulesoftConfig)
 }

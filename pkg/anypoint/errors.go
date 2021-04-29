@@ -1,10 +1,7 @@
 package anypoint
 
 import (
-	"encoding/json"
-
 	"github.com/Axway/agent-sdk/pkg/util/errors"
-	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 // Errors hit communicating with and setting up resources on Mulesoft
@@ -18,22 +15,3 @@ var (
 	ErrMarshallingBody          = errors.New(3006, "could not create the body of the request to Mulesoft")
 	ErrAuthentication           = errors.New(3401, "authentication failed")
 )
-
-type apiErrorResponse map[string][]apiError
-
-type apiError struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
-}
-
-func logResponseErrors(body []byte) []apiError {
-	detail := make(apiErrorResponse)
-	err := json.Unmarshal(body, &detail)
-	if err != nil {
-		return nil
-	}
-	for _, e := range detail["errors"] {
-		log.Debugf("HTTP response error %v: %v", e.Code, e.Message)
-	}
-	return detail["errors"]
-}

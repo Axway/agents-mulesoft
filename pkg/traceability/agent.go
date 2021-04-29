@@ -11,30 +11,42 @@ import (
 	"github.com/elastic/beats/v7/libbeat/common"
 )
 
-// Agent - mulesoft Beater configuration.
+// Agent - mulesoft Beater configuration. Implements the beat.Beater interface.
 type Agent struct {
 	client         beat.Client
 	done           chan struct{}
 	eventChannel   chan string
 	eventProcessor Processor
-	mule           MuleEmitter
+	mule           Emitter
 }
 
-// New creates an instance of mulesoft_traceability_agent.
-func New(_ *beat.Beat, _ *common.Config) (beat.Beater, error) {
+// NewBeater creates an instance of mulesoft_traceability_agent.
+func NewBeater(_ *beat.Beat, _ *common.Config) (beat.Beater, error) {
+	eventChannel := make(chan string)
 	agentConfig := config.GetConfig()
-	bt := &Agent{
-		done:         make(chan struct{}),
-		eventChannel: make(chan string),
-	}
 
 	var err error
-	eventGen := transaction.NewEventGenerator()
-	bt.eventProcessor = NewEventProcessor(agentConfig, eventGen, &EventMapper{})
+	generator := transaction.NewEventGenerator()
+	processor := NewEventProcessor(agentConfig, generator, &EventMapper{})
 	client := anypoint.NewClient(agentConfig.MulesoftConfig)
-	bt.mule, err = NewMuleEventEmitter(agentConfig, bt.eventChannel, client)
+	emitter, err := NewMuleEventEmitter(agentConfig, eventChannel, client)
 	if err != nil {
 		return nil, err
+	}
+
+	return newAgent(processor, emitter, eventChannel)
+}
+
+func newAgent(
+	processor Processor,
+	emitter Emitter,
+	eventChannel chan string,
+) (*Agent, error) {
+	a := &Agent{
+		done:           make(chan struct{}),
+		eventChannel:   eventChannel,
+		eventProcessor: processor,
+		mule:           emitter,
 	}
 
 	// Validate that all necessary services are up and running. If not, return error
@@ -42,7 +54,7 @@ func New(_ *beat.Beat, _ *common.Config) (beat.Beater, error) {
 		return nil, agenterrors.ErrInitServicesNotReady
 	}
 
-	return bt, nil
+	return a, nil
 }
 
 // Run starts the Mulesoft traceability agent.
@@ -66,7 +78,6 @@ func (a *Agent) Run(b *beat.Beat) error {
 		case event := <-a.eventChannel:
 			eventsToPublish := a.eventProcessor.ProcessRaw([]byte(event))
 			a.client.PublishAll(eventsToPublish)
-
 		}
 	}
 }

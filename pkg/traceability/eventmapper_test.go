@@ -11,10 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
-
-	"github.com/Axway/agent-sdk/pkg/agent"
-	corecfg "github.com/Axway/agent-sdk/pkg/config"
-	"github.com/Axway/agents-mulesoft/pkg/config"
 )
 
 var event = anypoint.AnalyticsEvent{
@@ -23,26 +19,26 @@ var event = anypoint.AnalyticsEvent{
 	APIVersionID:       "16810512",
 	APIVersionName:     "v1",
 	ApplicationName:    "",
-	Browser:            "Other",
+	Browser:            "Chrome",
 	City:               "Phoenix",
 	ClientIP:           "1.2.3.4",
 	Continent:          "North America",
-	Country:            "USA",
-	HardwarePlatform:   "Other",
+	Country:            "United States",
+	HardwarePlatform:   "",
 	MessageID:          "e2029ea0-a873-11eb-875c-064449f4dd2c",
-	OSFamily:           "Other",
-	OSMajorVersion:     "1",
-	OSMinorVersion:     "2",
-	OSVersion:          "1.2",
-	PostalCode:         "12345",
+	OSFamily:           "",
+	OSMajorVersion:     "",
+	OSMinorVersion:     "",
+	OSVersion:          "",
+	PostalCode:         "",
 	RequestOutcome:     "PROCESSED",
 	RequestSize:        0,
 	ResourcePath:       "/pets",
-	ResponseSize:       18,
-	ResponseTime:       58,
+	ResponseSize:       20,
+	ResponseTime:       60,
 	StatusCode:         200,
 	Timestamp:          time.Now(),
-	Timezone:           "Mountain",
+	Timezone:           "",
 	UserAgentName:      "Mozilla",
 	UserAgentVersion:   "5.0",
 	Verb:               "GET",
@@ -51,23 +47,7 @@ var event = anypoint.AnalyticsEvent{
 
 func init() {
 	setupRedaction()
-	assetCache := agent.GetAPICache()
-	assetCache.Set("111", "{}")
-	ac := &config.AgentConfig{
-		CentralConfig: &corecfg.CentralConfiguration{
-			CentralConfig:    nil,
-			IConfigValidator: nil,
-			AgentType:        corecfg.TraceabilityAgent,
-			TenantID:         "332211",
-			APICDeployment:   "prod",
-			Environment:      "mule",
-		},
-		MulesoftConfig: &config.MulesoftConfig{
-			PollInterval: 1 * time.Second,
-		},
-	}
-	ac.CentralConfig.SetEnvironmentID("envid00")
-	agent.Initialize(ac.CentralConfig)
+	setupConfig()
 }
 
 func TestEventMapper_processMapping(t *testing.T) {

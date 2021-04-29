@@ -2,8 +2,13 @@ package traceability
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 	"time"
+
+	"github.com/Axway/agents-mulesoft/pkg/discovery"
+
+	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 
 	"github.com/stretchr/testify/assert"
 
@@ -12,79 +17,118 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/Axway/agent-sdk/pkg/transaction"
 	"github.com/elastic/beats/v7/libbeat/beat"
 	"github.com/elastic/beats/v7/libbeat/common"
-	"github.com/elastic/beats/v7/libbeat/publisher"
 
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agents-mulesoft/pkg/config"
 )
 
-func Test_EventProcessor(t *testing.T) {
+var agentConfig *config.AgentConfig
+
+const (
+	TenantID       = "332211"
+	APICDeployment = "prod"
+	Environment    = "mule"
+	EnvID          = "envid00"
+	TeamID         = "678"
+)
+
+func init() {
 	setupRedaction()
-	assetCache := agent.GetAPICache()
-	assetCache.Set("111", "{}")
-	ac := &config.AgentConfig{
-		CentralConfig: &corecfg.CentralConfiguration{
-			CentralConfig:    nil,
-			IConfigValidator: nil,
-			AgentType:        corecfg.TraceabilityAgent,
-			TenantID:         "332211",
-			APICDeployment:   "prod",
-			Environment:      "mule",
-		},
-		MulesoftConfig: &config.MulesoftConfig{
-			PollInterval: 1 * time.Second,
-		},
-	}
-	ac.CentralConfig.SetEnvironmentID("envid00")
-	agent.Initialize(ac.CentralConfig)
+	setupConfig()
+}
 
-	processor := NewEventProcessor(ac, &eventGeneratorMock{}, &EventMapper{})
-	events := []publisher.Event{
-		{
-			Content: beat.Event{
-				Timestamp: time.Time{},
-				Fields: map[string]interface{}{
-					"message": `{
-						"API ID": "211799904",
-						"API Name": "petstore-3",
-						"API Version ID": "16810512",
-						"API Version Name": "v1",
-						"Application Name": "",
-						"Client IP": "1.2.3.4",
-						"Continent": "North America",
-						"Country": "United States",
-						"Message ID": "e2029ea0-a873-11eb-875c-064449f4dd2c",
-						"Request Outcome": "PROCESSED",
-						"Request Size": 0,
-						"Resource Path": "/pets",
-						"Response Size": 18,
-						"Response Time": 58,
-						"Status Code": 200,
-						"User Agent Name": "Mozilla",
-						"User Agent Version": "5.0",
-						"Verb": "GET"
-					}`,
-				},
-				Private:    nil,
-				TimeSeries: false,
-			},
-		},
-	}
-	processedEvents := processor.Process(events)
-	assert.Equal(t, 3, len(processedEvents))
-	summaryJSON := processedEvents[0].Content.Fields["message"]
-	s := summaryJSON.(string)
-	summaryLogEvent := &transaction.LogEvent{}
-	json.Unmarshal([]byte(s), summaryLogEvent)
-	// leg0 := processedEvents[1]
-	// leg1 := processedEvents[2]
+func TestEventProcessor_ProcessRaw(t *testing.T) {
+	processor := NewEventProcessor(agentConfig, &eventGeneratorMock{}, &EventMapper{})
 
-	logrus.Infof("Events: %+v", processedEvents)
+	bts, err := json.Marshal(&event)
+	assert.Nil(t, err)
+	evts := processor.ProcessRaw(bts)
+
+	summaryRaw := evts[0]
+	summaryEvent := &transaction.LogEvent{}
+	summaryMsg := summaryRaw.Fields["message"].(string)
+	err = json.Unmarshal([]byte(summaryMsg), summaryEvent)
+	assert.Nil(t, err)
+	// TransactionSummary assertions
+	assertLegCommonFields(t, event, summaryEvent, transaction.TypeTransactionSummary)
+	assert.Nil(t, summaryEvent.TransactionEvent)
+	assert.Equal(t, "Success", summaryEvent.TransactionSummary.Status)
+	assert.Equal(t, "200", summaryEvent.TransactionSummary.StatusDetail)
+	assert.Equal(t, 60, summaryEvent.TransactionSummary.Duration)
+	assert.Equal(t, TeamID, summaryEvent.TransactionSummary.Team.ID)
+	assert.Equal(t, transaction.FormatProxyID(event.APIVersionName), summaryEvent.TransactionSummary.Proxy.ID)
+	assert.Equal(t, 1, summaryEvent.TransactionSummary.Proxy.Revision)
+	assert.Equal(t, discovery.FormatServiceTitle(event.APIName, event.APIVersionName), summaryEvent.TransactionSummary.Proxy.Name)
+	assert.Nil(t, summaryEvent.TransactionSummary.Runtime)
+	assert.Equal(t, "http", summaryEvent.TransactionSummary.EntryPoint.Type)
+	assert.Equal(t, event.Verb, summaryEvent.TransactionSummary.EntryPoint.Method)
+	assert.Equal(t, event.ResourcePath, summaryEvent.TransactionSummary.EntryPoint.Path)
+	assert.Equal(t, event.ClientIP, summaryEvent.TransactionSummary.EntryPoint.Host)
+
+	leg0Raw := evts[1]
+	leg0Event := &transaction.LogEvent{}
+	leg0Msg := leg0Raw.Fields["message"].(string)
+	err = json.Unmarshal([]byte(leg0Msg), leg0Event)
+	assert.Nil(t, err)
+	assertLegCommonFields(t, event, leg0Event, transaction.TypeTransactionEvent)
+	assert.Equal(t, FormatLeg0(event.MessageID), leg0Event.TransactionEvent.ID)
+	assertLegTransactionEvent(t, event, leg0Event, Inbound, "")
+
+	leg1Raw := evts[2]
+	leg1Event := &transaction.LogEvent{}
+	leg1Msg := leg1Raw.Fields["message"].(string)
+	err = json.Unmarshal([]byte(leg1Msg), leg1Event)
+	assert.Nil(t, err)
+	assertLegCommonFields(t, event, leg1Event, transaction.TypeTransactionEvent)
+	assert.Equal(t, FormatLeg1(event.MessageID), leg1Event.TransactionEvent.ID)
+	assertLegTransactionEvent(t, event, leg1Event, Outbound, FormatLeg0(event.MessageID))
+}
+
+func TestEventProcessor_ProcessRaw_Errors(t *testing.T) {
+	// returns nil when the EventMapper throws an error
+	processor := NewEventProcessor(agentConfig, &eventGeneratorMock{}, &eventMapperErr{})
+	bts, err := json.Marshal(&event)
+	assert.Nil(t, err)
+	evts := processor.ProcessRaw(bts)
+	assert.Nil(t, evts)
+
+	// returns an empty array when the EventGenerator throws an error
+	processor = NewEventProcessor(agentConfig, &eventGenMockErr{}, &EventMapper{})
+	bts, err = json.Marshal(&event)
+	assert.Nil(t, err)
+	evts = processor.ProcessRaw(bts)
+	assert.Equal(t, 0, len(evts))
+
+	// return nil when given bad json
+	processor = NewEventProcessor(agentConfig, &eventGeneratorMock{}, &EventMapper{})
+	evts = processor.ProcessRaw([]byte("nope"))
+	assert.Nil(t, evts)
+}
+
+func assertLegCommonFields(t *testing.T, muleEvent anypoint.AnalyticsEvent, logEvent *transaction.LogEvent, logType string) {
+	assert.Equal(t, "1.0", logEvent.Version)
+	assert.Equal(t, FormatTxnId(muleEvent.APIVersionID, muleEvent.MessageID), logEvent.TransactionID)
+	assert.Equal(t, "", logEvent.Environment)
+	assert.Equal(t, APICDeployment, logEvent.APICDeployment)
+	assert.Equal(t, EnvID, logEvent.EnvironmentID)
+	assert.Equal(t, TenantID, logEvent.TenantID)
+	assert.Equal(t, TenantID, logEvent.TrcbltPartitionID)
+	assert.Equal(t, logType, logEvent.Type)
+	assert.Equal(t, "", logEvent.TargetPath)
+	assert.Equal(t, "", logEvent.ResourcePath)
+}
+
+func assertLegTransactionEvent(t *testing.T, muleEvent anypoint.AnalyticsEvent, logEvent *transaction.LogEvent, direction, parent string) {
+	assert.Nil(t, logEvent.TransactionSummary)
+	assert.Equal(t, parent, logEvent.TransactionEvent.ParentID)
+	assert.Equal(t, muleEvent.ClientIP+":0", logEvent.TransactionEvent.Source)
+	assert.Equal(t, muleEvent.APIName, logEvent.TransactionEvent.Destination)
+	assert.Equal(t, 0, logEvent.TransactionEvent.Duration)
+	assert.Equal(t, direction, logEvent.TransactionEvent.Direction)
+	assert.Equal(t, "Pass", logEvent.TransactionEvent.Status)
 }
 
 func setupRedaction() {
@@ -128,4 +172,41 @@ func (c *eventGeneratorMock) CreateEvent(
 		Fields:    eventData,
 	}
 	return
+}
+
+func setupConfig() {
+	agentConfig = &config.AgentConfig{
+		CentralConfig: &corecfg.CentralConfiguration{
+			CentralConfig:    nil,
+			IConfigValidator: nil,
+			AgentType:        corecfg.TraceabilityAgent,
+			TenantID:         TenantID,
+			APICDeployment:   APICDeployment,
+			Environment:      Environment,
+		},
+		MulesoftConfig: &config.MulesoftConfig{
+			PollInterval: 1 * time.Second,
+		},
+	}
+	agentConfig.CentralConfig.SetEnvironmentID(EnvID)
+	agentConfig.CentralConfig.SetTeamID(TeamID)
+	agent.Initialize(agentConfig.CentralConfig)
+}
+
+type eventGenMockErr struct{}
+
+func (c *eventGenMockErr) CreateEvent(
+	_ transaction.LogEvent,
+	_ time.Time,
+	_ common.MapStr,
+	_ common.MapStr,
+	_ interface{},
+) (event beat.Event, err error) {
+	return beat.Event{}, fmt.Errorf("create event error")
+}
+
+type eventMapperErr struct{}
+
+func (em *eventMapperErr) ProcessMapping(_ anypoint.AnalyticsEvent) ([]*transaction.LogEvent, error) {
+	return nil, fmt.Errorf("event mapping error")
 }

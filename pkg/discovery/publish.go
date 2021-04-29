@@ -8,6 +8,10 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
+type APIPublisher interface {
+	PublishLoop()
+}
+
 // publishLoop Publish event loop.
 func (a *Agent) publishLoop() {
 	for {
@@ -27,7 +31,7 @@ func (a *Agent) publishLoop() {
 func (a *Agent) publish(serviceDetail *ServiceDetail) error {
 	log.Infof("Publishing API \"%s (%s)\" to Amplify Central", serviceDetail.APIName, serviceDetail.ID)
 
-	serviceBody, err := a.buildServiceBody(serviceDetail)
+	serviceBody, err := buildServiceBody(serviceDetail)
 	if err != nil {
 		log.Errorf("Error building service body for API \"%s (%s)\": %s", serviceDetail.APIName, serviceDetail.ID, err.Error())
 		return err
@@ -42,7 +46,7 @@ func (a *Agent) publish(serviceDetail *ServiceDetail) error {
 }
 
 // buildServiceBody - creates the service definition
-func (a *Agent) buildServiceBody(service *ServiceDetail) (apic.ServiceBody, error) {
+func buildServiceBody(service *ServiceDetail) (apic.ServiceBody, error) {
 	tags := map[string]interface{}{}
 	if service.Tags != nil {
 		for _, tag := range service.Tags {
