@@ -90,8 +90,8 @@ Complete the configuration form, noting the value entered in the `Name` field. I
 
 ### Agent Configuration
 To configure the agents see:
-- [Mulesoft Discovery Agent Configuration](./mulesoft_discovery_agent/README.md)
-- [Mulesoft Traceability Agent Configuration](./mulesoft_traceability_agent/README.md)
+- [Mulesoft Discovery Agent Configuration](./README_discovery.md)
+- [Mulesoft Traceability Agent Configuration](./README_traceability.md)
 
 ## See Also
 Reference: [SDK Documentation - Building Discovery Agent](https://github.com/Axway/agent-sdk/blob/main/docs/discovery/index.md), [Mulesoft API Manager API](https://anypoint.mulesoft.com/exchange/portals/anypoint-platform/f1e97bc6-315a-4490-82a7-23abe036327a.anypoint-platform/api-manager-api/minor/1.0/console/method/%231156/)

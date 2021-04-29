@@ -14,11 +14,11 @@ jobs:
       run: git fetch --prune --unshallow
     - uses: actions/setup-go@v2
       with:
-        go-version: '^1.15.0'
+        go-version: '^1.13.0'
     - name: Discovery Release
       uses: goreleaser/goreleaser-action@master
       with:
-        workdir: ./mulesoft_discovery_agent
+        workdir: .
         args: release
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -31,11 +31,11 @@ jobs:
       run: git fetch --prune --unshallow
     - uses: actions/setup-go@v2
       with:
-        go-version: '^1.15.0'
+        go-version: '^1.13.0'
     - name: Traceability Release
       uses: goreleaser/goreleaser-action@master
       with:
-        workdir: ./mulesoft_traceability_agent
+        workdir: .
         args: release
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
