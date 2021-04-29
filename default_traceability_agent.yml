@@ -10,7 +10,7 @@ central:
     privateKey: <Amplify_CENTRAL_DOSA_PRIVATE_KEY_PATH>
     publicKey: <Amplify_CENTRAL_DOSA_PUBLIC_KEY_PATH>
     realm: Broker
-    timeout: 10s
+    timeout: 30s
     url: https://login.axway.com/auth
     # Uncomment the following line if you are using a proxy to access the Amplify platform (apicentral.axway.com / login.axway.com / platform.axway.com) on port 443
     # Configure the appropriate value (PROXY_USER / PROXY_PASSWORD are optional values)

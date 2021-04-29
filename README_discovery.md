@@ -16,6 +16,8 @@ As well as access to Amplify Central it is assumed you have access to the [Mules
 
 ## Configuring the Discovery Agent
 
+The agents read their configuration from a YAML files. To set up your config file copy the content of `default_mulesoft_discovery_agent.yml` into a new file named `mulesoft_discovery_agent`, and replace the default values that reflect your environment.
+
 The minimial configuration for the agent is:
 
 ```
@@ -41,7 +43,6 @@ mulesoft:
 ```
 
 ## Configuration Variables
-The agents read their configuration from the environment, an env file, or a YAML configuration. To set up your config file copy the content of `default_mulesoft_discovery_agent.yml` into a new file named `mulesoft_discovery_agent`, and replace the default values that reflect your environment.
 
 | Variable Name                                                      | YAML Path                                                           | Description                                                                                                                                                                                                                                                                                              | **Location** / _Default_                                             |
 | ------------------------------------------------------------------ | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |

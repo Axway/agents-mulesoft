@@ -123,7 +123,7 @@ func NewMulesoftConfig(props properties.Properties) *MulesoftConfig {
 		Environment:         props.StringPropertyValue(pathEnvironment),
 		Password:            props.StringPropertyValue(pathAuthPassword),
 		PollInterval:        props.DurationPropertyValue(pathPollInterval),
-		ProxyURL: props.StringPropertyValue(pathProxyURL),
+		ProxyURL:            props.StringPropertyValue(pathProxyURL),
 		SessionLifetime:     props.DurationPropertyValue(pathAuthLifetime),
 		Username:            props.StringPropertyValue(pathAuthUsername),
 		TLS: &corecfg.TLSConfiguration{

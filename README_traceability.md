@@ -16,6 +16,8 @@ As well as access to Amplify Central it is assumed you have access to the [Mules
 
 ## Configuring the Traceability Agent
 
+The agents read their configuration from a YAML file. To set up your config file copy the content of `default_mulesoft_traceability_agent.yml` into a new file named `mulesoft_traceability_agent`, and replace the default values that reflect your environment.
+
 The minimial configuration for the agent is:
 
 ```
@@ -41,8 +43,6 @@ mulesoft:
 ```
 
 ## Configuration Variables
-
-The agents read their configuration from the environment, an env file, or a YAML configuration. To set up your config file copy the content of `default_mulesoft_traceability_agent.yml` into a new file named `mulesoft_traceability_agent`, and replace the default values that reflect your environment.
 
 - The following are all of the Environment variables that can be set, they will override the defaults
 
