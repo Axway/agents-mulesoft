@@ -1,13 +1,14 @@
 central:
-  organizationID: "252973553240348"
-  environment: mulesoft
+  organizationID: "<Amplify_ORG_ID>"
+  environment: <Amplify_CENTRAL_ENVIRONMENT_NAME>
   mode: publishToEnvironmentAndCatalog
   url: https://apicentral.axway.com
   platformURL: https://platform.axway.com
+  pollInterval: 10s
   auth:
-    clientID: DOSA_552cd5373107407ca543b2797c24d534
-    privateKey: /Users/tjohnson/Public/repos/agents-mulesoft/private_key.pem
-    publicKey: /Users/tjohnson/Public/repos/agents-mulesoft/public_key.pem
+    clientID: <Amplify_CENTRAL_DOSA_CLIENT_ID>
+    privateKey: <Amplify_CENTRAL_DOSA_PRIVATE_KEY_PATH>
+    publicKey: <Amplify_CENTRAL_DOSA_PUBLIC_KEY_PATH>
     realm: Broker
     timeout: 10s
     url: https://login.axway.com/auth
@@ -26,8 +27,8 @@ mulesoft:
   environment: Sandbox
   pollInterval: 20s
   auth:
-    username: tsjohnson
-    password: "!vB%RRe5^qV6"
+    username: <USERNAME>
+    password: <PASSWORD>
     # The following property is used to filter the APIs that have a particular tag in their configuration.
     # Comma-separated list of tags. Only APIs that have one or more of these tags are considered for discovery.
     # Default value: empty. Meaning that no matching is performed.
@@ -38,3 +39,4 @@ mulesoft:
     # This property takes precedence over the discoveryTags property/
     # Default value: empty. Meaning that no API is ignored
     #discoveryIgnoreTags: tags1, tags2
+
