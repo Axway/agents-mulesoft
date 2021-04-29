@@ -56,34 +56,6 @@ func (em *EventMapper) ProcessMapping(event anypoint.AnalyticsEvent) ([]*transac
 	}, nil
 }
 
-func (em *EventMapper) getTransactionEventStatus(code int) transaction.TxEventStatus {
-	if code >= 400 {
-		return transaction.TxEventStatusFail
-	}
-	return transaction.TxEventStatusPass
-}
-
-func (em *EventMapper) getTransactionSummaryStatus(statusCode int) transaction.TxSummaryStatus {
-	transSummaryStatus := transaction.TxSummaryStatusUnknown
-	if statusCode >= http.StatusOK && statusCode < http.StatusBadRequest {
-		transSummaryStatus = transaction.TxSummaryStatusSuccess
-	} else if statusCode >= http.StatusBadRequest && statusCode < http.StatusInternalServerError {
-		transSummaryStatus = transaction.TxSummaryStatusFailure
-	} else if statusCode >= http.StatusInternalServerError && statusCode < http.StatusNetworkAuthenticationRequired {
-		transSummaryStatus = transaction.TxSummaryStatusException
-	}
-	return transSummaryStatus
-}
-
-func (em *EventMapper) buildHeaders(headers map[string]string) string {
-	jsonHeader, err := json.Marshal(headers)
-	if err != nil {
-		log.Error(err.Error())
-		return ""
-	}
-	return string(jsonHeader)
-}
-
 func (em *EventMapper) createTransactionEvent(
 	eventTime int64,
 	txID string,
@@ -97,7 +69,7 @@ func (em *EventMapper) createTransactionEvent(
 	res := map[string]string{"Request-Outcome": txDetails.RequestOutcome}
 	httpProtocolDetails, err := transaction.NewHTTPProtocolBuilder().
 		SetByteLength(txDetails.RequestSize, txDetails.ResponseSize).
-		SetHeaders(em.buildHeaders(req), em.buildHeaders(res)).
+		SetHeaders(buildHeaders(req), buildHeaders(res)).
 		SetHost(txDetails.ClientIP).
 		SetMethod(txDetails.Verb).
 		SetStatus(txDetails.StatusCode, http.StatusText(txDetails.StatusCode)).
@@ -114,7 +86,7 @@ func (em *EventMapper) createTransactionEvent(
 		SetParentID(parentEventID).
 		SetProtocolDetail(httpProtocolDetails).
 		SetSource(txDetails.ClientIP + ":0").
-		SetStatus(em.getTransactionEventStatus(txDetails.StatusCode)).
+		SetStatus(getTransactionEventStatus(txDetails.StatusCode)).
 		SetTimestamp(eventTime).
 		SetTransactionID(txID).
 		Build()
@@ -137,11 +109,39 @@ func (em *EventMapper) createSummaryEvent(
 		SetDuration(event.ResponseTime).
 		SetEntryPoint("http", method, uri, host).
 		SetProxy(transaction.FormatProxyID(version), discovery.FormatServiceTitle(name, version), 1).
-		SetStatus(em.getTransactionSummaryStatus(statusCode), strconv.Itoa(statusCode)).
+		SetStatus(getTransactionSummaryStatus(statusCode), strconv.Itoa(statusCode)).
 		SetTeam(teamID).
 		SetTransactionID(txID).
 		SetTimestamp(eventTime).
 		Build()
+}
+
+func getTransactionSummaryStatus(statusCode int) transaction.TxSummaryStatus {
+	transSummaryStatus := transaction.TxSummaryStatusUnknown
+	if statusCode >= http.StatusOK && statusCode < http.StatusBadRequest {
+		transSummaryStatus = transaction.TxSummaryStatusSuccess
+	} else if statusCode >= http.StatusBadRequest && statusCode < http.StatusInternalServerError {
+		transSummaryStatus = transaction.TxSummaryStatusFailure
+	} else if statusCode >= http.StatusInternalServerError && statusCode < http.StatusNetworkAuthenticationRequired {
+		transSummaryStatus = transaction.TxSummaryStatusException
+	}
+	return transSummaryStatus
+}
+
+func buildHeaders(headers map[string]string) string {
+	jsonHeader, err := json.Marshal(headers)
+	if err != nil {
+		log.Error(err.Error())
+		return ""
+	}
+	return string(jsonHeader)
+}
+
+func getTransactionEventStatus(code int) transaction.TxEventStatus {
+	if code >= 400 {
+		return transaction.TxEventStatusFail
+	}
+	return transaction.TxEventStatusPass
 }
 
 func FormatTxnId(apiVersionID, messageID string) string {

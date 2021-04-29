@@ -6,8 +6,6 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/transaction"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/stretchr/testify/assert"
 
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
@@ -55,61 +53,56 @@ func TestEventMapper_processMapping(t *testing.T) {
 
 	item, err := mapper.ProcessMapping(event)
 	assert.Nil(t, err)
-	logrus.Infof("Item: %+v", item)
+	assert.Equal(t, 3, len(item))
 }
 
-func TestEventMapper_getTransactionEventStatus(t *testing.T) {
-	mapper := &EventMapper{}
+func Test_getTransactionEventStatus(t *testing.T) {
 
-	status := mapper.getTransactionEventStatus(100)
+	status := getTransactionEventStatus(100)
 	assert.Equal(t, transaction.TxEventStatusPass, status)
 
-	status = mapper.getTransactionEventStatus(200)
+	status = getTransactionEventStatus(200)
 	assert.Equal(t, transaction.TxEventStatusPass, status)
 
-	status = mapper.getTransactionEventStatus(300)
+	status = getTransactionEventStatus(300)
 	assert.Equal(t, transaction.TxEventStatusPass, status)
 
-	status = mapper.getTransactionEventStatus(400)
+	status = getTransactionEventStatus(400)
 	assert.Equal(t, transaction.TxEventStatusFail, status)
 
-	status = mapper.getTransactionEventStatus(500)
+	status = getTransactionEventStatus(500)
 	assert.Equal(t, transaction.TxEventStatusFail, status)
 
-	status = mapper.getTransactionEventStatus(600)
+	status = getTransactionEventStatus(600)
 	assert.Equal(t, transaction.TxEventStatusFail, status)
 }
 
-func TestEventMapper_getTransactionSummaryStatus(t *testing.T) {
-	mapper := &EventMapper{}
-
-	status := mapper.getTransactionSummaryStatus(200)
+func Test_getTransactionSummaryStatus(t *testing.T) {
+	status := getTransactionSummaryStatus(200)
 	assert.Equal(t, transaction.TxSummaryStatusSuccess, status)
 
-	status = mapper.getTransactionSummaryStatus(300)
+	status = getTransactionSummaryStatus(300)
 	assert.Equal(t, transaction.TxSummaryStatusSuccess, status)
 
-	status = mapper.getTransactionSummaryStatus(400)
+	status = getTransactionSummaryStatus(400)
 	assert.Equal(t, transaction.TxSummaryStatusFailure, status)
 
-	status = mapper.getTransactionSummaryStatus(500)
+	status = getTransactionSummaryStatus(500)
 	assert.Equal(t, transaction.TxSummaryStatusException, status)
 
-	status = mapper.getTransactionSummaryStatus(600)
+	status = getTransactionSummaryStatus(600)
 	assert.Equal(t, transaction.TxSummaryStatusUnknown, status)
 
-	status = mapper.getTransactionSummaryStatus(100)
+	status = getTransactionSummaryStatus(100)
 	assert.Equal(t, transaction.TxSummaryStatusUnknown, status)
 }
 
-func TestEventMapper_buildHeaders(t *testing.T) {
-	mapper := &EventMapper{}
-
+func Test_buildHeaders(t *testing.T) {
 	h := map[string]string{
 		"Authorization": "abc123",
 		"User-Agent":    "MulesoftTraceability",
 	}
-	res := mapper.buildHeaders(h)
+	res := buildHeaders(h)
 	assert.Equal(t, "{\"Authorization\":\"abc123\",\"User-Agent\":\"MulesoftTraceability\"}", res)
 }
 
