@@ -418,7 +418,7 @@ func (a *Agent) setOAS2policies(sc []byte, authPolicy string) ([]byte, error) {
 			Type:        "apiKey",
 			Name:        "Authorization",
 			In:          "header",
-			Description: "Provided as: client_secret:<INSERT_VALID_SECRET_HERE>",
+			Description: "Provided as: client_id:<INSERT_VALID_CLIENTID_HERE> client_secret:<INSERT_VALID_SECRET_HERE>",
 		}
 		ss := openapi2.SecurityScheme{
 			VendorExtensible:    openapi2.VendorExtensible{},
@@ -469,7 +469,7 @@ func (a *Agent) setOAS3policies(sc []byte, authPolicy string) ([]byte, error) {
 			Type:        "apiKey",
 			Name:        "Authorization",
 			In:          "header",
-			Description: "Provided as: client_secret:<INSERT_VALID_SECRET_HERE>",
+			Description: "Provided as: client_id:<INSERT_VALID_CLIENTID_HERE> client_secret:<INSERT_VALID_SECRET_HERE>",
 		}
 
 		ssr := openapi3.SecuritySchemeRef{
