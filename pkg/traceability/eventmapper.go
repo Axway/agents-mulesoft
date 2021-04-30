@@ -6,8 +6,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/Axway/agents-mulesoft/pkg/discovery"
-
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
@@ -108,7 +106,7 @@ func (em *EventMapper) createSummaryEvent(
 	return transaction.NewTransactionSummaryBuilder().
 		SetDuration(event.ResponseTime).
 		SetEntryPoint("http", method, uri, host).
-		SetProxy(transaction.FormatProxyID(version), discovery.FormatServiceTitle(name, version), 1).
+		SetProxy(transaction.FormatProxyID(version), name, 1).
 		SetStatus(getTransactionSummaryStatus(statusCode), strconv.Itoa(statusCode)).
 		SetTeam(teamID).
 		SetTransactionID(txID).
