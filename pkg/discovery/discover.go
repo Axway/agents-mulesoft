@@ -4,6 +4,8 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"github.com/getkin/kin-openapi/openapi3"
+	openapi2 "github.com/go-openapi/spec"
 	"net/url"
 	"sort"
 	"strings"
@@ -123,7 +125,7 @@ func (a *Agent) getServiceDetail(asset *anypoint.Asset, api *anypoint.API) (*Ser
 	if err != nil {
 		return nil, err
 	}
-	authPolicy := getAuthPolicy(policies)
+	authPolicy := a.getAuthPolicy(policies)
 
 	// Change detection (asset + policies)
 	checksum := checksum(api, authPolicy)
@@ -154,7 +156,7 @@ func (a *Agent) getServiceDetail(asset *anypoint.Asset, api *anypoint.API) (*Ser
 		return nil, nil
 	}
 
-	specContent, specType, err := a.getSpecFromExchangeFile(api, exchangeFile)
+	specContent, specType, err := a.getSpecFromExchangeFile(api, exchangeFile, authPolicy)
 	if err != nil {
 		return nil, err
 	}
@@ -195,7 +197,7 @@ func (a *Agent) shouldDiscoverAPI(api *anypoint.API) bool {
 }
 
 // getSpecFromExchangeFile gets the spec content and injects the api endpoint.
-func (a *Agent) getSpecFromExchangeFile(api *anypoint.API, exchangeFile *anypoint.ExchangeFile) ([]byte, string, error) {
+func (a *Agent) getSpecFromExchangeFile(api *anypoint.API, exchangeFile *anypoint.ExchangeFile, authPolicy string) ([]byte, string, error) {
 	specContent, err := a.anypointClient.GetExchangeFileContent(exchangeFile)
 	if err != nil {
 		return nil, "", err
@@ -215,8 +217,10 @@ func (a *Agent) getSpecFromExchangeFile(api *anypoint.API, exchangeFile *anypoin
 	switch specType {
 	case apic.Oas2:
 		specContent, err = setOAS2Endpoint(api.EndpointURI, specContent)
+		specContent, err = a.setOAS2policies(specContent, authPolicy)
 	case apic.Oas3:
 		specContent, err = setOAS3Endpoint(api.EndpointURI, specContent)
+		specContent, err = a.setOAS3policies(specContent, authPolicy)
 	case apic.Wsdl:
 		specContent, err = setWSDLEndpoint(api.EndpointURI, specContent)
 	}
@@ -282,14 +286,19 @@ func getSpecType(file *anypoint.ExchangeFile, specContent []byte) (string, error
 }
 
 // getAuthPolicy gets the authentication policy type.
-func getAuthPolicy(policies []anypoint.Policy) string {
-	if policies == nil || len(policies) == 0 {
+func (a *Agent) getAuthPolicy(policies anypoint.Policies) string {
+
+	if len(policies.Policies) == 0 {
 		return apic.Passthrough
 	}
 
-	for _, policy := range policies {
-		if policy.PolicyTemplateID == "client-id-enforcement" {
+	for _, policy := range policies.Policies {
+		if policy.Template.AssetId == "client-id-enforcement" {
 			return apic.Apikey
+		}
+
+		if policy.Template.AssetId == "external-oauth2-access-token-enforcement" {
+			return apic.Oauth
 		}
 	}
 
@@ -309,7 +318,13 @@ func setOAS2Endpoint(endpointURL string, specContent []byte) ([]byte, error) {
 	}
 
 	spec["host"] = endpoint.Host
-	spec["basePath"] = endpoint.Path
+
+	if endpoint.Path == "" {
+		log.Debug("Empty base path, manually changing to /")
+		spec["basePath"] = "/"
+	} else {
+		spec["basePath"] = endpoint.Path
+	}
 	spec["schemes"] = []string{endpoint.Scheme}
 
 	return json.Marshal(spec)
@@ -353,3 +368,140 @@ func doesAPIContainAnyMatchingTag(tags []string, api *anypoint.API) bool {
 	}
 	return false
 }
+
+// Helper function to remove existing back-end security policies
+func (a *Agent) removeOASpolicies(specContent []byte, oasVersion string) ([]byte, error) {
+	spec := make(map[string]interface{})
+	err := json.Unmarshal(specContent, &spec)
+	if err != nil {
+		return specContent, err
+	}
+	//Deleting any pre-existing security definitions
+	if oasVersion == "v2" {
+		if spec["securityDefinitions"] != nil {
+			delete(spec, "securityDefinitions")
+		}
+	}
+	if oasVersion == "v3" {
+
+		oas3Spec := openapi3.Swagger{}
+		json.Unmarshal(specContent, &oas3Spec)
+		if err != nil {
+			return specContent, err
+		}
+
+		//reset to empty
+		oas3Spec.Components.SecuritySchemes = nil
+		return json.Marshal(oas3Spec)
+
+	}
+
+	return json.Marshal(spec)
+}
+
+//TODO improve if fields are not complete, introduce per method swagger definitions, set up logic for multiple auth policies, use policy configurations
+func (a *Agent) setOAS2policies(sc []byte, authPolicy string) ([]byte, error) {
+
+	//Removing pre-existing auth security policies
+	sc, err := a.removeOASpolicies(sc, "v2")
+	if err != nil {
+		return sc, err
+	}
+
+	oas2Spec := openapi2.Swagger{}
+	json.Unmarshal(sc, &oas2Spec)
+
+	switch authPolicy {
+	case apic.Apikey:
+
+		ssp := openapi2.SecuritySchemeProps{
+			Type:        "apiKey",
+			Name:        "Authorization",
+			In:          "header",
+			Description: "Provided as: client_id:<INSERT_VALID_CLIENTID_HERE> client_secret:<INSERT_VALID_SECRET_HERE>",
+		}
+		ss := openapi2.SecurityScheme{
+			VendorExtensible:    openapi2.VendorExtensible{},
+			SecuritySchemeProps: ssp,
+		}
+		sd := openapi2.SecurityDefinitions{
+			"client-id-enforcement": &ss,
+		}
+
+		oas2Spec.SwaggerProps.SecurityDefinitions = sd
+
+	case apic.Oauth:
+
+		ss := openapi2.OAuth2Implicit("dummy.io")
+		sd := openapi2.SecurityDefinitions{
+			"oauth": ss,
+		}
+
+		oas2Spec.SwaggerProps.SecurityDefinitions = sd
+
+	}
+
+	return json.Marshal(oas2Spec)
+}
+
+func (a *Agent) setOAS3policies(sc []byte, authPolicy string) ([]byte, error) {
+
+	//Removing pre-existing auth security policies
+	sc, err := a.removeOASpolicies(sc, "v3")
+	if err != nil {
+		return sc, err
+	}
+
+	oas3Spec := openapi3.Swagger{}
+	err = json.Unmarshal(sc, &oas3Spec)
+	if err != nil {
+		return sc, err
+	}
+
+	if err != nil {
+		return sc, err
+	}
+
+	switch authPolicy {
+	case apic.Apikey:
+
+		ss := openapi3.SecurityScheme{
+			Type:        "apiKey",
+			Name:        "Authorization",
+			In:          "header",
+			Description: "Provided as: client_id:<INSERT_VALID_CLIENTID_HERE> client_secret:<INSERT_VALID_SECRET_HERE>",
+		}
+
+		ssr := openapi3.SecuritySchemeRef{
+			Value: &ss,
+		}
+
+		oas3Spec.Components.SecuritySchemes = openapi3.SecuritySchemes{"client-id-enforcement": &ssr}
+
+	case apic.Oauth:
+
+		i := openapi3.OAuthFlow{
+			ExtensionProps:   openapi3.ExtensionProps{},
+			AuthorizationURL: "dummy.io",
+			Scopes:           make(map[string]string),
+		}
+		oAuthFlow := openapi3.OAuthFlows{
+			ExtensionProps: openapi3.ExtensionProps{},
+			Implicit:       &i,
+		}
+		ss := openapi3.SecurityScheme{
+			ExtensionProps: openapi3.ExtensionProps{},
+			Type:           "oauth2",
+			Description:    "This API uses OAuth 2 with the implicit grant flow",
+			Flows:          &oAuthFlow,
+		}
+		ssr := openapi3.SecuritySchemeRef{
+			Value: &ss,
+		}
+
+		oas3Spec.Components.SecuritySchemes = openapi3.SecuritySchemes{"Oauth": &ssr}
+	}
+
+	return json.Marshal(oas3Spec)
+}
+
