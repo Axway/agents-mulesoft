@@ -1,20 +1,45 @@
-central:
-  organizationID: "<Amplify_ORG_ID>"
-  environment: <Amplify_CENTRAL_ENVIRONMENT_NAME>
-  mode: publishToEnvironmentAndCatalog
-  url: https://apicentral.axway.com
-  platformURL: https://platform.axway.com
-  pollInterval: 10s
+mulesoft_traceability_agent:
+  central:
+    organizationID: "<Amplify_ORG_ID>"
+    environment: <Amplify_CENTRAL_ENVIRONMENT_NAME>
+    url: https://apicentral.axway.com
+    platformURL: https://platform.axway.com
+    auth:
+      clientID: <Amplify_CENTRAL_DOSA_CLIENT_ID>
+      privateKey: <Amplify_CENTRAL_DOSA_PRIVATE_KEY_PATH>
+      publicKey: <Amplify_CENTRAL_DOSA_PUBLIC_KEY_PATH>
+      realm: Broker
+      timeout: 10s
+      url: https://login.axway.com/auth
+
+mulesoft:
+  environment: Sandbox
+  cachePath: "/tmp"
+  pollInterval: 30s
   auth:
-    clientID: <Amplify_CENTRAL_DOSA_CLIENT_ID>
-    privateKey: <Amplify_CENTRAL_DOSA_PRIVATE_KEY_PATH>
-    publicKey: <Amplify_CENTRAL_DOSA_PUBLIC_KEY_PATH>
-    realm: Broker
-    timeout: 30s
-    url: https://login.axway.com/auth
-    # Uncomment the following line if you are using a proxy to access the Amplify platform (apicentral.axway.com / login.axway.com / platform.axway.com) on port 443
-    # Configure the appropriate value (PROXY_USER / PROXY_PASSWORD are optional values)
-    #proxyurl: <PROXY_SCHEME>://<PROXY_USER>:<PROXY_USER_PASSWORD>@<PROXY_URL>:<PROXY_PORT>
+    username: <USERNAME>
+    password: <PASSWORD>
+
+output.traceability:
+  enabled: true
+  hosts:
+    - ${TRACEABILITY_HOST:"ingestion-lumberjack.datasearch.axway.com:453"}
+  protocol: ${TRACEABILITY_PROTOCOL:"tcp"}
+  compression_level: ${TRACEABILITY_COMPRESSIONLEVEL:3}
+  ssl:
+    enabled: true
+    verification_mode: none
+    cipher_suites:
+      - "ECDHE-ECDSA-AES-128-GCM-SHA256"
+      - "ECDHE-ECDSA-AES-256-GCM-SHA384"
+      - "ECDHE-ECDSA-CHACHA20-POLY1305"
+      - "ECDHE-RSA-AES-128-CBC-SHA256"
+      - "ECDHE-RSA-AES-128-GCM-SHA256"
+      - "ECDHE-RSA-AES-256-GCM-SHA384"
+      - "ECDHE-RSA-CHACHA20-POLY1205"
+  worker: 1
+  pipelining: 0
+  proxy_url: ${TRACEABILITY_PROXYURL:""}
 
 log:
   level: debug
@@ -22,21 +47,9 @@ log:
   output: stdout
   path: logs
 
-mulesoft:
-  anypointExchangeUrl: https://anypoint.mulesoft.com
-  environment: Sandbox
-  pollInterval: 20s
-  auth:
-    username: <USERNAME>
-    password: <PASSWORD>
-    # The following property is used to filter the APIs that have a particular tag in their configuration.
-    # Comma-separated list of tags. Only APIs that have one or more of these tags are considered for discovery.
-    # Default value: empty. Meaning that no matching is performed.
-    #discoveryTags: tags1, tags2
-    #
-    # The following property is used to filter out APIs that have a particular tag in their configuration.
-    # Comma-separated list of tags. If an API has one or more of these tags, the agent ignores this API and will not publish it to Amplify Central.
-    # This property takes precedence over the discoveryTags property/
-    # Default value: empty. Meaning that no API is ignored
-    #discoveryIgnoreTags: tags1, tags2
+logging:
+  metrics:
+    enabled: false
+  to_stderr: true
+  level: ${LOG_LEVEL:debug}
 
