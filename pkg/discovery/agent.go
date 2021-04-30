@@ -13,13 +13,19 @@ import (
 	"github.com/Axway/agents-mulesoft/pkg/config"
 )
 
+type Repeater interface {
+	Loop()
+	OnConfigChange(cfg *config.MulesoftConfig)
+	Stop()
+}
+
 // Agent links the mulesoft client and the gateway client.
 type Agent struct {
-	client     anypoint.Client
 	assetCache cache.Cache
+	client     anypoint.Client
 	stopAgent  chan bool
-	discovery  APIDiscovery
-	publisher  APIPublishLoop
+	discovery  Repeater
+	publisher  Repeater
 }
 
 // NewAgent creates a new agent
@@ -50,8 +56,8 @@ func NewAgent(cfg *config.AgentConfig, client anypoint.Client) (agent *Agent) {
 
 func newAgent(
 	client anypoint.Client,
-	discovery APIDiscovery,
-	publisher APIPublishLoop,
+	discovery Repeater,
+	publisher Repeater,
 	assetCache cache.Cache,
 ) *Agent {
 	return &Agent{
@@ -73,9 +79,10 @@ func (a *Agent) onConfigChange() {
 
 	a.client.OnConfigChange(cfg.MulesoftConfig)
 	a.discovery.OnConfigChange(cfg.MulesoftConfig)
+
 	// Restart Discovery & Publish
-	go a.discovery.DiscoveryLoop()
-	go a.publisher.PublishLoop()
+	go a.discovery.Loop()
+	go a.publisher.Loop()
 }
 
 // CheckHealth - check the health of all clients associated with the agent
@@ -92,8 +99,8 @@ func (a *Agent) Run() {
 	agent.RegisterAPIValidator(validator)
 	agent.OnConfigChange(a.onConfigChange)
 
-	go a.discovery.DiscoveryLoop()
-	go a.publisher.PublishLoop()
+	go a.discovery.Loop()
+	go a.publisher.Loop()
 
 	select {
 	case <-a.stopAgent:

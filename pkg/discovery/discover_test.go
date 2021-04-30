@@ -1,85 +1,74 @@
 package discovery
 
-//
-// import (
-// 	"fmt"
-// 	"net/url"
-// 	"testing"
-// 	"time"
-//
-// 	"github.com/Axway/agent-sdk/pkg/api"
-//
-// 	corecfg "github.com/Axway/agent-sdk/pkg/config"
-//
-// 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
-//
-// 	"github.com/stretchr/testify/assert"
-//
-// 	"github.com/Axway/agent-sdk/pkg/cache"
-//
-// 	"github.com/Axway/agents-mulesoft/pkg/config"
-//
-// 	"github.com/stretchr/testify/mock"
-// )
-//
-// type mockAnypointClient struct {
-// 	mock.Mock
-// }
-//
-// func (m *mockAnypointClient) OnConfigChange(*config.MulesoftConfig) {
-// 	//noop
-// }
-//
-// func (m *mockAnypointClient) GetAccessToken() (string, *anypoint.User, time.Duration, error) {
-// 	return "", nil, 0, nil
-// }
-//
-// func (m *mockAnypointClient) GetEnvironmentByName(_ string) (*anypoint.Environment, error) {
-// 	return nil, nil
-// }
-//
-// func (m *mockAnypointClient) ListAssets(*anypoint.Page) ([]anypoint.Asset, error) {
-// 	assets := []anypoint.Asset{{
-// 		ID:                12345,
-// 		Name:              "asset1",
-// 		ExchangeAssetName: "dummyasset",
-// 		APIs: []anypoint.API{{
-// 			ID:          6789,
-// 			EndpointURI: "google.com",
-// 			AssetID:     "12345",
-// 		}},
-// 	}}
-//
-// 	return assets, nil
-// }
-//
-// func (m *mockAnypointClient) GetPolicies(*anypoint.API) ([]anypoint.Policy, error) {
-// 	return nil, nil
-// }
-//
-// func (m *mockAnypointClient) GetExchangeAsset(*anypoint.API) (*anypoint.ExchangeAsset, error) {
-// 	return &anypoint.ExchangeAsset{
-// 		Files: []anypoint.ExchangeFile{{
-// 			Classifier: "oas",
-// 			Generated:  false,
-// 		}},
-// 	}, nil
-// }
-//
-// func (m *mockAnypointClient) GetExchangeAssetIcon(_ *anypoint.ExchangeAsset) (icon string, contentType string, err error) {
-// 	return "", "", nil
-// }
-//
-// func (m *mockAnypointClient) GetExchangeFileContent(*anypoint.ExchangeFile) (fileContent []byte, err error) {
-// 	var a = `{
-// "swagger": "2.0"
-// }`
-// 	return []byte(a), nil
-// }
-//
-// func (m *mockAnypointClient) GetAnalyticsWindow() ([]anypoint.AnalyticsEvent, error) {
-// 	return nil, nil
-// }
+import (
+	"time"
+
+	"github.com/Axway/agents-mulesoft/pkg/anypoint"
+
+	"github.com/Axway/agents-mulesoft/pkg/config"
+
+	"github.com/stretchr/testify/mock"
+)
+
+type mockAnypointClient struct {
+	mock.Mock
+}
+
+func (m *mockAnypointClient) OnConfigChange(*config.MulesoftConfig) {
+	// noop
+}
+
+func (m *mockAnypointClient) GetAccessToken() (string, *anypoint.User, time.Duration, error) {
+	return "", nil, 0, nil
+}
+
+func (m *mockAnypointClient) GetEnvironmentByName(_ string) (*anypoint.Environment, error) {
+	return nil, nil
+}
+
+func (m *mockAnypointClient) ListAssets(*anypoint.Page) ([]anypoint.Asset, error) {
+	assets := []anypoint.Asset{{
+		ID:                12345,
+		Name:              "asset1",
+		ExchangeAssetName: "dummyasset",
+		APIs: []anypoint.API{{
+			ID:          6789,
+			EndpointURI: "google.com",
+			AssetID:     "12345",
+		}},
+	}}
+
+	return assets, nil
+}
+
+func (m *mockAnypointClient) GetPolicies(*anypoint.API) ([]anypoint.Policy, error) {
+	return nil, nil
+}
+
+func (m *mockAnypointClient) GetExchangeAsset(*anypoint.API) (*anypoint.ExchangeAsset, error) {
+	return &anypoint.ExchangeAsset{
+		Files: []anypoint.ExchangeFile{{
+			Classifier: "oas",
+			Generated:  false,
+		}},
+	}, nil
+}
+
+func (m *mockAnypointClient) GetExchangeAssetIcon(_ *anypoint.ExchangeAsset) (icon string, contentType string, err error) {
+	return "", "", nil
+}
+
+func (m *mockAnypointClient) GetExchangeFileContent(*anypoint.ExchangeFile) (fileContent []byte, err error) {
+	var a = `{
+"swagger": "2.0"
+}`
+	return []byte(a), nil
+}
+
+func (m *mockAnypointClient) GetAnalyticsWindow() ([]anypoint.AnalyticsEvent, error) {
+	return nil, nil
+}
+
 //
 // func getAgent() Agent {
 // 	mac := &mockAnypointClient{}

@@ -106,7 +106,7 @@ type mockDiscovery struct {
 	hitCh  chan bool
 }
 
-func (m mockDiscovery) DiscoveryLoop() {
+func (m mockDiscovery) Loop() {
 	m.hitCh <- true
 }
 
@@ -122,8 +122,11 @@ type mockPublisher struct {
 	hitCh  chan bool
 }
 
-func (m mockPublisher) PublishLoop() {
+func (m mockPublisher) Loop() {
 	m.hitCh <- true
+}
+
+func (m mockPublisher) OnConfigChange(*config.MulesoftConfig) {
 }
 
 func (m mockPublisher) Stop() {

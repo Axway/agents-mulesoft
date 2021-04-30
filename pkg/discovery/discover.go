@@ -21,12 +21,7 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-type APIDiscovery interface {
-	DiscoveryLoop()
-	OnConfigChange(cfg *config.MulesoftConfig)
-	Stop()
-}
-
+// discovery implements the Repeater interface. Polls mulesoft for APIs.
 type discovery struct {
 	apiChan             chan *ServiceDetail
 	assetCache          cache.Cache
@@ -50,8 +45,8 @@ func (a *discovery) OnConfigChange(cfg *config.MulesoftConfig) {
 	a.stage = cfg.Environment
 }
 
-// DiscoveryLoop Discovery event loop.
-func (a *discovery) DiscoveryLoop() {
+// Loop Discovery event loop.
+func (a *discovery) Loop() {
 	go func() {
 		// Instant fist "tick"
 		a.discoverAPIs()
