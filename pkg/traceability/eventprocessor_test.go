@@ -6,8 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Axway/agents-mulesoft/pkg/discovery"
-
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 
 	"github.com/stretchr/testify/assert"
@@ -61,7 +59,7 @@ func TestEventProcessor_ProcessRaw(t *testing.T) {
 	assert.Equal(t, TeamID, summaryEvent.TransactionSummary.Team.ID)
 	assert.Equal(t, transaction.FormatProxyID(event.APIVersionName), summaryEvent.TransactionSummary.Proxy.ID)
 	assert.Equal(t, 1, summaryEvent.TransactionSummary.Proxy.Revision)
-	assert.Equal(t, discovery.FormatServiceTitle(event.APIName, event.APIVersionName), summaryEvent.TransactionSummary.Proxy.Name)
+	assert.Equal(t, event.APIName, summaryEvent.TransactionSummary.Proxy.Name)
 	assert.Nil(t, summaryEvent.TransactionSummary.Runtime)
 	assert.Equal(t, "http", summaryEvent.TransactionSummary.EntryPoint.Type)
 	assert.Equal(t, event.Verb, summaryEvent.TransactionSummary.EntryPoint.Method)

@@ -45,7 +45,7 @@ func Test_buildServiceBody(t *testing.T) {
 		URL:               "https://petstore3.us-e2.cloudhub.io",
 		Version:           "1.0.0",
 	}
-	apicSvc, err := buildServiceBody(sd)
+	apicSvc, err := BuildServiceBody(sd)
 	assert.Nil(t, err)
 	assert.Equal(t, sd.APIName, apicSvc.APIName)
 	assert.Equal(t, sd.APISpec, apicSvc.SpecDefinition)
@@ -62,7 +62,7 @@ func Test_buildServiceBody(t *testing.T) {
 	assert.Equal(t, sd.Status, apicSvc.Status)
 	assert.Equal(t, sd.SubscriptionName, apicSvc.SubscriptionName)
 	assert.Equal(t, map[string]interface{}{"tag1": true}, apicSvc.Tags)
-	assert.Equal(t, FormatServiceTitle(sd.Title, sd.Version), apicSvc.NameToPush)
+	assert.Equal(t, sd.Title, apicSvc.NameToPush)
 	assert.Equal(t, sd.URL, apicSvc.URL)
 	assert.Equal(t, sd.Version, apicSvc.Version)
 }

@@ -4,6 +4,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Axway/agents-mulesoft/pkg/discovery"
+
 	"github.com/Axway/agent-sdk/pkg/transaction"
 
 	"github.com/stretchr/testify/assert"
@@ -104,4 +106,37 @@ func Test_buildHeaders(t *testing.T) {
 	}
 	res := buildHeaders(h)
 	assert.Equal(t, "{\"Authorization\":\"abc123\",\"User-Agent\":\"MulesoftTraceability\"}", res)
+}
+
+func Test_APIServiceNameAndTransactionProxyNameAreEqual(t *testing.T) {
+	sd := &discovery.ServiceDetail{
+		APIName:           "petstore-3",
+		APISpec:           []byte("{\"openapi\":\"3.0.1\",\"servers\":[{\"url\":\"google.com\"}]}"),
+		APIUpdateSeverity: "",
+		AuthPolicy:        "pass-through",
+		Description:       "petstore api",
+		Documentation:     nil,
+		ID:                "211799904",
+		Image:             "",
+		ImageContentType:  "",
+		ResourceType:      "oas3",
+		ServiceAttributes: nil,
+		Stage:             "Sandbox",
+		State:             "",
+		Status:            "",
+		SubscriptionName:  "",
+		Tags:              nil,
+		Title:             "petstore-3",
+		URL:               "",
+		Version:           "1.0.0",
+	}
+	body, err := discovery.BuildServiceBody(sd)
+	assert.Nil(t, err)
+	apiServiceName := body.NameToPush
+
+	em := &EventMapper{}
+	le, err := em.createSummaryEvent(100, FormatTxnId(event.APIVersionID, event.MessageID), event, "123")
+	assert.Nil(t, err)
+	transactionProxyName := le.TransactionSummary.Proxy.Name
+	assert.Equal(t, apiServiceName, transactionProxyName)
 }
