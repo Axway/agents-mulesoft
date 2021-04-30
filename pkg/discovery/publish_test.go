@@ -17,11 +17,15 @@ import (
 // 		ServiceAttributes: nil,
 // 	}
 // 	agent := &Agent{}
-// 	err := agent.publisher.publish(sd)
+// 	err := agent.publishLoop.publish(sd)
 // 	if err != nil {
 // 		t.Error(err)
 // 	}
 // }
+
+func TestPublisher(t *testing.T) {
+
+}
 
 func Test_buildServiceBody(t *testing.T) {
 	sd := &ServiceDetail{

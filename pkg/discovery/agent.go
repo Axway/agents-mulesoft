@@ -19,16 +19,16 @@ type Agent struct {
 	assetCache cache.Cache
 	stopAgent  chan bool
 	discovery  APIDiscovery
-	publisher  APIPublisher
+	publisher  APIPublishLoop
 }
 
-// New creates a new agent
-func New(cfg *config.AgentConfig, client anypoint.Client) (agent *Agent) {
+// NewAgent creates a new agent
+func NewAgent(cfg *config.AgentConfig, client anypoint.Client) (agent *Agent) {
 	buffer := 5
 	assetCache := cache.New()
 	apiChan := make(chan *ServiceDetail, buffer)
 
-	pub := &publisher{
+	pub := &publishLoop{
 		apiChan:     apiChan,
 		stopPublish: make(chan bool),
 	}
@@ -45,14 +45,22 @@ func New(cfg *config.AgentConfig, client anypoint.Client) (agent *Agent) {
 		stopDiscovery:       make(chan bool),
 	}
 
-	agent = &Agent{
+	return newAgent(client, disc, pub, assetCache)
+}
+
+func newAgent(
+	client anypoint.Client,
+	discovery APIDiscovery,
+	publisher APIPublishLoop,
+	assetCache cache.Cache,
+) *Agent {
+	return &Agent{
+		client:     client,
 		assetCache: assetCache,
-		discovery:  disc,
-		publisher:  pub,
+		discovery:  discovery,
+		publisher:  publisher,
 		stopAgent:  make(chan bool),
 	}
-
-	return agent
 }
 
 // onConfigChange apply configuration changes
@@ -80,7 +88,8 @@ func (a *Agent) CheckHealth() error {
 
 // Run the agent loop
 func (a *Agent) Run() {
-	agent.RegisterAPIValidator(a.validateAPI)
+	validator := validateAPI(a.assetCache)
+	agent.RegisterAPIValidator(validator)
 	agent.OnConfigChange(a.onConfigChange)
 
 	go a.discovery.DiscoveryLoop()
@@ -95,17 +104,24 @@ func (a *Agent) Run() {
 	}
 }
 
-// validateAPI checks that the API still exists on the dataplane. If it doesn't the agent
+// Stop stops customLogTraceabilityAgent.
+func (a *Agent) Stop() {
+	a.stopAgent <- true
+}
+
+// validateAPI checks that the API still exists on the data plane. If it doesn't the agent
 // performs cleanup on the API Central environment. The asset cache is populated by the
 // discovery loop.
-func (a *Agent) validateAPI(apiID, stageName string) bool {
-	asset, err := a.assetCache.Get(formatCacheKey(apiID, stageName))
-	if err != nil {
-		log.Warnf("Unable to validate API: %s", err.Error())
-		// If we can't validate it exists then assume it does until known otherwise.
-		return true
+func validateAPI(assetCache cache.Cache) func(apiID, stageName string) bool {
+	return func(apiID, stageName string) bool {
+		asset, err := assetCache.Get(formatCacheKey(apiID, stageName))
+		if err != nil {
+			log.Warnf("Unable to validate API: %s", err.Error())
+			// If we can't validate it exists then assume it does until known otherwise.
+			return true
+		}
+		return asset != nil
 	}
-	return asset != nil
 }
 
 // cleanTags splits the CSV and trims off whitespace

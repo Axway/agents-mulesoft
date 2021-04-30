@@ -1,10 +1,7 @@
 package anypoint
 
 import (
-	"fmt"
 	"time"
-
-	"github.com/Axway/agent-sdk/pkg/api"
 )
 
 // CurrentUser -
@@ -209,17 +206,4 @@ type AnalyticsEvent struct {
 	UserAgentVersion   string    `json:"User Agent Version"`
 	Verb               string    `json:"Verb"`
 	ViolatedPolicyName string    `json:"Violated Policy Name"`
-}
-
-type MockClient struct {
-	Reqs map[string]*api.Response
-}
-
-func (mc *MockClient) Send(request api.Request) (*api.Response, error) {
-	req, ok := mc.Reqs[request.URL]
-	if ok {
-		return req, nil
-	} else {
-		return nil, fmt.Errorf("no request found for %s", request.URL)
-	}
 }

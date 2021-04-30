@@ -6,26 +6,36 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
-type APIPublisher interface {
+type APIPublishLoop interface {
 	PublishLoop()
 	Stop()
 }
 
-type publisher struct {
-	apiChan     chan *ServiceDetail
-	stopPublish chan bool
+type APIPublisher interface {
+	Publish(serviceDetail *ServiceDetail) error
 }
 
-func (a *publisher) Stop() {
+// type publisher struct {}
+//
+// func (p publisher) Publish(serviceDetail *ServiceDetail) error {
+// }
+
+type publishLoop struct {
+	apiChan     chan *ServiceDetail
+	stopPublish chan bool
+	publish     APIPublisher
+}
+
+func (a *publishLoop) Stop() {
 	a.stopPublish <- true
 }
 
 // publishLoop Publish event loop.
-func (a *publisher) PublishLoop() {
+func (a *publishLoop) PublishLoop() {
 	for {
 		select {
 		case serviceDetail := <-a.apiChan:
-			err := a.publish(serviceDetail)
+			err := a.bbbpublish(serviceDetail)
 			if err != nil {
 				log.Errorf("Error publishing API \"%s:(%s)\":%s", serviceDetail.APIName, serviceDetail.ID, err.Error())
 			}
@@ -36,7 +46,7 @@ func (a *publisher) PublishLoop() {
 }
 
 // publish Publishes the API to Amplify Central.
-func (a *publisher) publish(serviceDetail *ServiceDetail) error {
+func (a *publishLoop) bbbpublish(serviceDetail *ServiceDetail) error {
 	log.Infof("Publishing API \"%s (%s)\" to Amplify Central", serviceDetail.APIName, serviceDetail.ID)
 
 	serviceBody, err := BuildServiceBody(serviceDetail)
