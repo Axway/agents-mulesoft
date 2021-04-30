@@ -15,14 +15,11 @@ import (
 
 // Agent links the mulesoft client and the gateway client.
 type Agent struct {
-	anypointClient anypoint.Client
-	assetCache     cache.Cache
-	stage          string
-	stopAgent      chan bool
-	stopDiscovery  chan bool
-	stopPublish    chan bool
-	discovery      APIDiscovery
-	publisher      APIPublisher
+	client     anypoint.Client
+	assetCache cache.Cache
+	stopAgent  chan bool
+	discovery  APIDiscovery
+	publisher  APIPublisher
 }
 
 // New creates a new agent
@@ -37,9 +34,9 @@ func New(cfg *config.AgentConfig, client anypoint.Client) (agent *Agent) {
 	}
 
 	disc := &discovery{
-		client:              client,
 		apiChan:             apiChan,
 		assetCache:          assetCache,
+		client:              client,
 		discoveryIgnoreTags: cleanTags(cfg.MulesoftConfig.DiscoveryIgnoreTags),
 		discoveryPageSize:   50,
 		discoveryTags:       cleanTags(cfg.MulesoftConfig.DiscoveryTags),
@@ -51,8 +48,8 @@ func New(cfg *config.AgentConfig, client anypoint.Client) (agent *Agent) {
 	agent = &Agent{
 		assetCache: assetCache,
 		discovery:  disc,
-		stopAgent:  make(chan bool),
 		publisher:  pub,
+		stopAgent:  make(chan bool),
 	}
 
 	return agent
@@ -66,7 +63,7 @@ func (a *Agent) onConfigChange() {
 	a.discovery.Stop()
 	a.publisher.Stop()
 
-	a.anypointClient.OnConfigChange(cfg.MulesoftConfig)
+	a.client.OnConfigChange(cfg.MulesoftConfig)
 	a.discovery.OnConfigChange(cfg.MulesoftConfig)
 	// Restart Discovery & Publish
 	go a.discovery.DiscoveryLoop()

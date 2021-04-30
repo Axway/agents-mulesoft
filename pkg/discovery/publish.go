@@ -1,8 +1,6 @@
 package discovery
 
 import (
-	"fmt"
-
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	"github.com/Axway/agent-sdk/pkg/util/log"
@@ -41,7 +39,7 @@ func (a *publisher) PublishLoop() {
 func (a *publisher) publish(serviceDetail *ServiceDetail) error {
 	log.Infof("Publishing API \"%s (%s)\" to Amplify Central", serviceDetail.APIName, serviceDetail.ID)
 
-	serviceBody, err := buildServiceBody(serviceDetail)
+	serviceBody, err := BuildServiceBody(serviceDetail)
 	if err != nil {
 		log.Errorf("Error building service body for API \"%s (%s)\": %s", serviceDetail.APIName, serviceDetail.ID, err.Error())
 		return err
@@ -55,8 +53,8 @@ func (a *publisher) publish(serviceDetail *ServiceDetail) error {
 	return err
 }
 
-// buildServiceBody - creates the service definition
-func buildServiceBody(service *ServiceDetail) (apic.ServiceBody, error) {
+// BuildServiceBody - creates the service definition
+func BuildServiceBody(service *ServiceDetail) (apic.ServiceBody, error) {
 	tags := map[string]interface{}{}
 	if service.Tags != nil {
 		for _, tag := range service.Tags {
@@ -80,12 +78,8 @@ func buildServiceBody(service *ServiceDetail) (apic.ServiceBody, error) {
 		SetStatus(service.Status).
 		SetSubscriptionName(service.SubscriptionName).
 		SetTags(tags).
-		SetTitle(FormatServiceTitle(service.Title, service.Version)).
+		SetTitle(service.Title).
 		SetURL(service.URL).
 		SetVersion(service.Version).
 		Build()
-}
-
-func FormatServiceTitle(title, version string) string {
-	return fmt.Sprintf("%s (%s)", title, version)
 }

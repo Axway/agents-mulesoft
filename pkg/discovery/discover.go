@@ -28,9 +28,9 @@ type APIDiscovery interface {
 }
 
 type discovery struct {
-	client              anypoint.Client
 	apiChan             chan *ServiceDetail
 	assetCache          cache.Cache
+	client              anypoint.Client
 	discoveryIgnoreTags []string
 	discoveryPageSize   int
 	discoveryTags       []string
