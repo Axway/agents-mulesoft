@@ -10,10 +10,20 @@ import (
 
 type APIPublisher interface {
 	PublishLoop()
+	Stop()
+}
+
+type publisher struct {
+	apiChan     chan *ServiceDetail
+	stopPublish chan bool
+}
+
+func (a *publisher) Stop() {
+	a.stopPublish <- true
 }
 
 // publishLoop Publish event loop.
-func (a *Agent) publishLoop() {
+func (a *publisher) PublishLoop() {
 	for {
 		select {
 		case serviceDetail := <-a.apiChan:
@@ -28,7 +38,7 @@ func (a *Agent) publishLoop() {
 }
 
 // publish Publishes the API to Amplify Central.
-func (a *Agent) publish(serviceDetail *ServiceDetail) error {
+func (a *publisher) publish(serviceDetail *ServiceDetail) error {
 	log.Infof("Publishing API \"%s (%s)\" to Amplify Central", serviceDetail.APIName, serviceDetail.ID)
 
 	serviceBody, err := buildServiceBody(serviceDetail)

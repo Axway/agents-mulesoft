@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Axway/agents-mulesoft/pkg/config"
+
 	"github.com/sirupsen/logrus"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
@@ -21,10 +23,35 @@ import (
 
 type APIDiscovery interface {
 	DiscoveryLoop()
+	OnConfigChange(cfg *config.MulesoftConfig)
+	Stop()
 }
 
-// discoveryLoop Discovery event loop.
-func (a *Agent) discoveryLoop() {
+type discovery struct {
+	client              anypoint.Client
+	apiChan             chan *ServiceDetail
+	assetCache          cache.Cache
+	discoveryIgnoreTags []string
+	discoveryPageSize   int
+	discoveryTags       []string
+	pollInterval        time.Duration
+	stage               string
+	stopDiscovery       chan bool
+}
+
+func (a *discovery) Stop() {
+	a.stopDiscovery <- true
+}
+
+func (a *discovery) OnConfigChange(cfg *config.MulesoftConfig) {
+	a.discoveryTags = cleanTags(cfg.DiscoveryTags)
+	a.discoveryIgnoreTags = cleanTags(cfg.DiscoveryIgnoreTags)
+	a.pollInterval = cfg.PollInterval
+	a.stage = cfg.Environment
+}
+
+// DiscoveryLoop Discovery event loop.
+func (a *discovery) DiscoveryLoop() {
 	go func() {
 		// Instant fist "tick"
 		a.discoverAPIs()
@@ -45,7 +72,7 @@ func (a *Agent) discoveryLoop() {
 }
 
 // discoverAPIs Finds the APIs that are publishable.
-func (a *Agent) discoverAPIs() {
+func (a *discovery) discoverAPIs() {
 	offset := 0
 	pageSize := a.discoveryPageSize
 
@@ -55,7 +82,7 @@ func (a *Agent) discoverAPIs() {
 	for {
 		page := &anypoint.Page{Offset: offset, PageSize: pageSize}
 
-		assets, err := a.anypointClient.ListAssets(page)
+		assets, err := a.client.ListAssets(page)
 		if err != nil {
 			log.Error(err)
 		}
@@ -83,7 +110,7 @@ func (a *Agent) discoverAPIs() {
 
 // getServiceDetails gathers the ServiceDetail for a single Mulesoft Asset. Each Asset has multiple versions and
 // so can resolve to multiple ServiceDetails.
-func (a *Agent) getServiceDetails(asset *anypoint.Asset, freshAssetCache cache.Cache) []*ServiceDetail {
+func (a *discovery) getServiceDetails(asset *anypoint.Asset, freshAssetCache cache.Cache) []*ServiceDetail {
 	serviceDetails := []*ServiceDetail{}
 	for _, api := range asset.APIs {
 		// Cache - update the existing to ensure it contains anything new, but create fresh cache
@@ -105,7 +132,7 @@ func (a *Agent) getServiceDetails(asset *anypoint.Asset, freshAssetCache cache.C
 }
 
 // getServiceDetail gets the ServiceDetail for the API asset.
-func (a *Agent) getServiceDetail(asset *anypoint.Asset, api *anypoint.API) (*ServiceDetail, error) {
+func (a *discovery) getServiceDetail(asset *anypoint.Asset, api *anypoint.API) (*ServiceDetail, error) {
 	// Filtering
 	if !a.shouldDiscoverAPI(api) {
 		// Skip
@@ -119,7 +146,7 @@ func (a *Agent) getServiceDetail(asset *anypoint.Asset, api *anypoint.API) (*Ser
 	}
 
 	// Get the policies associated with the API
-	policies, err := a.anypointClient.GetPolicies(api)
+	policies, err := a.client.GetPolicies(api)
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +165,7 @@ func (a *Agent) getServiceDetail(asset *anypoint.Asset, api *anypoint.API) (*Ser
 	// Potentially discoverable API, gather the details
 	log.Infof("Gathering details for %s(%d)", asset.AssetID, api.ID)
 
-	exchangeAsset, err := a.anypointClient.GetExchangeAsset(api)
+	exchangeAsset, err := a.client.GetExchangeAsset(api)
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +186,7 @@ func (a *Agent) getServiceDetail(asset *anypoint.Asset, api *anypoint.API) (*Ser
 		return nil, err
 	}
 
-	icon, iconContentType, err := a.anypointClient.GetExchangeAssetIcon(exchangeAsset)
+	icon, iconContentType, err := a.client.GetExchangeAssetIcon(exchangeAsset)
 	if err != nil {
 		return nil, err
 	}
@@ -181,7 +208,7 @@ func (a *Agent) getServiceDetail(asset *anypoint.Asset, api *anypoint.API) (*Ser
 }
 
 // shouldDiscoverAPI - callback used determine if the API should be pushed to Central or not
-func (a *Agent) shouldDiscoverAPI(api *anypoint.API) bool {
+func (a *discovery) shouldDiscoverAPI(api *anypoint.API) bool {
 	if doesAPIContainAnyMatchingTag(a.discoveryIgnoreTags, api) {
 		return false // ignore
 	}
@@ -195,8 +222,8 @@ func (a *Agent) shouldDiscoverAPI(api *anypoint.API) bool {
 }
 
 // getSpecFromExchangeFile gets the spec content and injects the api endpoint.
-func (a *Agent) getSpecFromExchangeFile(api *anypoint.API, exchangeFile *anypoint.ExchangeFile) ([]byte, string, error) {
-	specContent, err := a.anypointClient.GetExchangeFileContent(exchangeFile)
+func (a *discovery) getSpecFromExchangeFile(api *anypoint.API, exchangeFile *anypoint.ExchangeFile) ([]byte, string, error) {
+	specContent, err := a.client.GetExchangeFileContent(exchangeFile)
 	if err != nil {
 		return nil, "", err
 	}

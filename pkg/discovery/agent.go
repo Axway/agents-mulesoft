@@ -3,11 +3,8 @@ package discovery
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
-	coreagent "github.com/Axway/agent-sdk/pkg/agent"
-	"github.com/Axway/agent-sdk/pkg/apic"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	utilErrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
@@ -18,38 +15,44 @@ import (
 
 // Agent links the mulesoft client and the gateway client.
 type Agent struct {
-	anypointClient      anypoint.Client
-	apicClient          apic.Client
-	apiChan             chan *ServiceDetail
-	assetCache          cache.Cache
-	discoveryIgnoreTags []string
-	discoveryPageSize   int
-	discoveryTags       []string
-	pollInterval        time.Duration
-	publishBufferSize   int
-	stage               string
-	stopAgent           chan bool
-	stopDiscovery       chan bool
-	stopPublish         chan bool
+	anypointClient anypoint.Client
+	assetCache     cache.Cache
+	stage          string
+	stopAgent      chan bool
+	stopDiscovery  chan bool
+	stopPublish    chan bool
+	discovery      APIDiscovery
+	publisher      APIPublisher
 }
 
 // New creates a new agent
 func New(cfg *config.AgentConfig, client anypoint.Client) (agent *Agent) {
 	buffer := 5
 	assetCache := cache.New()
-	agent = &Agent{
-		anypointClient:      client,
-		apicClient:          coreagent.GetCentralClient(),
-		apiChan:             make(chan *ServiceDetail, buffer),
+	apiChan := make(chan *ServiceDetail, buffer)
+
+	pub := &publisher{
+		apiChan:     apiChan,
+		stopPublish: make(chan bool),
+	}
+
+	disc := &discovery{
+		client:              client,
+		apiChan:             apiChan,
 		assetCache:          assetCache,
 		discoveryIgnoreTags: cleanTags(cfg.MulesoftConfig.DiscoveryIgnoreTags),
 		discoveryPageSize:   50,
 		discoveryTags:       cleanTags(cfg.MulesoftConfig.DiscoveryTags),
 		pollInterval:        cfg.MulesoftConfig.PollInterval,
 		stage:               cfg.MulesoftConfig.Environment,
-		stopAgent:           make(chan bool),
 		stopDiscovery:       make(chan bool),
-		stopPublish:         make(chan bool),
+	}
+
+	agent = &Agent{
+		assetCache: assetCache,
+		discovery:  disc,
+		stopAgent:  make(chan bool),
+		publisher:  pub,
 	}
 
 	return agent
@@ -60,19 +63,14 @@ func (a *Agent) onConfigChange() {
 	cfg := config.GetConfig()
 
 	// Stop Discovery & Publish
-	a.stopDiscovery <- true
-	a.stopPublish <- true
+	a.discovery.Stop()
+	a.publisher.Stop()
 
-	a.stage = cfg.MulesoftConfig.Environment
-	a.discoveryTags = cleanTags(cfg.MulesoftConfig.DiscoveryTags)
-	a.discoveryIgnoreTags = cleanTags(cfg.MulesoftConfig.DiscoveryIgnoreTags)
-	a.apicClient = coreagent.GetCentralClient()
-	a.pollInterval = cfg.MulesoftConfig.PollInterval
 	a.anypointClient.OnConfigChange(cfg.MulesoftConfig)
-
+	a.discovery.OnConfigChange(cfg.MulesoftConfig)
 	// Restart Discovery & Publish
-	go a.discoveryLoop()
-	go a.publishLoop()
+	go a.discovery.DiscoveryLoop()
+	go a.publisher.PublishLoop()
 }
 
 // CheckHealth - check the health of all clients associated with the agent
@@ -88,14 +86,14 @@ func (a *Agent) Run() {
 	agent.RegisterAPIValidator(a.validateAPI)
 	agent.OnConfigChange(a.onConfigChange)
 
-	go a.discoveryLoop()
-	go a.publishLoop()
+	go a.discovery.DiscoveryLoop()
+	go a.publisher.PublishLoop()
 
 	select {
 	case <-a.stopAgent:
 		log.Info("Received request to kill agent")
-		a.stopDiscovery <- true
-		a.stopPublish <- true
+		a.discovery.Stop()
+		a.publisher.Stop()
 		return
 	}
 }
