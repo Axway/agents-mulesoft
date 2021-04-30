@@ -92,16 +92,29 @@ type API struct {
 
 // Policy -
 type Policy struct {
-	APIID                int64                  `json:"apiId"`
-	AssetID              string                 `json:"assetId"`
-	AssetVersion         string                 `json:"assetVersion"`
 	Audit                Audit                  `json:"audit"`
-	ConfigurationData    map[string]interface{} `json:"configurationData"`
-	GroupID              string                 `json:"groupId"`
-	ID                   int64                  `json:"id"`
+	Type                 string                 `json:"type"`
+	Order                int                    `json:"order"`
+	PointCutData         interface{}            `json:"pointCutData"`
+	PolicyID             int                    `json:"policyId"`
+	Version              int64                  `json:"version"`
 	MasterOrganizationID string                 `json:"masterOrganizationId"`
 	OrganizationID       string                 `json:"organizationId"`
+	ID                   int64                  `json:"id"`
+	Template             Template               `json:"template"`
+	APIID                int64                  `json:"apiId"`
 	PolicyTemplateID     string                 `json:"policyTemplateId"`
+	Configuration        map[string]interface{} `json:"configuration"`
+}
+
+type Template struct {
+	GroupId      string `json:"groupId"`
+	AssetId      string `json:"assetId"`
+	Assetversion string `json:"assetVersion"`
+}
+
+type Policies struct {
+	Policies []Policy `json:"policies"`
 }
 
 // Audit -

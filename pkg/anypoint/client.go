@@ -37,7 +37,7 @@ type Client interface {
 	GetAccessToken() (string, *User, time.Duration, error)
 	GetEnvironmentByName(name string) (*Environment, error)
 	ListAssets(page *Page) ([]Asset, error)
-	GetPolicies(api *API) ([]Policy, error)
+	GetPolicies(api *API) (Policies, error)
 	GetExchangeAsset(api *API) (*ExchangeAsset, error)
 	GetExchangeAssetIcon(asset *ExchangeAsset) (icon string, contentType string, err error)
 	GetExchangeFileContent(file *ExchangeFile) (fileContent []byte, err error)
@@ -249,13 +249,13 @@ func (c *AnypointClient) ListAssets(page *Page) ([]Asset, error) {
 }
 
 // GetPolicies lists the API policies.
-func (c *AnypointClient) GetPolicies(api *API) ([]Policy, error) {
-	var policies []Policy
+func (c *AnypointClient) GetPolicies(api *API) (Policies, error) {
+	var policies Policies
 	url := fmt.Sprintf("%s/apimanager/api/v1/organizations/%s/environments/%s/apis/%d/policies", c.baseURL, c.auth.GetOrgID(), c.environment.ID, api.ID)
 	err := c.invokeJSONGet(url, nil, &policies)
 
 	if err != nil {
-		return nil, err
+		return Policies{}, err
 	}
 
 	return policies, err
@@ -386,6 +386,11 @@ func (c *AnypointClient) invokeJSON(request coreapi.Request, resp interface{}) e
 	body, _, err := c.invoke(request)
 	if err != nil {
 		return agenterrors.Wrap(ErrCommunicatingWithGateway, err.Error())
+	}
+
+	//TODO this is to prevent Mule 3 APIs with no policies crashing the discovery agent -> need to verify if still required
+	if string(body) == "[]" {
+		return nil
 	}
 
 	err = json.Unmarshal(body, resp)
