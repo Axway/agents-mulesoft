@@ -23,28 +23,28 @@ type discovery struct {
 	serviceHandler    ServiceHandler
 }
 
-func (a *discovery) Stop() {
-	a.stopDiscovery <- true
+func (d *discovery) Stop() {
+	d.stopDiscovery <- true
 }
 
-func (a *discovery) OnConfigChange(cfg *config.MulesoftConfig) {
-	a.pollInterval = cfg.PollInterval
-	a.serviceHandler.OnConfigChange(cfg)
+func (d *discovery) OnConfigChange(cfg *config.MulesoftConfig) {
+	d.pollInterval = cfg.PollInterval
+	d.serviceHandler.OnConfigChange(cfg)
 }
 
 // Loop Discovery event loop.
-func (a *discovery) Loop() {
+func (d *discovery) Loop() {
 	go func() {
 		// Instant fist "tick"
-		a.discoverAPIs()
+		d.discoverAPIs()
 		logrus.Info("Starting poller for Mulesoft APIs")
-		ticker := time.NewTicker(a.pollInterval)
+		ticker := time.NewTicker(d.pollInterval)
 		for {
 			select {
 			case <-ticker.C:
-				a.discoverAPIs()
+				d.discoverAPIs()
 				break
-			case <-a.stopDiscovery:
+			case <-d.stopDiscovery:
 				log.Debug("stopping discovery loop")
 				ticker.Stop()
 				break
@@ -54,23 +54,23 @@ func (a *discovery) Loop() {
 }
 
 // discoverAPIs Finds the APIs that are publishable.
-func (a *discovery) discoverAPIs() {
+func (d *discovery) discoverAPIs() {
 	offset := 0
-	pageSize := a.discoveryPageSize
+	pageSize := d.discoveryPageSize
 
 	for {
 		page := &anypoint.Page{Offset: offset, PageSize: pageSize}
 
-		assets, err := a.client.ListAssets(page)
+		assets, err := d.client.ListAssets(page)
 		if err != nil {
 			log.Error(err)
 		}
 
 		for _, asset := range assets {
-			svcDetails := a.serviceHandler.ToServiceDetails(&asset)
+			svcDetails := d.serviceHandler.ToServiceDetails(&asset)
 			if svcDetails != nil {
 				for _, svc := range svcDetails {
-					a.apiChan <- svc
+					d.apiChan <- svc
 				}
 			}
 		}
@@ -84,5 +84,5 @@ func (a *discovery) discoverAPIs() {
 
 	// Replacing asset cache rather than updating it
 	freshAssetCache := cache.New()
-	a.assetCache = freshAssetCache
+	d.assetCache = freshAssetCache
 }

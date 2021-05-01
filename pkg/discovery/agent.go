@@ -34,7 +34,7 @@ func NewAgent(cfg *config.AgentConfig, client anypoint.Client) (agent *Agent) {
 	assetCache := cache.New()
 	apiChan := make(chan *ServiceDetail, buffer)
 
-	pub := &publishLoop{
+	pub := &publisher{
 		apiChan:     apiChan,
 		stopPublish: make(chan bool),
 		publishAPI:  coreAgent.PublishAPI,

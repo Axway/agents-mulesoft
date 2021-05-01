@@ -8,38 +8,38 @@ import (
 
 type PublishAPI func(serviceBody apic.ServiceBody) error
 
-// publishLoop implements the Repeater interface. Waits for for items on a channel and publishes them to central
-type publishLoop struct {
+// publisher implements the Repeater interface. Waits for for items on a channel and publishes them to central
+type publisher struct {
 	apiChan     chan *ServiceDetail
 	stopPublish chan bool
 	publishAPI  PublishAPI
 }
 
-func (a *publishLoop) Stop() {
-	a.stopPublish <- true
+func (p *publisher) Stop() {
+	p.stopPublish <- true
 }
 
-func (a *publishLoop) OnConfigChange(_ *config.MulesoftConfig) {
+func (p *publisher) OnConfigChange(_ *config.MulesoftConfig) {
 	// noop
 }
 
-// publishLoop Publish event loop.
-func (a *publishLoop) Loop() {
+// publisher Publish event loop.
+func (p *publisher) Loop() {
 	for {
 		select {
-		case serviceDetail := <-a.apiChan:
-			err := a.publish(serviceDetail)
+		case serviceDetail := <-p.apiChan:
+			err := p.publish(serviceDetail)
 			if err != nil {
 				log.Errorf("Error publishing API '%s:(%s)':%s", serviceDetail.APIName, serviceDetail.ID, err.Error())
 			}
-		case <-a.stopPublish:
+		case <-p.stopPublish:
 			return
 		}
 	}
 }
 
 // publish Publishes the API to Amplify Central.
-func (a *publishLoop) publish(serviceDetail *ServiceDetail) error {
+func (p *publisher) publish(serviceDetail *ServiceDetail) error {
 	log.Infof("Publishing API '%s (%s)' to Amplify Central", serviceDetail.APIName, serviceDetail.ID)
 
 	serviceBody, err := BuildServiceBody(serviceDetail)
@@ -47,7 +47,7 @@ func (a *publishLoop) publish(serviceDetail *ServiceDetail) error {
 		log.Errorf("Error building service body for API '%s (%s)': %s", serviceDetail.APIName, serviceDetail.ID, err.Error())
 		return err
 	}
-	err = a.publishAPI(serviceBody)
+	err = p.publishAPI(serviceBody)
 	if err != nil {
 		log.Errorf("Error publishing API '%s (%s)' to Amplify Central: %s", serviceDetail.APIName, serviceDetail.ID, err.Error())
 		return err

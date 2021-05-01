@@ -36,7 +36,7 @@ func TestPublish(t *testing.T) {
 	mp := &mockAPIPublisher{
 		hitCh: make(chan bool),
 	}
-	pub := &publishLoop{
+	pub := &publisher{
 		apiChan:     make(chan *ServiceDetail),
 		stopPublish: make(chan bool),
 		publishAPI:  mp.mockPublishAPI,
