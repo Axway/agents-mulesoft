@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Axway/agent-sdk/pkg/agent"
+	coreAgent "github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	utilErrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
@@ -37,18 +37,26 @@ func NewAgent(cfg *config.AgentConfig, client anypoint.Client) (agent *Agent) {
 	pub := &publishLoop{
 		apiChan:     apiChan,
 		stopPublish: make(chan bool),
+		publishAPI:  coreAgent.PublishAPI,
+	}
+
+	svcHandler := &serviceHandler{
+		assetCache:          assetCache,
+		freshCache:          cache.New(),
+		stage:               cfg.MulesoftConfig.Environment,
+		discoveryTags:       cleanTags(cfg.MulesoftConfig.DiscoveryTags),
+		discoveryIgnoreTags: cleanTags(cfg.MulesoftConfig.DiscoveryIgnoreTags),
+		client:              client,
 	}
 
 	disc := &discovery{
-		apiChan:             apiChan,
-		assetCache:          assetCache,
-		client:              client,
-		discoveryIgnoreTags: cleanTags(cfg.MulesoftConfig.DiscoveryIgnoreTags),
-		discoveryPageSize:   50,
-		discoveryTags:       cleanTags(cfg.MulesoftConfig.DiscoveryTags),
-		pollInterval:        cfg.MulesoftConfig.PollInterval,
-		stage:               cfg.MulesoftConfig.Environment,
-		stopDiscovery:       make(chan bool),
+		apiChan:           apiChan,
+		assetCache:        assetCache,
+		client:            client,
+		discoveryPageSize: 50,
+		pollInterval:      cfg.MulesoftConfig.PollInterval,
+		stopDiscovery:     make(chan bool),
+		serviceHandler:    svcHandler,
 	}
 
 	return newAgent(client, disc, pub, assetCache)
@@ -96,8 +104,8 @@ func (a *Agent) CheckHealth() error {
 // Run the agent loop
 func (a *Agent) Run() {
 	validator := validateAPI(a.assetCache)
-	agent.RegisterAPIValidator(validator)
-	agent.OnConfigChange(a.onConfigChange)
+	coreAgent.RegisterAPIValidator(validator)
+	coreAgent.OnConfigChange(a.onConfigChange)
 
 	go a.discovery.Loop()
 	go a.publisher.Loop()

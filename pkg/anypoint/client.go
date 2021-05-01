@@ -53,6 +53,10 @@ type AuthClient interface {
 	GetAccessToken() (string, *User, time.Duration, error)
 }
 
+type ListAssetClient interface {
+	ListAssets(page *Page) ([]Asset, error)
+}
+
 // AnypointClient is the client for interacting with Mulesoft Anypoint.
 type AnypointClient struct {
 	baseURL     string
