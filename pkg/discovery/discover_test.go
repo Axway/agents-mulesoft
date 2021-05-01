@@ -1,14 +1,71 @@
 package discovery
 
 import (
+	"testing"
 	"time"
 
+	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 
 	"github.com/Axway/agents-mulesoft/pkg/config"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
+
+const assetID = "dummy asset id"
+
+func TestDiscovery(t *testing.T) {
+	apiChan := make(chan *ServiceDetail)
+	stopCh := make(chan bool)
+	disc := &discovery{
+		apiChan:           apiChan,
+		assetCache:        cache.New(),
+		client:            &mockAnypointClient{},
+		discoveryPageSize: 50,
+		pollInterval:      1 * time.Second,
+		stopDiscovery:     stopCh,
+		serviceHandler:    &mockServiceHandler{},
+	}
+
+	go disc.Loop()
+
+	item := <-disc.apiChan
+	assert.Equal(t, assetID, item.APIName)
+	disc.OnConfigChange(&config.MulesoftConfig{})
+	disc.Stop()
+}
+
+type mockServiceHandler struct{}
+
+func (m mockServiceHandler) ToServiceDetails(asset *anypoint.Asset) []*ServiceDetail {
+	return []*ServiceDetail{
+		{
+			APIName:           asset.AssetID,
+			APISpec:           nil,
+			APIUpdateSeverity: "",
+			AuthPolicy:        "",
+			Description:       "",
+			Documentation:     nil,
+			ID:                "",
+			Image:             "",
+			ImageContentType:  "",
+			ResourceType:      "",
+			ServiceAttributes: nil,
+			Stage:             "",
+			State:             "",
+			Status:            "",
+			SubscriptionName:  "",
+			Tags:              nil,
+			Title:             "",
+			URL:               "",
+			Version:           "",
+		},
+	}
+}
+
+func (m mockServiceHandler) OnConfigChange(_ *config.MulesoftConfig) {
+}
 
 type mockAnypointClient struct {
 	mock.Mock
@@ -31,6 +88,7 @@ func (m *mockAnypointClient) ListAssets(*anypoint.Page) ([]anypoint.Asset, error
 		ID:                12345,
 		Name:              "asset1",
 		ExchangeAssetName: "dummyasset",
+		AssetID:           assetID,
 		APIs: []anypoint.API{{
 			ID:          6789,
 			EndpointURI: "google.com",
