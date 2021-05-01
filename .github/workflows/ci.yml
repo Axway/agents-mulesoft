@@ -27,7 +27,7 @@ jobs:
     - name: Discovery Release (Snapshot)
       uses: goreleaser/goreleaser-action@v2.5.0
       with:
-        workdir: .
+        workdir: ./cmd/discovery
         args: release --snapshot --skip-publish --rm-dist
 
   build-traceability:
@@ -49,5 +49,5 @@ jobs:
     - name: Traceability Release (Snapshot)
       uses: goreleaser/goreleaser-action@v2.5.0
       with:
-        workdir: .
+        workdir: ./cmd/traceability
         args: release --snapshot --skip-publish --rm-dist
