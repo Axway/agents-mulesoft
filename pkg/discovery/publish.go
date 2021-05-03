@@ -28,10 +28,7 @@ func (p *publisher) Loop() {
 	for {
 		select {
 		case serviceDetail := <-p.apiChan:
-			err := p.publish(serviceDetail)
-			if err != nil {
-				log.Errorf("Error publishing API '%s:(%s)':%s", serviceDetail.APIName, serviceDetail.ID, err.Error())
-			}
+			p.publish(serviceDetail)
 		case <-p.stopPublish:
 			return
 		}
@@ -39,21 +36,20 @@ func (p *publisher) Loop() {
 }
 
 // publish Publishes the API to Amplify Central.
-func (p *publisher) publish(serviceDetail *ServiceDetail) error {
+func (p *publisher) publish(serviceDetail *ServiceDetail) {
 	log.Infof("Publishing API '%s (%s)' to Amplify Central", serviceDetail.APIName, serviceDetail.ID)
 
 	serviceBody, err := BuildServiceBody(serviceDetail)
 	if err != nil {
 		log.Errorf("Error building service body for API '%s (%s)': %s", serviceDetail.APIName, serviceDetail.ID, err.Error())
-		return err
+		return
 	}
 	err = p.publishAPI(serviceBody)
 	if err != nil {
 		log.Errorf("Error publishing API '%s (%s)' to Amplify Central: %s", serviceDetail.APIName, serviceDetail.ID, err.Error())
-		return err
+		return
 	}
 	log.Infof("Published API '%s (%s)' to Amplify Central", serviceDetail.APIName, serviceDetail.ID)
-	return err
 }
 
 // BuildServiceBody - creates the service definition

@@ -42,7 +42,7 @@ func (s *serviceHandler) OnConfigChange(cfg *config.MulesoftConfig) {
 }
 
 // ToServiceDetails gathers the ServiceDetail for a single Mulesoft Asset. Each Asset has multiple versions and
-// so can resolve to multiple ServiceDetails.
+// can resolve to multiple ServiceDetails.
 func (s *serviceHandler) ToServiceDetails(asset *anypoint.Asset) []*ServiceDetail {
 	serviceDetails := []*ServiceDetail{}
 	for _, api := range asset.APIs {

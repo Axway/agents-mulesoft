@@ -37,14 +37,24 @@ func TestPublish(t *testing.T) {
 		hitCh: make(chan bool),
 	}
 	pub := &publisher{
-		apiChan:     make(chan *ServiceDetail),
+		apiChan:     make(chan *ServiceDetail, 3),
 		stopPublish: make(chan bool),
 		publishAPI:  mp.mockPublishAPI,
 	}
 	go pub.Loop()
-	pub.apiChan <- sd
-	hit := <-mp.hitCh
-	assert.True(t, hit)
+	// send 3 events to the channel
+	for i := 0; i < 3; i++ {
+		pub.apiChan <- sd
+	}
+
+	// wait for each event
+	for mp.count < 3 {
+		select {
+		case <-mp.hitCh:
+		}
+	}
+
+	assert.Equal(t, 3, mp.count)
 	pub.OnConfigChange(&config.MulesoftConfig{})
 	pub.Stop()
 }
@@ -78,9 +88,11 @@ func Test_buildServiceBody(t *testing.T) {
 
 type mockAPIPublisher struct {
 	hitCh chan bool
+	count int
 }
 
 func (mp *mockAPIPublisher) mockPublishAPI(_ apic.ServiceBody) error {
+	mp.count = mp.count + 1
 	mp.hitCh <- true
 	return nil
 }

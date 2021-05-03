@@ -4,67 +4,144 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
+	"github.com/sirupsen/logrus"
+
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 
 	"github.com/Axway/agents-mulesoft/pkg/config"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
-const assetID = "dummy asset id"
+const assetID = "petstore-3"
 
-func TestDiscovery(t *testing.T) {
+var asset = anypoint.Asset{
+	APIs: []anypoint.API{
+		{
+			AssetID:       assetID,
+			AssetVersion:  "1.0.0",
+			EndpointURI:   "https://petstore3.us-e2.cloudhub.io",
+			EnvironmentID: "e9a405ae-2789-4889-a267-548a1f7aa6f4",
+			ID:            16810512,
+			Tags:          []string{"tag1"},
+		},
+	},
+	AssetID:              assetID,
+	Audit:                anypoint.Audit{},
+	AutodiscoveryAPIName: "groupId:d3ada710-fc7b-4fc7-b8b9-4ccfc0f872e4:assetId:petstore-3",
+	ExchangeAssetName:    "petstore-3",
+	GroupID:              "d3ada710-fc7b-4fc7-b8b9-4ccfc0f872e4",
+	ID:                   211799904,
+	MasterOrganizationID: "d3ada710-fc7b-4fc7-b8b9-4ccfc0f872e4",
+	Name:                 "groupId:d3ada710-fc7b-4fc7-b8b9-4ccfc0f872e4:assetId:petstore-3",
+	OrganizationID:       "d3ada710-fc7b-4fc7-b8b9-4ccfc0f872e4",
+	TotalAPIs:            1,
+}
+var assets = []anypoint.Asset{asset}
+
+func TestDiscovery_Loop(t *testing.T) {
 	apiChan := make(chan *ServiceDetail)
 	stopCh := make(chan bool)
+
+	client := &mockAnypointClient{}
+	client.On("ListAssets").Return(assets, nil)
+
+	msh := &mockServiceHandler{}
+	msh.On("ToServiceDetails").Return([]*ServiceDetail{sd})
+
 	disc := &discovery{
 		apiChan:           apiChan,
 		assetCache:        cache.New(),
-		client:            &mockAnypointClient{},
+		client:            client,
 		discoveryPageSize: 50,
-		pollInterval:      1 * time.Second,
+		pollInterval:      0001 * time.Second,
 		stopDiscovery:     stopCh,
-		serviceHandler:    &mockServiceHandler{},
+		serviceHandler:    msh,
 	}
 
 	go disc.Loop()
 
-	item := <-disc.apiChan
-	assert.Equal(t, assetID, item.APIName)
-	disc.OnConfigChange(&config.MulesoftConfig{})
+	// accounts for the immediate tick, and two ticks of the pollInterval
+	count := 0
+	for count < 3 {
+		select {
+		case <-disc.apiChan:
+			// assert.Equal(t, )
+			count++
+		}
+	}
 	disc.Stop()
+	disc.OnConfigChange(&config.MulesoftConfig{})
 }
 
-type mockServiceHandler struct{}
-
-func (m mockServiceHandler) ToServiceDetails(asset *anypoint.Asset) []*ServiceDetail {
-	return []*ServiceDetail{
+func Test_discoverAPIs(t *testing.T) {
+	tests := []struct {
+		name           string
+		pageSize       int
+		err            error
+		expectedAssets int
+		listSize       int
+	}{
 		{
-			APIName:           asset.AssetID,
-			APISpec:           nil,
-			APIUpdateSeverity: "",
-			AuthPolicy:        "",
-			Description:       "",
-			Documentation:     nil,
-			ID:                "",
-			Image:             "",
-			ImageContentType:  "",
-			ResourceType:      "",
-			ServiceAttributes: nil,
-			Stage:             "",
-			State:             "",
-			Status:            "",
-			SubscriptionName:  "",
-			Tags:              nil,
-			Title:             "",
-			URL:               "",
-			Version:           "",
+			name:           "should fetch more assets when the returned length is equal to the page size",
+			pageSize:       3,
+			listSize:       3,
+			expectedAssets: 6,
+			err:            nil,
 		},
 	}
+
+	for i := range tests {
+		tc := tests[i]
+		t.Run(tc.name, func(t *testing.T) {
+			apiChan := make(chan *ServiceDetail)
+			stopCh := make(chan bool)
+			client := &mockAnypointClient{}
+			client.On("ListAssets").Return(make([]anypoint.Asset, tc.listSize), tc.err)
+			client.On("ListAssets").Return(make([]anypoint.Asset, 0), tc.err)
+			msh := &mockServiceHandler{}
+			msh.On("ToServiceDetails").Return([]*ServiceDetail{sd})
+			disc := &discovery{
+				apiChan:           apiChan,
+				assetCache:        cache.New(),
+				client:            client,
+				discoveryPageSize: tc.pageSize,
+				pollInterval:      0001 * time.Second,
+				stopDiscovery:     stopCh,
+				serviceHandler:    msh,
+			}
+			go disc.discoverAPIs()
+
+			calls := 0
+			for calls < tc.expectedAssets {
+				select {
+				case <-disc.apiChan:
+					calls++
+				}
+			}
+
+			assert.Equal(t, tc.expectedAssets, calls)
+			logrus.Info(client)
+		})
+	}
+
 }
 
-func (m mockServiceHandler) OnConfigChange(_ *config.MulesoftConfig) {
+type mockServiceHandler struct {
+	mock.Mock
+	count int
+}
+
+func (m *mockServiceHandler) ToServiceDetails(*anypoint.Asset) []*ServiceDetail {
+	args := m.Called()
+	result := args.Get(0)
+	return result.([]*ServiceDetail)
+}
+
+func (m *mockServiceHandler) OnConfigChange(_ *config.MulesoftConfig) {
 }
 
 type mockAnypointClient struct {
@@ -72,7 +149,6 @@ type mockAnypointClient struct {
 }
 
 func (m *mockAnypointClient) OnConfigChange(*config.MulesoftConfig) {
-	// noop
 }
 
 func (m *mockAnypointClient) GetAccessToken() (string, *anypoint.User, time.Duration, error) {
@@ -84,19 +160,10 @@ func (m *mockAnypointClient) GetEnvironmentByName(_ string) (*anypoint.Environme
 }
 
 func (m *mockAnypointClient) ListAssets(*anypoint.Page) ([]anypoint.Asset, error) {
-	assets := []anypoint.Asset{{
-		ID:                12345,
-		Name:              "asset1",
-		ExchangeAssetName: "dummyasset",
-		AssetID:           assetID,
-		APIs: []anypoint.API{{
-			ID:          6789,
-			EndpointURI: "google.com",
-			AssetID:     "12345",
-		}},
-	}}
+	args := m.Called()
+	result := args.Get(0)
+	return result.([]anypoint.Asset), args.Error(1)
 
-	return assets, nil
 }
 
 func (m *mockAnypointClient) GetPolicies(*anypoint.API) ([]anypoint.Policy, error) {
@@ -127,44 +194,6 @@ func (m *mockAnypointClient) GetAnalyticsWindow() ([]anypoint.AnalyticsEvent, er
 	return nil, nil
 }
 
-//
-// func getAgent() Agent {
-// 	mac := &mockAnypointClient{}
-// 	assetCache := cache.New()
-// 	buffer := 5
-//
-// 	return Agent{
-// 		discoveryPageSize: 1,
-// 		anypointClient:    mac,
-// 		stage:             "Sandbox",
-// 		assetCache:        assetCache,
-// 		stopDiscovery:     make(chan bool),
-// 		pollInterval:      time.Second,
-// 		apiChan:           make(chan *ServiceDetail, buffer),
-// 	}
-// }
-//
-// func TestDiscoverAPIs(t *testing.T) {
-// 	a := getAgent()
-//
-// 	go func() {
-// 		a.discoverAPIs()
-// 	}()
-//
-// 	select {
-// 	case sd := <-a.apiChan:
-// 		assert.Equal(t, "dummyasset", sd.Title)
-// 		assert.Equal(t, a.stage, sd.Stage)
-// 		assert.Equal(t, "12345", sd.APIName)
-// 		assert.Equal(t, "oas2", sd.ResourceType)
-// 		assert.Equal(t, "6789", sd.ID)
-// 		assert.Equal(t, []byte("{\"basePath\":\"google.com\",\"host\":\"\",\"schemes\":[\"\"],\"swagger\":\"2.0\"}"), sd.APISpec)
-// 		assert.NotEmpty(t, sd.ServiceAttributes["checksum"])
-// 	case <-time.After(time.Second * 1):
-// 		t.Errorf("Timed out waiting for the discovery")
-// 	}
-// }
-//
 // var mapOfResponses = map[string]*api.Response{
 // 	"/accounts/login": {
 // 		Code:    200,
@@ -330,231 +359,3 @@ func (m *mockAnypointClient) GetAnalyticsWindow() ([]anypoint.AnalyticsEvent, er
 // 	assert.NotNil(t, err)
 // }
 //
-// func TestGetServiceDetailFailsWhenGetExchangeAssetIconFails(t *testing.T) {
-// 	agent, mc := buildAgentWithCustomMockAnypointClient()
-//
-// 	mc.Reqs["/apimanager/api/v1/organizations/333/environments/111/apis/456/policies"] = &api.Response{
-// 		Code: 200,
-// 		Body: []byte(`[{}]`),
-// 	}
-//
-// 	mc.Reqs["/exchange/api/v2/assets/123/456/89"] = &api.Response{
-// 		Code: 200,
-// 		Body: []byte("{\"Icon\": \"blahblah.com\", \"Files\": [{\"Classifier\":\"oas\",\"Generated\":false, \"ExternalLink\": \"https://localhost/swagger.json\"}]}"),
-// 	}
-//
-// 	mc.Reqs["https://localhost/swagger.json"] = &api.Response{
-// 		Code: 200,
-// 		Body: []byte("{\"basePath\":\"google.com\",\"host\":\"\",\"schemes\":[\"\"],\"swagger\":\"2.0\"}"),
-// 	}
-//
-// 	mc.Reqs["blahblah.com"] = &api.Response{
-// 		Code: 400,
-// 		Body: nil,
-// 	}
-//
-// 	asset := &anypoint.Asset{}
-//
-// 	a := &anypoint.API{
-// 		ID:           456,
-// 		EndpointURI:  "google.com",
-// 		GroupID:      "123",
-// 		AssetID:      "456",
-// 		AssetVersion: "89",
-// 	}
-//
-// 	_, err := agent.getServiceDetail(asset, a)
-// 	assert.NotNil(t, err)
-// }
-//
-// func TestShouldDiscoverAPIBasedOnTags(t *testing.T) {
-// 	tests := []struct {
-// 		name     string
-// 		a        Agent
-// 		api      *anypoint.API
-// 		expected bool
-// 	}{
-// 		{
-// 			name: "Should discover if matching discovery tag exists on API",
-// 			a: Agent{
-// 				discoveryTags: []string{"discover"},
-// 			},
-// 			api:      &anypoint.API{Tags: []string{"discover"}},
-// 			expected: true,
-// 		},
-// 		{
-// 			name: "Should not discover if API has a tag to be ignored",
-// 			a: Agent{
-// 				discoveryIgnoreTags: []string{"donotdiscover"},
-// 			},
-// 			api:      &anypoint.API{Tags: []string{"donotdiscover"}},
-// 			expected: false,
-// 		},
-// 		{
-// 			name: "Should not discover if API does not have any tags that the agent's config has",
-// 			a: Agent{
-// 				discoveryIgnoreTags: []string{"donotdiscover"},
-// 				discoveryTags:       []string{"discover"},
-// 			},
-// 			api:      &anypoint.API{Tags: []string{}},
-// 			expected: false,
-// 		},
-// 		{
-// 			name:     "Should discover if API as well as agent's config have no discovery tags",
-// 			a:        Agent{},
-// 			api:      &anypoint.API{Tags: []string{}},
-// 			expected: true,
-// 		},
-// 		{
-// 			name: "Should not discover if API has both - a tag to be discovered and a tag to be ignored",
-// 			a: Agent{
-// 				discoveryIgnoreTags: []string{"donotdiscover"},
-// 				discoveryTags:       []string{"discover"},
-// 			},
-// 			api:      &anypoint.API{Tags: []string{"discover", "donotdiscover"}},
-// 			expected: false,
-// 		},
-// 	}
-//
-// 	for _, tc := range tests {
-// 		t.Run(tc.name, func(t *testing.T) {
-// 			assert.Equal(t, tc.expected, tc.a.shouldDiscoverAPI(tc.api))
-// 		})
-// 	}
-// }
-//
-// func TestGetExchangeAssetSpecFile(t *testing.T) {
-// 	tests := []struct {
-// 		name      string
-// 		asset     *anypoint.ExchangeAsset
-// 		exchgfile *anypoint.ExchangeFile
-// 		err       error
-// 	}{
-// 		{
-// 			name: "Should return nil and no error if the Exchange asset has no files",
-// 			asset: &anypoint.ExchangeAsset{
-// 				Name:  "Sample exchange asset 1",
-// 				Files: nil,
-// 			},
-// 			exchgfile: nil,
-// 			err:       nil,
-// 		},
-// 		{
-// 			name: "Should return nil and no error if the Exchange asset has a file that is not of expected classifier",
-// 			asset: &anypoint.ExchangeAsset{
-// 				Name: "Sample exchange asset 2",
-// 				Files: []anypoint.ExchangeFile{{
-// 					Classifier: "oas3",
-// 				},
-// 				},
-// 			},
-// 			exchgfile: nil,
-// 			err:       nil,
-// 		},
-// 		{
-// 			name: "Should return an exchange asset if it has a file that is of expected classifier",
-// 			asset: &anypoint.ExchangeAsset{
-// 				Name: "Sample exchange asset 3",
-// 				Files: []anypoint.ExchangeFile{{
-// 					Classifier: "oas",
-// 				},
-// 				},
-// 			},
-// 			exchgfile: &anypoint.ExchangeFile{
-// 				Classifier: "oas",
-// 			},
-// 			err: nil,
-// 		},
-// 	}
-//
-// 	for _, tc := range tests {
-// 		t.Run(tc.name, func(t *testing.T) {
-// 			sd, err := getExchangeAssetSpecFile(tc.asset)
-// 			assert.Equal(t, tc.exchgfile, sd)
-// 			assert.Equal(t, tc.err, err)
-// 		})
-// 	}
-// }
-//
-// func TestSetOAS2Endpoint(t *testing.T) {
-// 	tests := []struct {
-// 		name        string
-// 		endPointURL string
-// 		specContent []byte
-// 		result      []byte
-// 		err         error
-// 	}{
-// 		{
-// 			name:        "Should return error if Endpoint URL is not valid",
-// 			endPointURL: "postgres://user:abc{def=ghi@sdf.com:5432",
-// 			specContent: []byte("{\"basePath\":\"google.com\",\"host\":\"\",\"schemes\":[\"\"],\"swagger\":\"2.0\"}"),
-// 			result:      []byte("{\"basePath\":\"google.com\",\"host\":\"\",\"schemes\":[\"\"],\"swagger\":\"2.0\"}"),
-// 			err: &url.Error{
-// 				Op:  "parse",
-// 				URL: "postgres://user:abc{def=ghi@sdf.com:5432",
-// 				Err: fmt.Errorf("net/url: invalid userinfo"),
-// 			},
-// 		},
-// 		{
-// 			name:        "Should return error if the spec content is not a valid JSON",
-// 			endPointURL: "http://google.com",
-// 			specContent: []byte("google.com"),
-// 			result:      []byte("google.com"),
-// 			err:         fmt.Errorf("invalid character 'g' looking for beginning of value"),
-// 		},
-// 		{
-// 			name:        "Should return spec that has OAS2 endpoint set",
-// 			endPointURL: "http://google.com",
-// 			specContent: []byte("{\"basePath\":\"google.com\",\"host\":\"\",\"schemes\":[\"\"],\"swagger\":\"2.0\"}"),
-// 			result:      []byte("{\"basePath\":\"\",\"host\":\"google.com\",\"schemes\":[\"http\"],\"swagger\":\"2.0\"}"),
-// 			err:         nil,
-// 		},
-// 	}
-//
-// 	for _, tc := range tests {
-// 		t.Run(tc.name, func(t *testing.T) {
-// 			spec, err := setOAS2Endpoint(tc.endPointURL, tc.specContent)
-//
-// 			if err != nil {
-// 				assert.Equal(t, tc.err.Error(), err.Error())
-// 			}
-//
-// 			assert.Equal(t, tc.result, spec)
-// 		})
-// 	}
-// }
-//
-// func TestSetOAS3Endpoint(t *testing.T) {
-// 	tests := []struct {
-// 		name        string
-// 		url         string
-// 		specContent []byte
-// 		result      []byte
-// 		err         error
-// 	}{
-// 		{
-// 			name:        "Should return error if the spec content is not a valid JSON",
-// 			url:         "google.com",
-// 			specContent: []byte("google.com"),
-// 			result:      []byte("google.com"),
-// 			err:         fmt.Errorf("invalid character 'g' looking for beginning of value"),
-// 		},
-// 		{
-// 			name:        "Should return spec that has OAS3 endpoint set",
-// 			url:         "google.com",
-// 			specContent: []byte("{\"openapi\": \"3.0.1\"}"),
-// 			result:      []byte("{\"openapi\":\"3.0.1\",\"servers\":[{\"url\":\"google.com\"}]}"),
-// 			err:         nil,
-// 		},
-// 	}
-//
-// 	for _, tc := range tests {
-// 		t.Run(tc.name, func(t *testing.T) {
-// 			spec, err := setOAS3Endpoint(tc.url, tc.specContent)
-// 			if err != nil {
-// 				assert.Equal(t, tc.err.Error(), err.Error())
-// 			}
-// 			assert.Equal(t, tc.result, spec)
-// 		})
-// 	}
-// }

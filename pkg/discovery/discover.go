@@ -53,7 +53,7 @@ func (d *discovery) Loop() {
 	}()
 }
 
-// discoverAPIs Finds the APIs that are publishable.
+// discoverAPIs Finds APIs from exchange
 func (d *discovery) discoverAPIs() {
 	offset := 0
 	pageSize := d.discoveryPageSize

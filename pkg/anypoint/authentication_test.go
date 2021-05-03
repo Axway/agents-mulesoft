@@ -5,32 +5,61 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/mock"
+
 	"github.com/stretchr/testify/assert"
 )
 
 func TestAuth(t *testing.T) {
-	c := &authClient{}
-	auth, err := NewAuth(c)
-	assert.Nil(t, err)
-	assert.NotNil(t, auth)
+	tests := []struct {
+		name  string
+		token string
+		err   error
+	}{
+		{
+			name:  "should return an access token and no error",
+			token: "abc123",
+			err:   nil,
+		},
+		{
+			name:  "should return no token and an error",
+			token: "",
+			err:   fmt.Errorf("no token here"),
+		},
+	}
+	for i := range tests {
+		tc := tests[i]
+		t.Run(tc.name, func(t *testing.T) {
+			c := &authClient{}
+			user := &User{
+				Organization: Organization{
+					ID: "1",
+				},
+			}
 
-	org := auth.GetOrgID()
-	token := auth.GetToken()
+			c.On("GetAccessToken").Return(tc.token, user, time.Duration(10), tc.err)
 
-	assert.Equal(t, "1", org)
-	assert.Equal(t, "abc123", token)
+			auth, err := NewAuth(c)
+			assert.Equal(t, tc.err, err)
+			if tc.err == nil {
+				assert.NotNil(t, auth)
+				org := auth.GetOrgID()
+				token := auth.GetToken()
+				assert.Equal(t, "1", org)
+				assert.Equal(t, tc.token, token)
+				auth.Stop()
 
-	auth.Stop()
-}
+			} else {
+				assert.Nil(t, auth)
+			}
 
-func TestAuthError(t *testing.T) {
-	c := &authClientGetErr{}
-	auth, err := NewAuth(c)
-	assert.NotNil(t, err)
-	assert.Nil(t, auth)
+		})
+	}
+
 }
 
 func Test_startRefreshToken(t *testing.T) {
+
 	client := &authClientRefreshErr{
 		stop: make(chan bool),
 	}
@@ -42,13 +71,6 @@ func Test_startRefreshToken(t *testing.T) {
 	assert.True(t, done)
 }
 
-type authClientGetErr struct {
-}
-
-func (a authClientGetErr) GetAccessToken() (string, *User, time.Duration, error) {
-	return "", &User{}, 0, fmt.Errorf("auth error")
-}
-
 type authClientRefreshErr struct {
 	stop chan bool
 }
@@ -58,20 +80,14 @@ func (a authClientRefreshErr) GetAccessToken() (string, *User, time.Duration, er
 	return "", &User{}, 0, fmt.Errorf("auth error")
 }
 
-type authClient struct{}
+type authClient struct {
+	mock.Mock
+}
 
-func (a authClient) GetAccessToken() (string, *User, time.Duration, error) {
-	return "abc123", &User{
-		Email:        "",
-		FirstName:    "",
-		ID:           "",
-		IdentityType: "",
-		LastName:     "",
-		Organization: Organization{
-			Domain: "",
-			ID:     "1",
-			Name:   "",
-		},
-		Username: "",
-	}, 10, nil
+func (a *authClient) GetAccessToken() (string, *User, time.Duration, error) {
+	args := a.Called()
+	token := args.String(0)
+	user := args.Get(1)
+	duration := args.Get(2)
+	return token, user.(*User), duration.(time.Duration), args.Error(3)
 }
