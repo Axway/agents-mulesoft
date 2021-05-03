@@ -16,9 +16,9 @@ jobs:
       with:
         go-version: '^1.13.0'
     - name: Discovery Release
-      uses: goreleaser/goreleaser-action@master
+      uses: goreleaser/goreleaser-action@v2.5.0
       with:
-        workdir: .
+        workdir: ./cmd/discovery
         args: release
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -33,9 +33,9 @@ jobs:
       with:
         go-version: '^1.13.0'
     - name: Traceability Release
-      uses: goreleaser/goreleaser-action@master
+      uses: goreleaser/goreleaser-action@v2.5.0
       with:
-        workdir: .
+        workdir: ./cmd/traceability
         args: release
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
