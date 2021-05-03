@@ -220,3 +220,6 @@ type AnalyticsEvent struct {
 	Verb               string    `json:"Verb"`
 	ViolatedPolicyName string    `json:"Violated Policy Name"`
 }
+
+const ExternalOauth = "external-oauth2-access-token-enforcement"
+const ClientID = "client-id-enforcement"

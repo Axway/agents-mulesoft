@@ -8,6 +8,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/Axway/agent-sdk/pkg/agent"
+
 	"github.com/Axway/agent-sdk/pkg/apic"
 	"sigs.k8s.io/yaml"
 
@@ -88,10 +90,10 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 	// Change detection (asset + policies)
 	checksum := checksum(api, authPolicy)
 	if s.isAPIPublished(fmt.Sprint(api.ID)) {
-		// publishedChecksum := agent.GetAttributeOnPublishedAPI(fmt.Sprint(api.ID), "checksum")
-		// if checksum == publishedChecksum {
-		// 	return nil, nil
-		// }
+		publishedChecksum := agent.GetAttributeOnPublishedAPI(fmt.Sprint(api.ID), "checksum")
+		if checksum == publishedChecksum {
+			return nil, nil
+		}
 		log.Debugf("Change detected in published asset %s(%d)", asset.AssetID, api.ID)
 	}
 
@@ -241,14 +243,14 @@ func getSpecType(file *anypoint.ExchangeFile, specContent []byte) (string, error
 }
 
 // getAuthPolicy gets the authentication policy type.
-func getAuthPolicy(policies []anypoint.Policy) string {
-	if policies == nil {
-		return apic.Passthrough
-	}
-
-	for _, policy := range policies {
-		if policy.PolicyTemplateID == "client-id-enforcement" {
+func getAuthPolicy(policies anypoint.Policies) string {
+	for _, policy := range policies.Policies {
+		if policy.Template.AssetId == anypoint.ClientID {
 			return apic.Apikey
+		}
+
+		if policy.Template.AssetId == anypoint.ExternalOauth {
+			return apic.Oauth
 		}
 	}
 

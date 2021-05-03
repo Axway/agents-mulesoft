@@ -50,10 +50,10 @@ func (m *MockAnypointClient) ListAssets(*Page) ([]Asset, error) {
 	return result.([]Asset), args.Error(1)
 }
 
-func (m *MockAnypointClient) GetPolicies(*API) ([]Policy, error) {
+func (m *MockAnypointClient) GetPolicies(*API) (Policies, error) {
 	args := m.Called()
 	result := args.Get(0)
-	return result.([]Policy), args.Error(1)
+	return result.(Policies), args.Error(1)
 }
 
 func (m *MockAnypointClient) GetExchangeAsset(*API) (*ExchangeAsset, error) {

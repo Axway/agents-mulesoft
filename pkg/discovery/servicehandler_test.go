@@ -44,11 +44,15 @@ var exchangeAsset = anypoint.ExchangeAsset{
 func TestServiceHandler(t *testing.T) {
 	stage := "Sandbox"
 	content := `{"openapi":"3.0.1","servers":[{"url":"https://abc.com"}]}`
-	policy := anypoint.Policy{PolicyTemplateID: "client-id-enforcement"}
+	policies := anypoint.Policies{Policies: []anypoint.Policy{
+		{
+			Template: anypoint.Template{
+				AssetId: anypoint.ClientID,
+			},
+		},
+	}}
 	mc := &anypoint.MockAnypointClient{}
-	mc.On("GetPolicies").Return([]anypoint.Policy{
-		policy,
-	}, nil)
+	mc.On("GetPolicies").Return(policies, nil)
 	mc.On("GetExchangeAsset").Return(&exchangeAsset, nil)
 	mc.On("GetExchangeFileContent").Return([]byte(content), nil)
 	mc.On("GetExchangeAssetIcon").Return("", "", nil)
@@ -278,8 +282,8 @@ func TestSetOAS3Endpoint(t *testing.T) {
 }
 
 func Test_checksum(t *testing.T) {
-	s1 := checksum(&asset, "pass-through")
-	s2 := checksum(&asset, "client-id-enforcement")
+	s1 := checksum(&asset, apic.Passthrough)
+	s2 := checksum(&asset, anypoint.ClientID)
 	assert.NotEmpty(t, s1)
 	assert.NotEqual(t, s1, s2)
 }
@@ -288,32 +292,56 @@ func Test_getAuthPolicy(t *testing.T) {
 	tests := []struct {
 		name     string
 		expected string
-		policies []anypoint.Policy
+		policies anypoint.Policies
 	}{
 		{
 			name:     "should return the policy as APIKey when the mulesoft policy is client-id-enforcement",
 			expected: apic.Apikey,
-			policies: []anypoint.Policy{
-				{PolicyTemplateID: "client-id-enforcement"},
+			policies: anypoint.Policies{
+				Policies: []anypoint.Policy{
+					{
+						Template: anypoint.Template{
+							AssetId: anypoint.ClientID,
+						},
+					},
+				},
+			},
+		},
+		{
+			name:     "should return the policy as OAuth when the mulesoft policy is oauth",
+			expected: apic.Oauth,
+			policies: anypoint.Policies{
+				Policies: []anypoint.Policy{
+					{
+						Template: anypoint.Template{
+							AssetId: anypoint.ExternalOauth,
+						},
+					},
+				},
 			},
 		},
 		{
 			name:     "should return the first policy that matches 'client-id-enforcement'",
 			expected: apic.Apikey,
-			policies: []anypoint.Policy{
-				{PolicyTemplateID: "fake"},
-				{PolicyTemplateID: "client-id-enforcement"},
+			policies: anypoint.Policies{
+				Policies: []anypoint.Policy{
+					{
+						Template: anypoint.Template{
+							AssetId: "fake",
+						},
+					},
+					{
+						Template: anypoint.Template{
+							AssetId: anypoint.ClientID,
+						},
+					},
+				},
 			},
 		},
 		{
 			name:     "should return the policy as pass-through when there are no policies in the array",
 			expected: apic.Passthrough,
-			policies: []anypoint.Policy{},
-		},
-		{
-			name:     "should return the policy as pass-through when the policies array is empty",
-			expected: apic.Passthrough,
-			policies: nil,
+			policies: anypoint.Policies{},
 		},
 	}
 	for _, tc := range tests {
