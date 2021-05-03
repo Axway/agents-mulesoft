@@ -44,7 +44,7 @@ func (m *mockAnypointClient) ListAssets(*anypoint.Page) ([]anypoint.Asset, error
 		ExchangeAssetName: "dummyasset",
 		APIs: []anypoint.API{{
 			ID:          6789,
-			EndpointURI: "google.com",
+			EndpointURI: "http://google.com",
 			AssetID:     "12345",
 		}},
 	}}
@@ -52,8 +52,8 @@ func (m *mockAnypointClient) ListAssets(*anypoint.Page) ([]anypoint.Asset, error
 	return assets, nil
 }
 
-func (m *mockAnypointClient) GetPolicies(*anypoint.API) ([]anypoint.Policy, error) {
-	return nil, nil
+func (m *mockAnypointClient) GetPolicies(*anypoint.API) (anypoint.Policies, error) {
+	return anypoint.Policies{}, nil
 }
 
 func (m *mockAnypointClient) GetExchangeAsset(*anypoint.API) (*anypoint.ExchangeAsset, error) {
@@ -110,7 +110,7 @@ func TestDiscoverAPIs(t *testing.T) {
 		assert.Equal(t, "12345", sd.APIName)
 		assert.Equal(t, "oas2", sd.ResourceType)
 		assert.Equal(t, "6789", sd.ID)
-		assert.Equal(t, []byte("{\"basePath\":\"google.com\",\"host\":\"\",\"schemes\":[\"\"],\"swagger\":\"2.0\"}"), sd.APISpec)
+		assert.Equal(t, []byte("{\"schemes\":[\"http\"],\"swagger\":\"2.0\",\"host\":\"google.com\",\"basePath\":\"/\",\"paths\":null,\"definitions\":null}"), sd.APISpec)
 		assert.NotEmpty(t, sd.ServiceAttributes["checksum"])
 	case <-time.After(time.Second * 1):
 		t.Errorf("Timed out waiting for the discovery")
@@ -227,7 +227,7 @@ func TestGetServiceDetailWhenExchangeAssetSpecFileIsEmpty(t *testing.T) {
 
 	mc.Reqs["/apimanager/api/v1/organizations/333/environments/111/apis/456/policies"] = &api.Response{
 		Code: 200,
-		Body: []byte(`[{}]`),
+		Body: []byte(`[]`),
 	}
 
 	mc.Reqs["/exchange/api/v2/assets/123/456/89"] = &api.Response{
@@ -457,8 +457,8 @@ func TestSetOAS2Endpoint(t *testing.T) {
 		{
 			name:        "Should return spec that has OAS2 endpoint set",
 			endPointURL: "http://google.com",
-			specContent: []byte("{\"basePath\":\"google.com\",\"host\":\"\",\"schemes\":[\"\"],\"swagger\":\"2.0\"}"),
-			result:      []byte("{\"basePath\":\"\",\"host\":\"google.com\",\"schemes\":[\"http\"],\"swagger\":\"2.0\"}"),
+			specContent: []byte("{\"basePath\":\"\",\"host\":\"\",\"schemes\":[\"\"],\"swagger\":\"2.0\"}"),
+			result:      []byte("{\"basePath\":\"/\",\"host\":\"google.com\",\"schemes\":[\"http\"],\"swagger\":\"2.0\"}"),
 			err:         nil,
 		},
 	}
