@@ -31,33 +31,52 @@ func (m *MockAnypointClient) OnConfigChange(*config.MulesoftConfig) {
 }
 
 func (m *MockAnypointClient) GetAccessToken() (string, *User, time.Duration, error) {
-	return "abc123", &User{}, 10, nil
+	args := m.Called()
+	token := args.String(0)
+	user := args.Get(1).(*User)
+	duration := args.Get(2).(time.Duration)
+	return token, user, duration, args.Error(1)
 }
 
-func (m *MockAnypointClient) GetEnvironmentByName(name string) (*Environment, error) {
-	return nil, nil
+func (m *MockAnypointClient) GetEnvironmentByName(string) (*Environment, error) {
+	args := m.Called()
+	result := args.Get(0)
+	return result.(*Environment), args.Error(1)
 }
 
-func (m *MockAnypointClient) ListAssets(page *Page) ([]Asset, error) {
-	return nil, nil
+func (m *MockAnypointClient) ListAssets(*Page) ([]Asset, error) {
+	args := m.Called()
+	result := args.Get(0)
+	return result.([]Asset), args.Error(1)
 }
 
-func (m *MockAnypointClient) GetPolicies(api *API) ([]Policy, error) {
-	return nil, nil
+func (m *MockAnypointClient) GetPolicies(*API) ([]Policy, error) {
+	args := m.Called()
+	result := args.Get(0)
+	return result.([]Policy), args.Error(1)
 }
 
-func (m *MockAnypointClient) GetExchangeAsset(api *API) (*ExchangeAsset, error) {
-	return nil, nil
+func (m *MockAnypointClient) GetExchangeAsset(*API) (*ExchangeAsset, error) {
+	args := m.Called()
+	result := args.Get(0)
+	return result.(*ExchangeAsset), args.Error(1)
 }
 
-func (m *MockAnypointClient) GetExchangeAssetIcon(asset *ExchangeAsset) (icon string, contentType string, err error) {
-	return "", "", nil
+func (m *MockAnypointClient) GetExchangeAssetIcon(*ExchangeAsset) (string, string, error) {
+	args := m.Called()
+	icon := args.String(0)
+	contentType := args.String(1)
+	return icon, contentType, args.Error(2)
 }
 
-func (m *MockAnypointClient) GetExchangeFileContent(file *ExchangeFile) (fileContent []byte, err error) {
-	return nil, nil
+func (m *MockAnypointClient) GetExchangeFileContent(*ExchangeFile) ([]byte, error) {
+	args := m.Called()
+	result := args.Get(0)
+	return result.([]byte), args.Error(1)
 }
 
 func (m *MockAnypointClient) GetAnalyticsWindow() ([]AnalyticsEvent, error) {
-	return nil, nil
+	args := m.Called()
+	result := args.Get(0)
+	return result.([]AnalyticsEvent), args.Error(1)
 }

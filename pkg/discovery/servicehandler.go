@@ -11,7 +11,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic"
 	"sigs.k8s.io/yaml"
 
-	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Axway/agent-sdk/pkg/cache"
@@ -26,6 +25,8 @@ type ServiceHandler interface {
 	OnConfigChange(cfg *config.MulesoftConfig)
 }
 
+type IsAPIPublished func(externalAPIID string) bool
+
 type serviceHandler struct {
 	assetCache          cache.Cache
 	freshCache          cache.Cache
@@ -33,6 +34,7 @@ type serviceHandler struct {
 	discoveryTags       []string
 	discoveryIgnoreTags []string
 	client              anypoint.Client
+	isAPIPublished      IsAPIPublished
 }
 
 func (s *serviceHandler) OnConfigChange(cfg *config.MulesoftConfig) {
@@ -85,17 +87,16 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 
 	// Change detection (asset + policies)
 	checksum := checksum(api, authPolicy)
-	if agent.IsAPIPublished(fmt.Sprint(api.ID)) {
-		publishedChecksum := agent.GetAttributeOnPublishedAPI(fmt.Sprint(api.ID), "checksum")
-		if checksum == publishedChecksum {
-			return nil, nil
-		}
+	if s.isAPIPublished(fmt.Sprint(api.ID)) {
+		// publishedChecksum := agent.GetAttributeOnPublishedAPI(fmt.Sprint(api.ID), "checksum")
+		// if checksum == publishedChecksum {
+		// 	return nil, nil
+		// }
 		log.Debugf("Change detected in published asset %s(%d)", asset.AssetID, api.ID)
 	}
 
 	// Potentially discoverable API, gather the details
 	log.Infof("Gathering details for %s(%d)", asset.AssetID, api.ID)
-
 	exchangeAsset, err := s.client.GetExchangeAsset(api)
 	if err != nil {
 		return nil, err
@@ -197,11 +198,13 @@ func getExchangeAssetSpecFile(exchangeFiles []anypoint.ExchangeFile) *anypoint.E
 // specYAMLToJSON - if the spec is yaml convert it to json, SDK doesn't handle yaml.
 func specYAMLToJSON(specContent []byte) []byte {
 	specMap := make(map[string]interface{})
+	// check if the content is already json
 	err := json.Unmarshal(specContent, &specMap)
 	if err == nil {
 		return specContent
 	}
 
+	// check if the content is already yaml
 	err = yaml.Unmarshal(specContent, &specMap)
 	if err != nil {
 		// Not yaml, nothing more to be done
@@ -218,9 +221,11 @@ func specYAMLToJSON(specContent []byte) []byte {
 
 // getSpecType determines the correct resource type for the asset.
 func getSpecType(file *anypoint.ExchangeFile, specContent []byte) (string, error) {
-	if file.Classifier == "wsdl" {
+	if file.Classifier == apic.Wsdl {
 		return apic.Wsdl, nil
-	} else if specContent != nil {
+	}
+
+	if specContent != nil {
 		jsonMap := make(map[string]interface{})
 		err := json.Unmarshal(specContent, &jsonMap)
 		if err != nil {
@@ -237,7 +242,7 @@ func getSpecType(file *anypoint.ExchangeFile, specContent []byte) (string, error
 
 // getAuthPolicy gets the authentication policy type.
 func getAuthPolicy(policies []anypoint.Policy) string {
-	if policies == nil || len(policies) == 0 {
+	if policies == nil {
 		return apic.Passthrough
 	}
 

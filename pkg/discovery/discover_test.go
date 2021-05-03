@@ -46,7 +46,7 @@ func TestDiscovery_Loop(t *testing.T) {
 	apiChan := make(chan *ServiceDetail)
 	stopCh := make(chan bool)
 
-	client := &mockAnypointClient{}
+	client := &anypoint.MockAnypointClient{}
 	client.On("ListAssets").Return(assets, nil)
 
 	msh := &mockServiceHandler{}
@@ -99,7 +99,7 @@ func Test_discoverAPIs(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			apiChan := make(chan *ServiceDetail)
 			stopCh := make(chan bool)
-			client := &mockAnypointClient{}
+			client := &anypoint.MockAnypointClient{}
 			client.On("ListAssets").Return(make([]anypoint.Asset, tc.listSize), tc.err)
 			client.On("ListAssets").Return(make([]anypoint.Asset, 0), tc.err)
 			msh := &mockServiceHandler{}
@@ -142,56 +142,6 @@ func (m *mockServiceHandler) ToServiceDetails(*anypoint.Asset) []*ServiceDetail 
 }
 
 func (m *mockServiceHandler) OnConfigChange(_ *config.MulesoftConfig) {
-}
-
-type mockAnypointClient struct {
-	mock.Mock
-}
-
-func (m *mockAnypointClient) OnConfigChange(*config.MulesoftConfig) {
-}
-
-func (m *mockAnypointClient) GetAccessToken() (string, *anypoint.User, time.Duration, error) {
-	return "", nil, 0, nil
-}
-
-func (m *mockAnypointClient) GetEnvironmentByName(_ string) (*anypoint.Environment, error) {
-	return nil, nil
-}
-
-func (m *mockAnypointClient) ListAssets(*anypoint.Page) ([]anypoint.Asset, error) {
-	args := m.Called()
-	result := args.Get(0)
-	return result.([]anypoint.Asset), args.Error(1)
-
-}
-
-func (m *mockAnypointClient) GetPolicies(*anypoint.API) ([]anypoint.Policy, error) {
-	return nil, nil
-}
-
-func (m *mockAnypointClient) GetExchangeAsset(*anypoint.API) (*anypoint.ExchangeAsset, error) {
-	return &anypoint.ExchangeAsset{
-		Files: []anypoint.ExchangeFile{{
-			Classifier: "oas",
-			Generated:  false,
-		}},
-	}, nil
-}
-
-func (m *mockAnypointClient) GetExchangeAssetIcon(_ *anypoint.ExchangeAsset) (icon string, contentType string, err error) {
-	return "", "", nil
-}
-
-func (m *mockAnypointClient) GetExchangeFileContent(*anypoint.ExchangeFile) (fileContent []byte, err error) {
-	var a = `{
-"swagger": "2.0"
-}`
-	return []byte(a), nil
-}
-
-func (m *mockAnypointClient) GetAnalyticsWindow() ([]anypoint.AnalyticsEvent, error) {
-	return nil, nil
 }
 
 // var mapOfResponses = map[string]*api.Response{

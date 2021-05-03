@@ -4,27 +4,75 @@ import (
 	"fmt"
 	"net/url"
 	"testing"
+	"time"
 
-	"github.com/sirupsen/logrus"
+	"github.com/Axway/agent-sdk/pkg/apic"
+
 	"github.com/stretchr/testify/assert"
 
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 )
 
+var exchangeFile = anypoint.ExchangeFile{
+	Classifier:  "fat-oas",
+	DownloadURL: "abc.com",
+}
+
+var exchangeAsset = anypoint.ExchangeAsset{
+	AssetID:      "petstore-3",
+	AssetType:    "rest-api",
+	Categories:   nil,
+	CreatedAt:    time.Now(),
+	Description:  "",
+	Files:        []anypoint.ExchangeFile{exchangeFile},
+	GroupID:      "d3ada710-fc7b-4fc7-b8b9-4ccfc0f872e4",
+	Icon:         "",
+	ID:           "d3ada710-fc7b-4fc7-b8b9-4ccfc0f872e4/petstore-3/1.0.0",
+	Instances:    nil,
+	Labels:       nil,
+	MinorVersion: "1.0",
+	ModifiedAt:   time.Time{},
+	Name:         "petstore-3",
+	Public:       false,
+	Snapshopt:    false,
+	Status:       "published",
+	Version:      "1.0.0",
+	VersionGroup: "v1",
+}
+
 func TestServiceHandler(t *testing.T) {
-	t.Skip()
-	mc := &mockAnypointClient{}
+	stage := "Sandbox"
+	content := `{"openapi":"3.0.1","servers":[{"url":"https://abc.com"}]}`
+	policy := anypoint.Policy{PolicyTemplateID: "client-id-enforcement"}
+	mc := &anypoint.MockAnypointClient{}
+	mc.On("GetPolicies").Return([]anypoint.Policy{
+		policy,
+	}, nil)
+	mc.On("GetExchangeAsset").Return(&exchangeAsset, nil)
+	mc.On("GetExchangeFileContent").Return([]byte(content), nil)
+	mc.On("GetExchangeAssetIcon").Return("", "", nil)
 	sh := &serviceHandler{
 		assetCache:          cache.New(),
 		freshCache:          cache.New(),
-		stage:               "Sandbox",
+		stage:               stage,
 		discoveryTags:       []string{"tag1"},
 		discoveryIgnoreTags: []string{"nah"},
 		client:              mc,
+		isAPIPublished:      mockIsPublishedTrue,
 	}
 	details := sh.ToServiceDetails(&asset)
-	logrus.Info(details)
+	assert.Equal(t, 1, len(details))
+	item := details[0]
+	assert.Equal(t, asset.APIs[0].AssetID, item.APIName)
+	assert.Equal(t, "verify-api-key", item.AuthPolicy)
+	assert.Equal(t, fmt.Sprint(asset.APIs[0].ID), item.ID)
+	assert.Equal(t, apic.Oas3, item.ResourceType)
+	assert.Equal(t, stage, item.Stage)
+	assert.Equal(t, asset.ExchangeAssetName, item.Title)
+	assert.Equal(t, asset.APIs[0].AssetVersion, item.Version)
+	assert.Equal(t, asset.APIs[0].Tags, item.Tags)
+	assert.NotEmpty(t, item.ServiceAttributes["checksum"])
 }
 
 func TestShouldDiscoverAPIBasedOnTags(t *testing.T) {
@@ -227,4 +275,193 @@ func TestSetOAS3Endpoint(t *testing.T) {
 			assert.Equal(t, tc.result, spec)
 		})
 	}
+}
+
+func Test_checksum(t *testing.T) {
+	s1 := checksum(&asset, "pass-through")
+	s2 := checksum(&asset, "client-id-enforcement")
+	assert.NotEmpty(t, s1)
+	assert.NotEqual(t, s1, s2)
+}
+
+func Test_getAuthPolicy(t *testing.T) {
+	tests := []struct {
+		name     string
+		expected string
+		policies []anypoint.Policy
+	}{
+		{
+			name:     "should return the policy as APIKey when the mulesoft policy is client-id-enforcement",
+			expected: apic.Apikey,
+			policies: []anypoint.Policy{
+				{PolicyTemplateID: "client-id-enforcement"},
+			},
+		},
+		{
+			name:     "should return the first policy that matches 'client-id-enforcement'",
+			expected: apic.Apikey,
+			policies: []anypoint.Policy{
+				{PolicyTemplateID: "fake"},
+				{PolicyTemplateID: "client-id-enforcement"},
+			},
+		},
+		{
+			name:     "should return the policy as pass-through when there are no policies in the array",
+			expected: apic.Passthrough,
+			policies: []anypoint.Policy{},
+		},
+		{
+			name:     "should return the policy as pass-through when the policies array is empty",
+			expected: apic.Passthrough,
+			policies: nil,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			policy := getAuthPolicy(tc.policies)
+			assert.Equal(t, policy, tc.expected)
+		})
+	}
+}
+
+func Test_getSpecType(t *testing.T) {
+	tests := []struct {
+		name         string
+		file         *anypoint.ExchangeFile
+		specContent  []byte
+		expectedType string
+		expectedErr  error
+	}{
+		{
+			name: "should return the spec type as WSDL",
+			file: &anypoint.ExchangeFile{
+				Classifier: apic.Wsdl,
+			},
+			specContent:  []byte(""),
+			expectedType: apic.Wsdl,
+		},
+		{
+			name: "should return the spec type as OAS2",
+			file: &anypoint.ExchangeFile{
+				Classifier: apic.Oas2,
+			},
+			specContent:  []byte("{\"basePath\":\"google.com\",\"host\":\"\",\"schemes\":[\"\"],\"swagger\":\"2.0\"}"),
+			expectedType: apic.Oas2,
+		},
+		{
+			name: "should return the spec type as OAS3",
+			file: &anypoint.ExchangeFile{
+				Classifier: apic.Oas3,
+			},
+			specContent:  []byte("{\"openapi\": \"3.0.1\"}"),
+			expectedType: apic.Oas3,
+		},
+		{
+			name: "should return the specType as an empty string when the specContent is nil",
+			file: &anypoint.ExchangeFile{
+				Classifier: apic.Oas3,
+			},
+			specContent:  nil,
+			expectedType: "",
+		},
+		{
+			name: "should return an error when given an invalid spec",
+			file: &anypoint.ExchangeFile{
+				Classifier: apic.Oas3,
+			},
+			specContent:  []byte("abc"),
+			expectedType: "",
+			expectedErr:  fmt.Errorf("error"),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			specType, err := getSpecType(tc.file, tc.specContent)
+			if tc.expectedErr != nil {
+				assert.NotNil(t, err)
+			} else {
+				assert.Nil(t, err)
+			}
+			assert.Equal(t, tc.expectedType, specType)
+		})
+	}
+}
+
+func Test_specYAMLToJSON(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  string
+		output []byte
+	}{
+		{
+			name: "should convert yaml to json",
+			input: `---
+openapi: 3.0.1
+`,
+			output: []byte(`{"openapi":"3.0.1"}`),
+		},
+		{
+			name:   "should return the content when it is already json",
+			input:  `{"openapi":"3.0.1"}`,
+			output: []byte(`{"openapi":"3.0.1"}`),
+		},
+		{
+			name:   "should return the content when it is not yaml or json",
+			input:  `nope`,
+			output: []byte(`nope`),
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			res := specYAMLToJSON([]byte(tc.input))
+			assert.Equal(t, tc.output, res)
+		})
+	}
+}
+
+func Test_updateSpecEndpoints(t *testing.T) {
+	tests := []struct {
+		name            string
+		specType        string
+		endpoint        string
+		content         []byte
+		expectedContent []byte
+	}{
+		{
+			name:            "should update an OAS 2 spec",
+			specType:        apic.Oas2,
+			endpoint:        "https://abc.com/v1",
+			content:         []byte(`{"basePath":"/v2","host":"oldhost.com","schemes":["http"],"swagger":"2.0"}`),
+			expectedContent: []byte(`{"basePath":"/v1","host":"abc.com","schemes":["https"],"swagger":"2.0"}`),
+		},
+		{
+			name:            "should update an OAS 3 spec",
+			specType:        apic.Oas3,
+			endpoint:        "https://abc.com",
+			content:         []byte(`{"openapi":"3.0.1","servers":[{"url":"google.com"}]}`),
+			expectedContent: []byte(`{"openapi":"3.0.1","servers":[{"url":"https://abc.com"}]}`),
+		},
+		{
+			name:            "should update a WSDL spec",
+			specType:        apic.Wsdl,
+			endpoint:        "https://abc.com",
+			content:         []byte(""),
+			expectedContent: []byte(""),
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			content, err := updateSpecEndpoints(tc.specType, tc.endpoint, tc.content)
+			assert.Nil(t, err)
+			assert.Equal(t, tc.expectedContent, content)
+		})
+	}
+}
+
+func mockIsPublishedTrue(string) bool {
+	return true
+}
+func mockIsPublishedFalse(string) bool {
+	return false
 }
