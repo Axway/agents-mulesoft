@@ -77,9 +77,6 @@ func Test_validateAPI(t *testing.T) {
 	validator := validateAPI(c)
 	ok := validator(apiID, stageName)
 	assert.True(t, ok)
-
-	ok = validator("fake", "fake")
-	assert.True(t, ok)
 }
 
 func newConfig() *config.AgentConfig {
