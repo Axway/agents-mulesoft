@@ -1,8 +1,8 @@
 tasks:
-  - init: cd ./mulesoft_discovery_agent && make
-    command: ./bin/mulesoft_discovery_agent
-  - init: cd ./mulesoft_traceability_agent && make
-    command: ./bin/mulesoft_traceability_agent
+  - init: make build-discovery
+    command: ./bin/discovery
+  - init: make build-trace
+    command: ./bin/traceability
 
 vscode:
   extensions:

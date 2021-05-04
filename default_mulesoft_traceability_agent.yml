@@ -1,0 +1,55 @@
+mulesoft_traceability_agent:
+  central:
+    organizationID: "<Amplify_ORG_ID>"
+    environment: <Amplify_CENTRAL_ENVIRONMENT_NAME>
+    url: https://apicentral.axway.com
+    platformURL: https://platform.axway.com
+    auth:
+      clientID: <Amplify_CENTRAL_DOSA_CLIENT_ID>
+      privateKey: <Amplify_CENTRAL_DOSA_PRIVATE_KEY_PATH>
+      publicKey: <Amplify_CENTRAL_DOSA_PUBLIC_KEY_PATH>
+      realm: Broker
+      timeout: 10s
+      url: https://login.axway.com/auth
+
+mulesoft:
+  environment: Sandbox
+  cachePath: "/tmp"
+  pollInterval: 30s
+  auth:
+    username: <USERNAME>
+    password: <PASSWORD>
+
+output.traceability:
+  enabled: true
+  hosts:
+    - ${TRACEABILITY_HOST:"ingestion-lumberjack.datasearch.axway.com:453"}
+  protocol: ${TRACEABILITY_PROTOCOL:"tcp"}
+  compression_level: ${TRACEABILITY_COMPRESSIONLEVEL:3}
+  ssl:
+    enabled: true
+    verification_mode: none
+    cipher_suites:
+      - "ECDHE-ECDSA-AES-128-GCM-SHA256"
+      - "ECDHE-ECDSA-AES-256-GCM-SHA384"
+      - "ECDHE-ECDSA-CHACHA20-POLY1305"
+      - "ECDHE-RSA-AES-128-CBC-SHA256"
+      - "ECDHE-RSA-AES-128-GCM-SHA256"
+      - "ECDHE-RSA-AES-256-GCM-SHA384"
+      - "ECDHE-RSA-CHACHA20-POLY1205"
+  worker: 1
+  pipelining: 0
+  proxy_url: ${TRACEABILITY_PROXYURL:""}
+
+log:
+  level: debug
+  format: json
+  output: stdout
+  path: logs
+
+logging:
+  metrics:
+    enabled: false
+  to_stderr: true
+  level: ${LOG_LEVEL:debug}
+
