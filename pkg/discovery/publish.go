@@ -30,6 +30,7 @@ func (p *publisher) Loop() {
 		case serviceDetail := <-p.apiChan:
 			p.publish(serviceDetail)
 		case <-p.stopPublish:
+			log.Debug("stopping publish listener")
 			return
 		}
 	}

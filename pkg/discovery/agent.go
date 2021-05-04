@@ -2,7 +2,10 @@ package discovery
 
 import (
 	"fmt"
+	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	coreAgent "github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/cache"
@@ -110,18 +113,22 @@ func (a *Agent) Run() {
 	go a.discovery.Loop()
 	go a.publisher.Loop()
 
+	gracefulStop := make(chan os.Signal, 1)
+	signal.Notify(gracefulStop, syscall.SIGTERM, os.Interrupt)
+
 	select {
-	case <-a.stopAgent:
+	case <-gracefulStop:
 		log.Info("Received request to kill agent")
-		a.discovery.Stop()
-		a.publisher.Stop()
+		a.Stop()
 		return
 	}
 }
 
-// Stop stops customLogTraceabilityAgent.
+// Stop stops the discovery agent.
 func (a *Agent) Stop() {
-	a.stopAgent <- true
+	a.discovery.Stop()
+	a.publisher.Stop()
+	close(a.stopAgent)
 }
 
 // validateAPI checks that the API still exists on the data plane. If it doesn't the agent
