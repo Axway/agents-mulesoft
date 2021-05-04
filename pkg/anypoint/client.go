@@ -121,7 +121,7 @@ func (c *AnypointClient) healthcheck(name string) (status *hc.Status) {
 		Result: hc.OK,
 	}
 
-	user, err := c.GetCurrentUser()
+	user, err := c.getUser()
 	if err != nil {
 		status = &hc.Status{
 			Result:  hc.FAIL,
@@ -184,8 +184,8 @@ func (c *AnypointClient) GetAccessToken() (string, *User, time.Duration, error) 
 	return token, user, c.lifetime, nil
 }
 
-// GetCurrentUser returns the current user.
-func (c *AnypointClient) GetCurrentUser() (*User, error) {
+// getUser returns the current user.
+func (c *AnypointClient) getUser() (*User, error) {
 	return c.getCurrentUser(c.auth.GetToken())
 }
 

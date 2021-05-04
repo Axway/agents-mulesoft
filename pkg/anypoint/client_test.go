@@ -4,6 +4,8 @@ import (
 	"testing"
 	"time"
 
+	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
+
 	"github.com/sirupsen/logrus"
 
 	"github.com/Axway/agent-sdk/pkg/api"
@@ -106,6 +108,9 @@ func TestClient(t *testing.T) {
 	}
 
 	client := NewClient(cfg, SetClient(mcb))
+
+	status := client.healthcheck("check")
+	assert.Equal(t, hc.OK, status.Result)
 
 	req := api.Request{
 		Method:      "GET",
