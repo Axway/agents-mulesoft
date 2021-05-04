@@ -115,15 +115,9 @@ func Test_discoverAPIs(t *testing.T) {
 			}
 			go disc.discoverAPIs()
 
-			calls := 0
-			for calls < tc.expectedAssets {
-				select {
-				case <-disc.apiChan:
-					calls++
-				}
-			}
+			svc := <-disc.apiChan
 
-			assert.Equal(t, tc.expectedAssets, calls)
+			assert.Equal(t, sd, svc)
 			logrus.Info(client)
 		})
 	}

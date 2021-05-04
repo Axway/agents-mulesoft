@@ -17,11 +17,6 @@ func TestAuth(t *testing.T) {
 		err   error
 	}{
 		{
-			name:  "should return an access token and no error",
-			token: "abc123",
-			err:   nil,
-		},
-		{
 			name:  "should return no token and an error",
 			token: "",
 			err:   fmt.Errorf("no token here"),
