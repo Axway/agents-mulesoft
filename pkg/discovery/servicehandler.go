@@ -448,8 +448,8 @@ func setOAS3policies(sc []byte, authPolicy string) ([]byte, error) {
 func isPublished(api *anypoint.API, authPolicy string) (bool, string) {
 	// Change detection (asset + policies)
 	checksum := checksum(api, authPolicy)
-	if agent.IsAPIPublished(fmt.Sprint(api.ID)) {
-		publishedChecksum := agent.GetAttributeOnPublishedAPI(fmt.Sprint(api.ID), "checksum")
+	if agent.IsAPIPublishedByID(fmt.Sprint(api.ID)) {
+		publishedChecksum := agent.GetAttributeOnPublishedAPIByID(fmt.Sprint(api.ID), "checksum")
 		if checksum == publishedChecksum {
 			// the api is already published with the latest changes
 			return true, checksum
