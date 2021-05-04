@@ -3,6 +3,7 @@ package discovery
 import (
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"sort"
@@ -169,10 +170,10 @@ func updateSpec(specType, endpointURI, authPolicy string, specContent []byte) ([
 	switch specType {
 	case apic.Oas2:
 		specContent, err = setOAS2Endpoint(endpointURI, specContent)
-		specContent, err = setOAS2policies(specContent, authPolicy)
+		specContent, err = setOAS2policies(specContent, authPolicy, specType)
 	case apic.Oas3:
 		specContent, err = setOAS3Endpoint(endpointURI, specContent)
-		specContent, err = setOAS3policies(specContent, authPolicy)
+		specContent, err = setOAS3policies(specContent, authPolicy, specType)
 	case apic.Wsdl:
 		specContent, err = setWSDLEndpoint(endpointURI, specContent)
 	}
@@ -244,7 +245,7 @@ func getSpecType(file *anypoint.ExchangeFile, specContent []byte) (string, error
 // getAuthPolicy gets the authentication policy type.
 func getAuthPolicy(policies anypoint.Policies) string {
 	for _, policy := range policies.Policies {
-		if policy.Template.AssetId == anypoint.ClientID || strings.Contains(policy.Template.AssetId,anypoint.SlaAuth){
+		if policy.Template.AssetId == anypoint.ClientID || strings.Contains(policy.Template.AssetId, anypoint.SlaAuth) {
 			return apic.Apikey
 		}
 
@@ -316,20 +317,21 @@ func doesAPIContainAnyMatchingTag(tags, apiTags []string) bool {
 	return false
 }
 
-// Helper function to remove existing back-end security policies
-func removeOASpolicies(specContent []byte, oasVersion string) ([]byte, error) {
+// removeOASpolicies is helper function to remove existing back-end security policies
+func removeOASpolicies(specContent []byte, specType string) ([]byte, error) {
 	spec := make(map[string]interface{})
 	err := json.Unmarshal(specContent, &spec)
 	if err != nil {
 		return specContent, err
 	}
-	// Deleting any pre-existing security definitions
-	if oasVersion == "v2" {
+
+	switch specType {
+	case apic.Oas2:
 		if spec["securityDefinitions"] != nil {
 			delete(spec, "securityDefinitions")
+			return json.Marshal(spec)
 		}
-	}
-	if oasVersion == "v3" {
+	case apic.Oas3:
 
 		oas3Spec := openapi3.Swagger{}
 		err := json.Unmarshal(specContent, &oas3Spec)
@@ -340,16 +342,14 @@ func removeOASpolicies(specContent []byte, oasVersion string) ([]byte, error) {
 		// reset to empty
 		oas3Spec.Components.SecuritySchemes = nil
 		return json.Marshal(oas3Spec)
-
 	}
 
-	return json.Marshal(spec)
+	return nil, errors.New("Invalid Spec Type, Only OAS specs are supported")
 }
 
-// TODO improve if fields are not complete, introduce per method swagger definitions, set up logic for multiple auth policies, use policy configurations
-func setOAS2policies(sc []byte, authPolicy string) ([]byte, error) {
+func setOAS2policies(sc []byte, authPolicy string, specType string) ([]byte, error) {
 	// Removing pre-existing auth security policies
-	sc, err := removeOASpolicies(sc, "v2")
+	sc, err := removeOASpolicies(sc, specType)
 	if err != nil {
 		return sc, err
 	}
@@ -366,7 +366,7 @@ func setOAS2policies(sc []byte, authPolicy string) ([]byte, error) {
 			Type:        "apiKey",
 			Name:        "Authorization",
 			In:          "header",
-			Description: "Provided as: client_id:<INSERT_VALID_CLIENTID_HERE> client_secret:<INSERT_VALID_SECRET_HERE>",
+			Description: "Provided as: client_id:<INSERT_VALID_CLIENTID_HERE> \r\n client_secret:<INSERT_VALID_SECRET_HERE>",
 		}
 		ss := openapi2.SecurityScheme{
 			VendorExtensible:    openapi2.VendorExtensible{},
@@ -390,9 +390,9 @@ func setOAS2policies(sc []byte, authPolicy string) ([]byte, error) {
 	return json.Marshal(oas2Spec)
 }
 
-func setOAS3policies(sc []byte, authPolicy string) ([]byte, error) {
+func setOAS3policies(sc []byte, authPolicy string, specType string) ([]byte, error) {
 	//Removing pre-existing auth security policies
-	sc, err := removeOASpolicies(sc, "v3")
+	sc, err := removeOASpolicies(sc, specType)
 	if err != nil {
 		return sc, err
 	}
@@ -409,7 +409,7 @@ func setOAS3policies(sc []byte, authPolicy string) ([]byte, error) {
 			Type:        "apiKey",
 			Name:        "Authorization",
 			In:          "header",
-			Description: "Provided as: client_id:<INSERT_VALID_CLIENTID_HERE> client_secret:<INSERT_VALID_SECRET_HERE>",
+			Description: "Provided as: client_id:<INSERT_VALID_CLIENTID_HERE> \r\n client_secret:<INSERT_VALID_SECRET_HERE>",
 		}
 
 		ssr := openapi3.SecuritySchemeRef{
