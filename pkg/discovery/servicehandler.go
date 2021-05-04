@@ -244,7 +244,7 @@ func getSpecType(file *anypoint.ExchangeFile, specContent []byte) (string, error
 // getAuthPolicy gets the authentication policy type.
 func getAuthPolicy(policies anypoint.Policies) string {
 	for _, policy := range policies.Policies {
-		if policy.Template.AssetId == anypoint.ClientID {
+		if policy.Template.AssetId == anypoint.ClientID || strings.Contains(policy.Template.AssetId,anypoint.SlaAuth){
 			return apic.Apikey
 		}
 
