@@ -63,7 +63,6 @@ func TestServiceHandler(t *testing.T) {
 		discoveryTags:       []string{"tag1"},
 		discoveryIgnoreTags: []string{"nah"},
 		client:              mc,
-		isAPIPublished:      mockIsPublishedTrue,
 	}
 	details := sh.ToServiceDetails(&asset)
 	assert.Equal(t, 1, len(details))
@@ -79,6 +78,71 @@ func TestServiceHandler(t *testing.T) {
 	assert.NotEmpty(t, item.ServiceAttributes["checksum"])
 }
 
+func TestServiceHandlerDidNotDiscoverAPI(t *testing.T) {
+	stage := "Sandbox"
+	policies := anypoint.Policies{Policies: []anypoint.Policy{
+		{
+			Template: anypoint.Template{
+				AssetId: anypoint.ClientID,
+			},
+		},
+	}}
+	mc := &anypoint.MockAnypointClient{}
+	mc.On("GetPolicies").Return(policies, nil)
+	sh := &serviceHandler{
+		assetCache:          cache.New(),
+		freshCache:          cache.New(),
+		stage:               stage,
+		discoveryTags:       []string{"nothing"},
+		discoveryIgnoreTags: []string{"nah"},
+		client:              mc,
+	}
+	details := sh.ToServiceDetails(&asset)
+	assert.Equal(t, 0, len(details))
+	assert.Equal(t, 0, len(mc.Calls))
+}
+
+func TestServiceHandlerGetPolicyError(t *testing.T) {
+	stage := "Sandbox"
+	policies := anypoint.Policies{Policies: []anypoint.Policy{}}
+	mc := &anypoint.MockAnypointClient{}
+	expectedErr := fmt.Errorf("failed to get policies")
+	mc.On("GetPolicies").Return(policies, expectedErr)
+	sh := &serviceHandler{
+		assetCache:          cache.New(),
+		freshCache:          cache.New(),
+		stage:               stage,
+		discoveryTags:       []string{},
+		discoveryIgnoreTags: []string{},
+		client:              mc,
+	}
+	sd, err := sh.getServiceDetail(&asset, &asset.APIs[0])
+
+	assert.Nil(t, sd)
+	assert.Equal(t, expectedErr, err)
+}
+
+func TestServiceHandlerGetExchangeAssetError(t *testing.T) {
+	stage := "Sandbox"
+	policies := anypoint.Policies{Policies: []anypoint.Policy{}}
+	mc := &anypoint.MockAnypointClient{}
+	expectedErr := fmt.Errorf("failed to get exchange asset")
+	mc.On("GetPolicies").Return(policies, nil)
+	mc.On("GetExchangeAsset").Return(&anypoint.ExchangeAsset{}, expectedErr)
+	sh := &serviceHandler{
+		assetCache:          cache.New(),
+		freshCache:          cache.New(),
+		stage:               stage,
+		discoveryTags:       []string{},
+		discoveryIgnoreTags: []string{},
+		client:              mc,
+	}
+	sd, err := sh.getServiceDetail(&asset, &asset.APIs[0])
+
+	assert.Nil(t, sd)
+	assert.Equal(t, expectedErr, err)
+}
+
 func TestShouldDiscoverAPIBasedOnTags(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -86,6 +150,7 @@ func TestShouldDiscoverAPIBasedOnTags(t *testing.T) {
 		ignoreTags    []string
 		apiTags       []string
 		expected      bool
+		endpoint      string
 	}{
 		{
 			name:          "Should discover if matching discovery tag exists on API",
@@ -93,6 +158,7 @@ func TestShouldDiscoverAPIBasedOnTags(t *testing.T) {
 			ignoreTags:    []string{},
 			apiTags:       []string{"discover"},
 			expected:      true,
+			endpoint:      "abc.com",
 		},
 		{
 			name:          "Should not discover if API has a tag to be ignored",
@@ -100,6 +166,7 @@ func TestShouldDiscoverAPIBasedOnTags(t *testing.T) {
 			ignoreTags:    []string{"donotdiscover"},
 			apiTags:       []string{"donotdiscover"},
 			expected:      false,
+			endpoint:      "abc.com",
 		},
 		{
 			name:          "Should not discover if API does not have any tags that the agent's config has",
@@ -107,6 +174,7 @@ func TestShouldDiscoverAPIBasedOnTags(t *testing.T) {
 			discoveryTags: []string{"discover"},
 			apiTags:       []string{},
 			expected:      false,
+			endpoint:      "abc.com",
 		},
 		{
 			name:          "Should discover if API as well as agent's config have no discovery tags",
@@ -114,6 +182,7 @@ func TestShouldDiscoverAPIBasedOnTags(t *testing.T) {
 			ignoreTags:    []string{},
 			apiTags:       []string{},
 			expected:      true,
+			endpoint:      "abc.com",
 		},
 		{
 			name:          "Should not discover if API has both - a tag to be discovered and a tag to be ignored",
@@ -121,13 +190,22 @@ func TestShouldDiscoverAPIBasedOnTags(t *testing.T) {
 			ignoreTags:    []string{"donotdiscover"},
 			apiTags:       []string{"discover", "donotdiscover"},
 			expected:      false,
+			endpoint:      "abc.com",
+		},
+		{
+			name:          "Should not discover if the endpoint is empty",
+			discoveryTags: []string{"discover"},
+			ignoreTags:    []string{"donotdiscover"},
+			apiTags:       []string{"discover"},
+			expected:      false,
+			endpoint:      "",
 		},
 	}
 
 	for i := range tests {
 		tc := tests[i]
 		t.Run(tc.name, func(t *testing.T) {
-			ok := shouldDiscoverAPI(tc.discoveryTags, tc.ignoreTags, tc.apiTags)
+			ok := shouldDiscoverAPI(tc.endpoint, tc.discoveryTags, tc.ignoreTags, tc.apiTags)
 			assert.Equal(t, tc.expected, ok)
 		})
 	}
@@ -228,7 +306,7 @@ func TestSetOAS2Endpoint(t *testing.T) {
 			name:        "Should return spec that has OAS2 endpoint set",
 			endPointURL: "http://google.com",
 			specContent: []byte("{\"basePath\":\"google.com\",\"host\":\"\",\"schemes\":[\"\"],\"swagger\":\"2.0\"}"),
-			result:      []byte("{\"basePath\":\"\",\"host\":\"google.com\",\"schemes\":[\"http\"],\"swagger\":\"2.0\"}"),
+			result:      []byte(`{"basePath":"/","host":"google.com","schemes":["http"],"swagger":"2.0"}`),
 			err:         nil,
 		},
 	}
@@ -455,20 +533,39 @@ func Test_updateSpecEndpoints(t *testing.T) {
 		endpoint        string
 		content         []byte
 		expectedContent []byte
+		authPolicy      string
 	}{
 		{
-			name:            "should update an OAS 2 spec",
+			name:            "should update an OAS 2 spec with APIKey security",
 			specType:        apic.Oas2,
 			endpoint:        "https://abc.com/v1",
 			content:         []byte(`{"basePath":"/v2","host":"oldhost.com","schemes":["http"],"swagger":"2.0"}`),
-			expectedContent: []byte(`{"basePath":"/v1","host":"abc.com","schemes":["https"],"swagger":"2.0"}`),
+			expectedContent: []byte(`{"schemes":["https"],"swagger":"2.0","host":"abc.com","basePath":"/v1","paths":null,"definitions":null,"securityDefinitions":{"client-id-enforcement":{"description":"Provided as: client_id:\u003cINSERT_VALID_CLIENTID_HERE\u003e client_secret:\u003cINSERT_VALID_SECRET_HERE\u003e","type":"apiKey","name":"Authorization","in":"header"}}}`),
+			authPolicy:      apic.Apikey,
 		},
 		{
-			name:            "should update an OAS 3 spec",
+			name:            "should update an OAS 2 spec with OAuth security",
+			specType:        apic.Oas2,
+			endpoint:        "https://abc.com/v1",
+			content:         []byte(`{"basePath":"/v2","host":"oldhost.com","schemes":["http"],"swagger":"2.0"}`),
+			expectedContent: []byte(`{"schemes":["https"],"swagger":"2.0","host":"abc.com","basePath":"/v1","paths":null,"definitions":null,"securityDefinitions":{"oauth":{"type":"oauth2","flow":"implicit","authorizationUrl":"dummy.io"}}}`),
+			authPolicy:      apic.Oauth,
+		},
+		{
+			name:            "should update an OAS 3 spec with OAuth security",
 			specType:        apic.Oas3,
 			endpoint:        "https://abc.com",
 			content:         []byte(`{"openapi":"3.0.1","servers":[{"url":"google.com"}]}`),
-			expectedContent: []byte(`{"openapi":"3.0.1","servers":[{"url":"https://abc.com"}]}`),
+			expectedContent: []byte(`{"openapi":"3.0.1","components":{"securitySchemes":{"Oauth":{"description":"This API uses OAuth 2 with the implicit grant flow","flows":{"implicit":{"authorizationUrl":"dummy.io","scopes":{}}},"type":"oauth2"}}},"info":{"title":"","version":""},"paths":null,"servers":[{"url":"https://abc.com"}]}`),
+			authPolicy:      apic.Oauth,
+		},
+		{
+			name:            "should update an OAS 3 spec with APIKey security",
+			specType:        apic.Oas3,
+			endpoint:        "https://abc.com",
+			content:         []byte(`{"openapi":"3.0.1","servers":[{"url":"google.com"}]}`),
+			expectedContent: []byte(`{"openapi":"3.0.1","components":{"securitySchemes":{"client-id-enforcement":{"description":"Provided as: client_id:\u003cINSERT_VALID_CLIENTID_HERE\u003e client_secret:\u003cINSERT_VALID_SECRET_HERE\u003e","in":"header","name":"Authorization","type":"apiKey"}}},"info":{"title":"","version":""},"paths":null,"servers":[{"url":"https://abc.com"}]}`),
+			authPolicy:      apic.Apikey,
 		},
 		{
 			name:            "should update a WSDL spec",
@@ -480,16 +577,13 @@ func Test_updateSpecEndpoints(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			content, err := updateSpecEndpoints(tc.specType, tc.endpoint, tc.content)
+			content, err := updateSpec(tc.specType, tc.endpoint, tc.authPolicy, tc.content)
 			assert.Nil(t, err)
 			assert.Equal(t, tc.expectedContent, content)
 		})
 	}
 }
 
-func mockIsPublishedTrue(string) bool {
-	return true
-}
-func mockIsPublishedFalse(string) bool {
-	return false
+func Test_setOAS2policies(t *testing.T) {
+
 }

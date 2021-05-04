@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	coreAgent "github.com/Axway/agent-sdk/pkg/agent"
-	coreagent "github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	utilErrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
@@ -48,7 +47,6 @@ func NewAgent(cfg *config.AgentConfig, client anypoint.Client) (agent *Agent) {
 		discoveryTags:       cleanTags(cfg.MulesoftConfig.DiscoveryTags),
 		discoveryIgnoreTags: cleanTags(cfg.MulesoftConfig.DiscoveryIgnoreTags),
 		client:              client,
-		isAPIPublished:      coreagent.IsAPIPublished,
 	}
 
 	disc := &discovery{

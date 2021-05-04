@@ -10,11 +10,11 @@ import (
 	"github.com/Axway/agent-sdk/pkg/api"
 )
 
-type MockClient struct {
+type MockClientBase struct {
 	Reqs map[string]*api.Response
 }
 
-func (mc *MockClient) Send(request api.Request) (*api.Response, error) {
+func (mc *MockClientBase) Send(request api.Request) (*api.Response, error) {
 	req, ok := mc.Reqs[request.URL]
 	if ok {
 		return req, nil
@@ -50,26 +50,26 @@ func (m *MockAnypointClient) ListAssets(*Page) ([]Asset, error) {
 	return result.([]Asset), args.Error(1)
 }
 
-func (m *MockAnypointClient) GetPolicies(*API) (Policies, error) {
+func (m *MockAnypointClient) GetPolicies(int64) (Policies, error) {
 	args := m.Called()
 	result := args.Get(0)
 	return result.(Policies), args.Error(1)
 }
 
-func (m *MockAnypointClient) GetExchangeAsset(*API) (*ExchangeAsset, error) {
+func (m *MockAnypointClient) GetExchangeAsset(_, _, _ string) (*ExchangeAsset, error) {
 	args := m.Called()
 	result := args.Get(0)
 	return result.(*ExchangeAsset), args.Error(1)
 }
 
-func (m *MockAnypointClient) GetExchangeAssetIcon(*ExchangeAsset) (string, string, error) {
+func (m *MockAnypointClient) GetExchangeAssetIcon(_ string) (string, string, error) {
 	args := m.Called()
 	icon := args.String(0)
 	contentType := args.String(1)
 	return icon, contentType, args.Error(2)
 }
 
-func (m *MockAnypointClient) GetExchangeFileContent(*ExchangeFile) ([]byte, error) {
+func (m *MockAnypointClient) GetExchangeFileContent(_, _, _ string) ([]byte, error) {
 	args := m.Called()
 	result := args.Get(0)
 	return result.([]byte), args.Error(1)

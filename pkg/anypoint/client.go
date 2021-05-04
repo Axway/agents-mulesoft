@@ -37,10 +37,10 @@ type Client interface {
 	GetAccessToken() (string, *User, time.Duration, error)
 	GetEnvironmentByName(name string) (*Environment, error)
 	ListAssets(page *Page) ([]Asset, error)
-	GetPolicies(api *API) (Policies, error)
-	GetExchangeAsset(api *API) (*ExchangeAsset, error)
-	GetExchangeAssetIcon(asset *ExchangeAsset) (icon string, contentType string, err error)
-	GetExchangeFileContent(file *ExchangeFile) (fileContent []byte, err error)
+	GetPolicies(apiID int64) (Policies, error)
+	GetExchangeAsset(groupID, assetID, assetVersion string) (*ExchangeAsset, error)
+	GetExchangeAssetIcon(icon string) (string, string, error)
+	GetExchangeFileContent(link, packaging, mainFile string) ([]byte, error)
 	GetAnalyticsWindow() ([]AnalyticsEvent, error)
 }
 
@@ -253,9 +253,9 @@ func (c *AnypointClient) ListAssets(page *Page) ([]Asset, error) {
 }
 
 // GetPolicies lists the API policies.
-func (c *AnypointClient) GetPolicies(api *API) (Policies, error) {
+func (c *AnypointClient) GetPolicies(apiID int64) (Policies, error) {
 	var policies Policies
-	url := fmt.Sprintf("%s/apimanager/api/v1/organizations/%s/environments/%s/apis/%d/policies", c.baseURL, c.auth.GetOrgID(), c.environment.ID, api.ID)
+	url := fmt.Sprintf("%s/apimanager/api/v1/organizations/%s/environments/%s/apis/%d/policies", c.baseURL, c.auth.GetOrgID(), c.environment.ID, apiID)
 	err := c.invokeJSONGet(url, nil, &policies)
 
 	if err != nil {
@@ -266,9 +266,9 @@ func (c *AnypointClient) GetPolicies(api *API) (Policies, error) {
 }
 
 // GetExchangeAsset creates the AssetDetail form the Asset API.
-func (c *AnypointClient) GetExchangeAsset(api *API) (*ExchangeAsset, error) {
+func (c *AnypointClient) GetExchangeAsset(groupID, assetID, assetVersion string) (*ExchangeAsset, error) {
 	var exchangeAsset ExchangeAsset
-	url := fmt.Sprintf("%s/exchange/api/v2/assets/%s/%s/%s", c.baseURL, api.GroupID, api.AssetID, api.AssetVersion)
+	url := fmt.Sprintf("%s/exchange/api/v2/assets/%s/%s/%s", c.baseURL, groupID, assetID, assetVersion)
 	err := c.invokeJSONGet(url, nil, &exchangeAsset)
 	if err != nil {
 		return nil, err
@@ -277,11 +277,11 @@ func (c *AnypointClient) GetExchangeAsset(api *API) (*ExchangeAsset, error) {
 }
 
 // GetExchangeAssetIcon get the icon as a base64 encoded string from the Exchange Asset files.
-func (c *AnypointClient) GetExchangeAssetIcon(asset *ExchangeAsset) (string, string, error) {
-	if asset.Icon == "" {
+func (c *AnypointClient) GetExchangeAssetIcon(icon string) (string, string, error) {
+	if icon == "" {
 		return "", "", nil
 	}
-	iconBuffer, headers, err := c.invokeGet(asset.Icon)
+	iconBuffer, headers, err := c.invokeGet(icon)
 	if err != nil {
 		return "", "", err
 	}
@@ -296,17 +296,17 @@ func (c *AnypointClient) GetExchangeAssetIcon(asset *ExchangeAsset) (string, str
 
 // GetExchangeFileContent download the file from the ExternalLink reference. If the file is a zip file
 // and thre is a MainFile set then the content of the MainFile is returned.
-func (c *AnypointClient) GetExchangeFileContent(file *ExchangeFile) (fileContent []byte, err error) {
-	fileContent, _, err = c.invokeGet(file.ExternalLink)
+func (c *AnypointClient) GetExchangeFileContent(link, packaging, mainFile string) (fileContent []byte, err error) {
+	fileContent, _, err = c.invokeGet(link)
 
-	if file.Packaging == "zip" && file.MainFile != "" {
+	if packaging == "zip" && mainFile != "" {
 		zipReader, err := zip.NewReader(bytes.NewReader(fileContent), int64(len(fileContent)))
 		if err != nil {
 			return nil, err
 		}
 
 		for _, f := range zipReader.File {
-			if f.Name == file.MainFile {
+			if f.Name == mainFile {
 				content, err := f.Open()
 				if err != nil {
 					return nil, err
@@ -392,7 +392,7 @@ func (c *AnypointClient) invokeJSON(request coreapi.Request, resp interface{}) e
 		return agenterrors.Wrap(ErrCommunicatingWithGateway, err.Error())
 	}
 
-	//TODO this is to prevent Mule 3 APIs with no policies crashing the discovery agent -> need to verify if still required
+	// TODO this is to prevent Mule 3 APIs with no policies crashing the discovery agent -> need to verify if still required
 	if string(body) == "[]" {
 		return nil
 	}

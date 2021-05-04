@@ -8,6 +8,9 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/getkin/kin-openapi/openapi3"
+	openapi2 "github.com/go-openapi/spec"
+
 	"github.com/Axway/agent-sdk/pkg/agent"
 
 	"github.com/Axway/agent-sdk/pkg/apic"
@@ -27,8 +30,6 @@ type ServiceHandler interface {
 	OnConfigChange(cfg *config.MulesoftConfig)
 }
 
-type IsAPIPublished func(externalAPIID string) bool
-
 type serviceHandler struct {
 	assetCache          cache.Cache
 	freshCache          cache.Cache
@@ -36,7 +37,6 @@ type serviceHandler struct {
 	discoveryTags       []string
 	discoveryIgnoreTags []string
 	client              anypoint.Client
-	isAPIPublished      IsAPIPublished
 }
 
 func (s *serviceHandler) OnConfigChange(cfg *config.MulesoftConfig) {
@@ -70,66 +70,57 @@ func (s *serviceHandler) ToServiceDetails(asset *anypoint.Asset) []*ServiceDetai
 
 // getServiceDetail gets the ServiceDetail for the API asset.
 func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.API) (*ServiceDetail, error) {
-	if !shouldDiscoverAPI(s.discoveryTags, s.discoveryIgnoreTags, api.Tags) {
-		return nil, nil
-	}
-
-	if api.EndpointURI == "" {
-		// If the API has no exposed endpoint we're not going to discover it.
-		logrus.Debugf("consumer endpoint not found for %s", api.AssetID)
+	if !shouldDiscoverAPI(api.EndpointURI, s.discoveryTags, s.discoveryIgnoreTags, api.Tags) {
 		return nil, nil
 	}
 
 	// Get the policies associated with the API
-	policies, err := s.client.GetPolicies(api)
+	policies, err := s.client.GetPolicies(api.ID)
 	if err != nil {
 		return nil, err
 	}
 	authPolicy := getAuthPolicy(policies)
 
-	// Change detection (asset + policies)
-	checksum := checksum(api, authPolicy)
-	if s.isAPIPublished(fmt.Sprint(api.ID)) {
-		publishedChecksum := agent.GetAttributeOnPublishedAPI(fmt.Sprint(api.ID), "checksum")
-		if checksum == publishedChecksum {
-			return nil, nil
-		}
-		log.Debugf("Change detected in published asset %s(%d)", asset.AssetID, api.ID)
+	isAlreadyPublished, checksum := isPublished(api, authPolicy)
+	if isAlreadyPublished {
+		// If true, then the api is published and there were no changes detected
+		return nil, nil
 	}
+	log.Debugf("Change detected in published asset %s(%d)", asset.AssetID, api.ID)
 
 	// Potentially discoverable API, gather the details
 	log.Infof("Gathering details for %s(%d)", asset.AssetID, api.ID)
-	exchangeAsset, err := s.client.GetExchangeAsset(api)
+	exchangeAsset, err := s.client.GetExchangeAsset(api.GroupID, api.AssetID, api.AssetVersion)
 	if err != nil {
 		return nil, err
 	}
 
-	exchangeFile := getExchangeAssetSpecFile(exchangeAsset.Files)
+	exchFile := getExchangeAssetSpecFile(exchangeAsset.Files)
 
-	if exchangeFile == nil {
+	if exchFile == nil {
 		// SDK needs a spec
 		log.Debugf("No supported specification file found for asset '%s (%s)'", api.AssetID, api.AssetVersion)
 		return nil, nil
 	}
 
-	rawSpec, err := s.client.GetExchangeFileContent(exchangeFile)
+	rawSpec, err := s.client.GetExchangeFileContent(exchFile.ExternalLink, exchFile.Packaging, exchFile.MainFile)
 	if err != nil {
 		return nil, err
 	}
 	specContent := specYAMLToJSON(rawSpec) // SDK does not support YAML specifications
-	specType, err := getSpecType(exchangeFile, specContent)
+	specType, err := getSpecType(exchFile, specContent)
 	if err != nil {
 		return nil, err
 	}
 	if specType == "" {
 		return nil, fmt.Errorf("unknown spec type for '%s (%s)'", api.AssetID, api.AssetVersion)
 	}
-	modifiedSpec, err := updateSpecEndpoints(specType, api.EndpointURI, specContent)
+	modifiedSpec, err := updateSpec(specType, api.EndpointURI, authPolicy, specContent)
 	if err != nil {
 		return nil, err
 	}
 
-	icon, iconContentType, err := s.client.GetExchangeAssetIcon(exchangeAsset)
+	icon, iconContentType, err := s.client.GetExchangeAssetIcon(exchangeAsset.Icon)
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +142,13 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 }
 
 // shouldDiscoverAPI determines if the API should be pushed to Central or not
-func shouldDiscoverAPI(discoveryTags, ignoreTags, apiTags []string) bool {
+func shouldDiscoverAPI(endpoint string, discoveryTags, ignoreTags, apiTags []string) bool {
+	if endpoint == "" {
+		// If the API has no exposed endpoint we're not going to discover it.
+		logrus.Debugf("consumer endpoint not found")
+		return false
+	}
+
 	if doesAPIContainAnyMatchingTag(ignoreTags, apiTags) {
 		return false // ignore
 	}
@@ -164,16 +161,18 @@ func shouldDiscoverAPI(discoveryTags, ignoreTags, apiTags []string) bool {
 	return true
 }
 
-// updateSpecEndpoints Updates the spec endpoints based on the given type.
-func updateSpecEndpoints(specType, endpointURI string, specContent []byte) ([]byte, error) {
+// updateSpec Updates the spec endpoints based on the given type.
+func updateSpec(specType, endpointURI, authPolicy string, specContent []byte) ([]byte, error) {
 	var err error
 	// Make a best effort to update the endpoints - required because the SDK is parsing from spec and not setting the
 	// endpoint information independently.
 	switch specType {
 	case apic.Oas2:
 		specContent, err = setOAS2Endpoint(endpointURI, specContent)
+		specContent, err = setOAS2policies(specContent, authPolicy)
 	case apic.Oas3:
 		specContent, err = setOAS3Endpoint(endpointURI, specContent)
+		specContent, err = setOAS3policies(specContent, authPolicy)
 	case apic.Wsdl:
 		specContent, err = setWSDLEndpoint(endpointURI, specContent)
 	}
@@ -262,17 +261,19 @@ func setOAS2Endpoint(endpointURL string, specContent []byte) ([]byte, error) {
 	if err != nil {
 		return specContent, err
 	}
-
 	spec := make(map[string]interface{})
 	err = json.Unmarshal(specContent, &spec)
 	if err != nil {
 		return specContent, err
 	}
-
 	spec["host"] = endpoint.Host
-	spec["basePath"] = endpoint.Path
+	if endpoint.Path == "" {
+		log.Debug("Empty base path, manually changing to /")
+		spec["basePath"] = "/"
+	} else {
+		spec["basePath"] = endpoint.Path
+	}
 	spec["schemes"] = []string{endpoint.Scheme}
-
 	return json.Marshal(spec)
 }
 
@@ -313,4 +314,147 @@ func doesAPIContainAnyMatchingTag(tags, apiTags []string) bool {
 		}
 	}
 	return false
+}
+
+// Helper function to remove existing back-end security policies
+func removeOASpolicies(specContent []byte, oasVersion string) ([]byte, error) {
+	spec := make(map[string]interface{})
+	err := json.Unmarshal(specContent, &spec)
+	if err != nil {
+		return specContent, err
+	}
+	// Deleting any pre-existing security definitions
+	if oasVersion == "v2" {
+		if spec["securityDefinitions"] != nil {
+			delete(spec, "securityDefinitions")
+		}
+	}
+	if oasVersion == "v3" {
+
+		oas3Spec := openapi3.Swagger{}
+		err := json.Unmarshal(specContent, &oas3Spec)
+		if err != nil {
+			return specContent, err
+		}
+
+		// reset to empty
+		oas3Spec.Components.SecuritySchemes = nil
+		return json.Marshal(oas3Spec)
+
+	}
+
+	return json.Marshal(spec)
+}
+
+// TODO improve if fields are not complete, introduce per method swagger definitions, set up logic for multiple auth policies, use policy configurations
+func setOAS2policies(sc []byte, authPolicy string) ([]byte, error) {
+	// Removing pre-existing auth security policies
+	sc, err := removeOASpolicies(sc, "v2")
+	if err != nil {
+		return sc, err
+	}
+
+	oas2Spec := openapi2.Swagger{}
+	err = json.Unmarshal(sc, &oas2Spec)
+	if err != nil {
+		return nil, err
+	}
+
+	switch authPolicy {
+	case apic.Apikey:
+		ssp := openapi2.SecuritySchemeProps{
+			Type:        "apiKey",
+			Name:        "Authorization",
+			In:          "header",
+			Description: "Provided as: client_id:<INSERT_VALID_CLIENTID_HERE> client_secret:<INSERT_VALID_SECRET_HERE>",
+		}
+		ss := openapi2.SecurityScheme{
+			VendorExtensible:    openapi2.VendorExtensible{},
+			SecuritySchemeProps: ssp,
+		}
+		sd := openapi2.SecurityDefinitions{
+			"client-id-enforcement": &ss,
+		}
+
+		oas2Spec.SwaggerProps.SecurityDefinitions = sd
+
+	case apic.Oauth:
+		ss := openapi2.OAuth2Implicit("dummy.io")
+		sd := openapi2.SecurityDefinitions{
+			"oauth": ss,
+		}
+
+		oas2Spec.SwaggerProps.SecurityDefinitions = sd
+	}
+
+	return json.Marshal(oas2Spec)
+}
+
+func setOAS3policies(sc []byte, authPolicy string) ([]byte, error) {
+	//Removing pre-existing auth security policies
+	sc, err := removeOASpolicies(sc, "v3")
+	if err != nil {
+		return sc, err
+	}
+
+	oas3Spec := openapi3.Swagger{}
+	err = json.Unmarshal(sc, &oas3Spec)
+	if err != nil {
+		return sc, err
+	}
+
+	switch authPolicy {
+	case apic.Apikey:
+		ss := openapi3.SecurityScheme{
+			Type:        "apiKey",
+			Name:        "Authorization",
+			In:          "header",
+			Description: "Provided as: client_id:<INSERT_VALID_CLIENTID_HERE> client_secret:<INSERT_VALID_SECRET_HERE>",
+		}
+
+		ssr := openapi3.SecuritySchemeRef{
+			Value: &ss,
+		}
+
+		oas3Spec.Components.SecuritySchemes = openapi3.SecuritySchemes{"client-id-enforcement": &ssr}
+
+	case apic.Oauth:
+		i := openapi3.OAuthFlow{
+			ExtensionProps:   openapi3.ExtensionProps{},
+			AuthorizationURL: "dummy.io",
+			Scopes:           make(map[string]string),
+		}
+		oAuthFlow := openapi3.OAuthFlows{
+			ExtensionProps: openapi3.ExtensionProps{},
+			Implicit:       &i,
+		}
+		ss := openapi3.SecurityScheme{
+			ExtensionProps: openapi3.ExtensionProps{},
+			Type:           "oauth2",
+			Description:    "This API uses OAuth 2 with the implicit grant flow",
+			Flows:          &oAuthFlow,
+		}
+		ssr := openapi3.SecuritySchemeRef{
+			Value: &ss,
+		}
+
+		oas3Spec.Components.SecuritySchemes = openapi3.SecuritySchemes{"Oauth": &ssr}
+	}
+
+	return json.Marshal(oas3Spec)
+}
+
+// isPublished checks if an api is published with the latest changes. Returns true if it is, and false if it is not.
+func isPublished(api *anypoint.API, authPolicy string) (bool, string) {
+	// Change detection (asset + policies)
+	checksum := checksum(api, authPolicy)
+	if agent.IsAPIPublished(fmt.Sprint(api.ID)) {
+		publishedChecksum := agent.GetAttributeOnPublishedAPI(fmt.Sprint(api.ID), "checksum")
+		if checksum == publishedChecksum {
+			// the api is already published with the latest changes
+			return true, checksum
+		}
+	}
+	// the api is not published
+	return false, checksum
 }
