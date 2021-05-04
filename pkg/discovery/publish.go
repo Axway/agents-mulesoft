@@ -1,46 +1,55 @@
 package discovery
 
 import (
-	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	"github.com/Axway/agent-sdk/pkg/util/log"
+	"github.com/Axway/agents-mulesoft/pkg/config"
 )
 
-type APIPublisher interface {
-	PublishLoop()
+type PublishAPI func(serviceBody apic.ServiceBody) error
+
+// publisher implements the Repeater interface. Waits for for items on a channel and publishes them to central
+type publisher struct {
+	apiChan     chan *ServiceDetail
+	stopPublish chan bool
+	publishAPI  PublishAPI
 }
 
-// publishLoop Publish event loop.
-func (a *Agent) publishLoop() {
+func (p *publisher) Stop() {
+	p.stopPublish <- true
+}
+
+func (p *publisher) OnConfigChange(_ *config.MulesoftConfig) {
+	// noop
+}
+
+// publisher Publish event loop.
+func (p *publisher) Loop() {
 	for {
 		select {
-		case serviceDetail := <-a.apiChan:
-			err := a.publish(serviceDetail)
-			if err != nil {
-				log.Errorf("Error publishing API \"%s:(%s)\":%s", serviceDetail.APIName, serviceDetail.ID, err.Error())
-			}
-		case <-a.stopPublish:
+		case serviceDetail := <-p.apiChan:
+			p.publish(serviceDetail)
+		case <-p.stopPublish:
 			return
 		}
 	}
 }
 
 // publish Publishes the API to Amplify Central.
-func (a *Agent) publish(serviceDetail *ServiceDetail) error {
-	log.Infof("Publishing API \"%s (%s)\" to Amplify Central", serviceDetail.APIName, serviceDetail.ID)
+func (p *publisher) publish(serviceDetail *ServiceDetail) {
+	log.Infof("Publishing API '%s (%s)' to Amplify Central", serviceDetail.APIName, serviceDetail.ID)
 
 	serviceBody, err := BuildServiceBody(serviceDetail)
 	if err != nil {
-		log.Errorf("Error building service body for API \"%s (%s)\": %s", serviceDetail.APIName, serviceDetail.ID, err.Error())
-		return err
+		log.Errorf("Error building service body for API '%s (%s)': %s", serviceDetail.APIName, serviceDetail.ID, err.Error())
+		return
 	}
-	err = agent.PublishAPI(serviceBody)
+	err = p.publishAPI(serviceBody)
 	if err != nil {
-		log.Errorf("Error publishing API \"%s (%s)\" to Amplify Central: %s", serviceDetail.APIName, serviceDetail.ID, err.Error())
-		return err
+		log.Errorf("Error publishing API '%s (%s)' to Amplify Central: %s", serviceDetail.APIName, serviceDetail.ID, err.Error())
+		return
 	}
-	log.Infof("Published API \"%s (%s)\" to Amplify Central", serviceDetail.APIName, serviceDetail.ID)
-	return err
+	log.Infof("Published API '%s (%s)' to Amplify Central", serviceDetail.APIName, serviceDetail.ID)
 }
 
 // BuildServiceBody - creates the service definition

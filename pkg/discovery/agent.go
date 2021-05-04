@@ -3,11 +3,8 @@ package discovery
 import (
 	"fmt"
 	"strings"
-	"time"
 
-	"github.com/Axway/agent-sdk/pkg/agent"
-	coreagent "github.com/Axway/agent-sdk/pkg/agent"
-	"github.com/Axway/agent-sdk/pkg/apic"
+	coreAgent "github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	utilErrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
@@ -16,43 +13,68 @@ import (
 	"github.com/Axway/agents-mulesoft/pkg/config"
 )
 
-// Agent links the mulesoft client and the gateway client.
-type Agent struct {
-	anypointClient      anypoint.Client
-	apicClient          apic.Client
-	apiChan             chan *ServiceDetail
-	assetCache          cache.Cache
-	discoveryIgnoreTags []string
-	discoveryPageSize   int
-	discoveryTags       []string
-	pollInterval        time.Duration
-	publishBufferSize   int
-	stage               string
-	stopAgent           chan bool
-	stopDiscovery       chan bool
-	stopPublish         chan bool
+type Repeater interface {
+	Loop()
+	OnConfigChange(cfg *config.MulesoftConfig)
+	Stop()
 }
 
-// New creates a new agent
-func New(cfg *config.AgentConfig, client anypoint.Client) (agent *Agent) {
+// Agent links the mulesoft client and the gateway client.
+type Agent struct {
+	assetCache cache.Cache
+	client     anypoint.Client
+	stopAgent  chan bool
+	discovery  Repeater
+	publisher  Repeater
+}
+
+// NewAgent creates a new agent
+func NewAgent(cfg *config.AgentConfig, client anypoint.Client) (agent *Agent) {
 	buffer := 5
 	assetCache := cache.New()
-	agent = &Agent{
-		anypointClient:      client,
-		apicClient:          coreagent.GetCentralClient(),
-		apiChan:             make(chan *ServiceDetail, buffer),
-		assetCache:          assetCache,
-		discoveryIgnoreTags: cleanTags(cfg.MulesoftConfig.DiscoveryIgnoreTags),
-		discoveryPageSize:   50,
-		discoveryTags:       cleanTags(cfg.MulesoftConfig.DiscoveryTags),
-		pollInterval:        cfg.MulesoftConfig.PollInterval,
-		stage:               cfg.MulesoftConfig.Environment,
-		stopAgent:           make(chan bool),
-		stopDiscovery:       make(chan bool),
-		stopPublish:         make(chan bool),
+	apiChan := make(chan *ServiceDetail, buffer)
+
+	pub := &publisher{
+		apiChan:     apiChan,
+		stopPublish: make(chan bool),
+		publishAPI:  coreAgent.PublishAPI,
 	}
 
-	return agent
+	svcHandler := &serviceHandler{
+		assetCache:          assetCache,
+		freshCache:          cache.New(),
+		stage:               cfg.MulesoftConfig.Environment,
+		discoveryTags:       cleanTags(cfg.MulesoftConfig.DiscoveryTags),
+		discoveryIgnoreTags: cleanTags(cfg.MulesoftConfig.DiscoveryIgnoreTags),
+		client:              client,
+	}
+
+	disc := &discovery{
+		apiChan:           apiChan,
+		assetCache:        assetCache,
+		client:            client,
+		discoveryPageSize: 50,
+		pollInterval:      cfg.MulesoftConfig.PollInterval,
+		stopDiscovery:     make(chan bool),
+		serviceHandler:    svcHandler,
+	}
+
+	return newAgent(client, disc, pub, assetCache)
+}
+
+func newAgent(
+	client anypoint.Client,
+	discovery Repeater,
+	publisher Repeater,
+	assetCache cache.Cache,
+) *Agent {
+	return &Agent{
+		client:     client,
+		assetCache: assetCache,
+		discovery:  discovery,
+		publisher:  publisher,
+		stopAgent:  make(chan bool),
+	}
 }
 
 // onConfigChange apply configuration changes
@@ -60,19 +82,15 @@ func (a *Agent) onConfigChange() {
 	cfg := config.GetConfig()
 
 	// Stop Discovery & Publish
-	a.stopDiscovery <- true
-	a.stopPublish <- true
+	a.discovery.Stop()
+	a.publisher.Stop()
 
-	a.stage = cfg.MulesoftConfig.Environment
-	a.discoveryTags = cleanTags(cfg.MulesoftConfig.DiscoveryTags)
-	a.discoveryIgnoreTags = cleanTags(cfg.MulesoftConfig.DiscoveryIgnoreTags)
-	a.apicClient = coreagent.GetCentralClient()
-	a.pollInterval = cfg.MulesoftConfig.PollInterval
-	a.anypointClient.OnConfigChange(cfg.MulesoftConfig)
+	a.client.OnConfigChange(cfg.MulesoftConfig)
+	a.discovery.OnConfigChange(cfg.MulesoftConfig)
 
 	// Restart Discovery & Publish
-	go a.discoveryLoop()
-	go a.publishLoop()
+	go a.discovery.Loop()
+	go a.publisher.Loop()
 }
 
 // CheckHealth - check the health of all clients associated with the agent
@@ -85,32 +103,40 @@ func (a *Agent) CheckHealth() error {
 
 // Run the agent loop
 func (a *Agent) Run() {
-	agent.RegisterAPIValidator(a.validateAPI)
-	agent.OnConfigChange(a.onConfigChange)
+	validator := validateAPI(a.assetCache)
+	coreAgent.RegisterAPIValidator(validator)
+	coreAgent.OnConfigChange(a.onConfigChange)
 
-	go a.discoveryLoop()
-	go a.publishLoop()
+	go a.discovery.Loop()
+	go a.publisher.Loop()
 
 	select {
 	case <-a.stopAgent:
 		log.Info("Received request to kill agent")
-		a.stopDiscovery <- true
-		a.stopPublish <- true
+		a.discovery.Stop()
+		a.publisher.Stop()
 		return
 	}
 }
 
-// validateAPI checks that the API still exists on the dataplane. If it doesn't the agent
+// Stop stops customLogTraceabilityAgent.
+func (a *Agent) Stop() {
+	a.stopAgent <- true
+}
+
+// validateAPI checks that the API still exists on the data plane. If it doesn't the agent
 // performs cleanup on the API Central environment. The asset cache is populated by the
 // discovery loop.
-func (a *Agent) validateAPI(apiID, stageName string) bool {
-	asset, err := a.assetCache.Get(formatCacheKey(apiID, stageName))
-	if err != nil {
-		log.Warnf("Unable to validate API: %s", err.Error())
-		// If we can't validate it exists then assume it does until known otherwise.
-		return true
+func validateAPI(assetCache cache.Cache) func(apiID, stageName string) bool {
+	return func(apiID, stageName string) bool {
+		asset, err := assetCache.Get(formatCacheKey(apiID, stageName))
+		if err != nil {
+			log.Warnf("Unable to validate API: %s", err.Error())
+			// If we can't validate it exists then assume it does until known otherwise.
+			return true
+		}
+		return asset != nil
 	}
-	return asset != nil
 }
 
 // cleanTags splits the CSV and trims off whitespace

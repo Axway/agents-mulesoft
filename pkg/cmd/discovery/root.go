@@ -33,7 +33,7 @@ func init() {
 func run() error {
 	cfg := config.GetConfig()
 	client := anypoint.NewClient(cfg.MulesoftConfig)
-	discoveryAgent :=  discovery.New(cfg, client)
+	discoveryAgent := discovery.NewAgent(cfg, client)
 	err := discoveryAgent.CheckHealth()
 	if err != nil {
 		return err
