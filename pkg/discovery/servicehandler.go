@@ -168,11 +168,26 @@ func updateSpec(specType, endpointURI, authPolicy string, specContent []byte) ([
 	// endpoint information independently.
 	switch specType {
 	case apic.Oas2:
-		specContent, err = setOAS2Endpoint(endpointURI, specContent)
-		specContent, err = setOAS2policies(specContent, authPolicy)
+		processor, err := apic.NewOas2Processor(specContent)
+		if err != nil {
+			return nil, err
+		}
+		err = processor.SetHostDetails(endpointURI)
+		if err != nil {
+			logrus.Errorf("failed to change the OAS 2 host to %s: %s", endpointURI, err)
+		}
+		return processor.Marshal()
+		// specContent, err = setOAS2Endpoint(endpointURI, specContent)
+		// specContent, err = setOAS2policies(specContent, authPolicy)
 	case apic.Oas3:
-		specContent, err = setOAS3Endpoint(endpointURI, specContent)
-		specContent, err = setOAS3policies(specContent, authPolicy)
+		processor, err := apic.NewOas3Processor(specContent)
+		if err != nil {
+			return nil, err
+		}
+		processor.SetServers([]string{endpointURI})
+		processor.Marshal()
+		// specContent, err = setOAS3Endpoint(endpointURI, specContent)
+		// specContent, err = setOAS3policies(specContent, authPolicy)
 	case apic.Wsdl:
 		specContent, err = setWSDLEndpoint(endpointURI, specContent)
 	}
