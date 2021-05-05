@@ -15,7 +15,7 @@ mulesoft_traceability_agent:
 mulesoft:
   environment: Sandbox
   cachePath: "/tmp"
-  pollInterval: 30s
+  pollInterval: 20s
   auth:
     username: <USERNAME>
     password: <PASSWORD>
