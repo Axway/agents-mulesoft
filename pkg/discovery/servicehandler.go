@@ -80,7 +80,7 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 	if err != nil {
 		return nil, err
 	}
-	authPolicy,_ := getAuthPolicy(policies)
+	authPolicy, _ := getAuthPolicy(policies)
 
 	//TODO can be refactored to not use authpolicy in checksum and use policy
 	isAlreadyPublished, checksum := isPublished(api, authPolicy)
@@ -349,9 +349,8 @@ func removeOASpolicies(specContent []byte, specType string) ([]byte, error) {
 }
 
 func setOAS2policies(sc []byte, policies anypoint.Policies, specType string) ([]byte, error) {
-	log.Info("**testing** " )
+
 	authPolicy, configuration := getAuthPolicy(policies)
-	log.Info("Printing Configuration ",configuration )
 
 	// Removing pre-existing auth security policies
 	sc, err := removeOASpolicies(sc, specType)
@@ -367,6 +366,7 @@ func setOAS2policies(sc []byte, policies anypoint.Policies, specType string) ([]
 
 	switch authPolicy {
 	case apic.Apikey:
+
 		ssp := openapi2.SecuritySchemeProps{
 			Type:        "apiKey",
 			Name:        "Authorization",
@@ -384,7 +384,11 @@ func setOAS2policies(sc []byte, policies anypoint.Policies, specType string) ([]
 		oas2Spec.SwaggerProps.SecurityDefinitions = sd
 
 	case apic.Oauth:
-		ss := openapi2.OAuth2Implicit("dummy.io")
+		var tokenUrl string
+		if configuration["tokenUrl"] != nil {
+			tokenUrl = configuration["tokenUrl"].(string)
+		}
+		ss := openapi2.OAuth2Implicit(tokenUrl)
 		sd := openapi2.SecurityDefinitions{
 			"oauth": ss,
 		}
@@ -396,9 +400,8 @@ func setOAS2policies(sc []byte, policies anypoint.Policies, specType string) ([]
 }
 
 func setOAS3policies(sc []byte, policies anypoint.Policies, specType string) ([]byte, error) {
-	log.Info("**testing** " )
+
 	authPolicy, configuration := getAuthPolicy(policies)
-	log.Info("Printing Configuration ",configuration )
 
 	//Removing pre-existing auth security policies
 	sc, err := removeOASpolicies(sc, specType)
@@ -428,9 +431,14 @@ func setOAS3policies(sc []byte, policies anypoint.Policies, specType string) ([]
 		oas3Spec.Components.SecuritySchemes = openapi3.SecuritySchemes{"client-id-enforcement": &ssr}
 
 	case apic.Oauth:
+		var authUrl string
+		if configuration["tokenUrl"] != nil {
+			authUrl = configuration["tokenUrl"].(string)
+		}
+
 		i := openapi3.OAuthFlow{
 			ExtensionProps:   openapi3.ExtensionProps{},
-			AuthorizationURL: "dummy.io",
+			AuthorizationURL: authUrl,
 			Scopes:           make(map[string]string),
 		}
 		oAuthFlow := openapi3.OAuthFlows{
@@ -449,7 +457,6 @@ func setOAS3policies(sc []byte, policies anypoint.Policies, specType string) ([]
 
 		oas3Spec.Components.SecuritySchemes = openapi3.SecuritySchemes{"Oauth": &ssr}
 	}
-	log.Info("Printing configuration of policy ", )
 
 	return json.Marshal(oas3Spec)
 }
