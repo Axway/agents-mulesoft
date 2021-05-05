@@ -8,9 +8,9 @@ on:
       - '*'
 
 jobs:
-  build-discovery:
+  release:
     runs-on: ubuntu-latest
-    name: Build & Test
+    name: Release
     defaults:
       run:
         working-directory: .
@@ -19,33 +19,19 @@ jobs:
     - uses: actions/setup-go@v2
       with:
         go-version: '^1.13.0'
-    - run: make download
-    - name: Discovery Build & Test
-      run: |
-        make build-discovery .
-        go test ./...
+    - name: download
+      run: make download
+    - name: Discovery Build
+      run: make build-discovery
+    - name: Traceability Build
+      run: make build-trace
+    - name: Test Agents
+      run : make test
     - name: Discovery Release (Snapshot)
       uses: goreleaser/goreleaser-action@v2.5.0
       with:
         workdir: ./cmd/discovery
         args: release --snapshot --skip-publish --rm-dist
-
-  build-traceability:
-    runs-on: ubuntu-latest
-    name: Build & Test
-    defaults:
-      run:
-        working-directory: .
-    steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-go@v2
-      with:
-        go-version: '^1.13.0'
-    - run: make download
-    - name: Traceability Build & Test
-      run: |
-        make build-trace
-        go test ./...
     - name: Traceability Release (Snapshot)
       uses: goreleaser/goreleaser-action@v2.5.0
       with:

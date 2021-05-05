@@ -116,7 +116,7 @@ func Test_APIServiceNameAndTransactionProxyNameAreEqual(t *testing.T) {
 		AuthPolicy:        "pass-through",
 		Description:       "petstore api",
 		Documentation:     nil,
-		ID:                "211799904",
+		ID:                "16810512",
 		Image:             "",
 		ImageContentType:  "",
 		ResourceType:      "oas3",
@@ -138,5 +138,7 @@ func Test_APIServiceNameAndTransactionProxyNameAreEqual(t *testing.T) {
 	le, err := em.createSummaryEvent(100, FormatTxnId(event.APIVersionID, event.MessageID), event, "123")
 	assert.Nil(t, err)
 	transactionProxyName := le.TransactionSummary.Proxy.Name
+	transactionProxyID := le.TransactionSummary.Proxy.ID
 	assert.Equal(t, apiServiceName, transactionProxyName)
+	assert.Equal(t, transaction.FormatProxyID(body.RestAPIID), transactionProxyID)
 }

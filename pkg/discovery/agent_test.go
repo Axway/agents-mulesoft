@@ -62,7 +62,11 @@ func TestAgent_Run(t *testing.T) {
 	assert.True(t, discRunning)
 	pubRunning := <-pub.hitCh
 	assert.True(t, pubRunning)
-	a.Stop()
+	go a.Stop()
+	done := <-disc.stopCh
+	assert.True(t, done)
+	done = <-pub.stopCh
+	assert.True(t, done)
 }
 
 func Test_validateAPI(t *testing.T) {

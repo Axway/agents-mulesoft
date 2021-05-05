@@ -43,18 +43,11 @@ func TestPublish(t *testing.T) {
 	}
 	go pub.Loop()
 	// send 3 events to the channel
-	for i := 0; i < 3; i++ {
-		pub.apiChan <- sd
-	}
+	pub.apiChan <- sd
 
-	// wait for each event
-	for mp.count < 3 {
-		select {
-		case <-mp.hitCh:
-		}
-	}
+	isDone := <-mp.hitCh
 
-	assert.Equal(t, 3, mp.count)
+	assert.True(t, isDone)
 	pub.OnConfigChange(&config.MulesoftConfig{})
 	pub.Stop()
 }
