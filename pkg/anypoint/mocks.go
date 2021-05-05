@@ -10,6 +10,22 @@ import (
 	"github.com/Axway/agent-sdk/pkg/api"
 )
 
+type MockAuth struct {
+	ch chan bool
+}
+
+func (m MockAuth) Stop() {
+	m.ch <- true
+}
+
+func (m MockAuth) GetToken() string {
+	return "abc123"
+}
+
+func (m MockAuth) GetOrgID() string {
+	return "333"
+}
+
 type MockClientBase struct {
 	Reqs map[string]*api.Response
 }
