@@ -57,7 +57,7 @@ func TestEventProcessor_ProcessRaw(t *testing.T) {
 	assert.Equal(t, "200", summaryEvent.TransactionSummary.StatusDetail)
 	assert.Equal(t, 60, summaryEvent.TransactionSummary.Duration)
 	assert.Equal(t, TeamID, summaryEvent.TransactionSummary.Team.ID)
-	assert.Equal(t, transaction.FormatProxyID(event.APIVersionName), summaryEvent.TransactionSummary.Proxy.ID)
+	assert.Equal(t, transaction.FormatProxyID(event.APIVersionID), summaryEvent.TransactionSummary.Proxy.ID)
 	assert.Equal(t, 1, summaryEvent.TransactionSummary.Proxy.Revision)
 	assert.Equal(t, event.APIName, summaryEvent.TransactionSummary.Proxy.Name)
 	assert.Nil(t, summaryEvent.TransactionSummary.Runtime)

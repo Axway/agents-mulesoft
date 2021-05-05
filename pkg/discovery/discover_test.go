@@ -34,7 +34,7 @@ var asset = anypoint.Asset{
 	AutodiscoveryAPIName: "groupId:d3ada710-fc7b-4fc7-b8b9-4ccfc0f872e4:assetId:petstore-3",
 	ExchangeAssetName:    "petstore-3",
 	GroupID:              "d3ada710-fc7b-4fc7-b8b9-4ccfc0f872e4",
-	ID:                   211799904,
+	ID:                   16810512,
 	MasterOrganizationID: "d3ada710-fc7b-4fc7-b8b9-4ccfc0f872e4",
 	Name:                 "groupId:d3ada710-fc7b-4fc7-b8b9-4ccfc0f872e4:assetId:petstore-3",
 	OrganizationID:       "d3ada710-fc7b-4fc7-b8b9-4ccfc0f872e4",
@@ -115,15 +115,9 @@ func Test_discoverAPIs(t *testing.T) {
 			}
 			go disc.discoverAPIs()
 
-			calls := 0
-			for calls < tc.expectedAssets {
-				select {
-				case <-disc.apiChan:
-					calls++
-				}
-			}
+			svc := <-disc.apiChan
 
-			assert.Equal(t, tc.expectedAssets, calls)
+			assert.Equal(t, sd, svc)
 			logrus.Info(client)
 		})
 	}

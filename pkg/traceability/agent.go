@@ -1,6 +1,10 @@
 package traceability
 
 import (
+	"os"
+	"os/signal"
+	"syscall"
+
 	coreagent "github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/transaction"
 	agenterrors "github.com/Axway/agent-sdk/pkg/util/errors"
@@ -9,6 +13,7 @@ import (
 	"github.com/Axway/agents-mulesoft/pkg/config"
 	"github.com/elastic/beats/v7/libbeat/beat"
 	"github.com/elastic/beats/v7/libbeat/common"
+	"github.com/sirupsen/logrus"
 )
 
 // Agent - mulesoft Beater configuration. Implements the beat.Beater interface.
@@ -70,10 +75,14 @@ func (a *Agent) Run(b *beat.Beat) error {
 
 	go a.mule.Start()
 
+	gracefulStop := make(chan os.Signal, 1)
+	signal.Notify(gracefulStop, syscall.SIGTERM, os.Interrupt)
+
 	for {
 		select {
-		case <-a.done:
-			a.mule.Stop()
+		case <-gracefulStop:
+			logrus.Info("Received graceful shutdown signal")
+			a.Stop()
 			return nil
 		case event := <-a.eventChannel:
 			eventsToPublish := a.eventProcessor.ProcessRaw([]byte(event))
