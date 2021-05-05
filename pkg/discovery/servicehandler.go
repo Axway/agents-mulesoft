@@ -166,15 +166,19 @@ func shouldDiscoverAPI(endpoint string, discoveryTags, ignoreTags, apiTags []str
 // updateSpec Updates the spec endpoints based on the given type.
 func updateSpec(specType string, endpointURI string, policies anypoint.Policies, specContent []byte) ([]byte, error) {
 	var err error
+
+	// Setting Auth policies on the spec
+	specContent, err = setAuthPolicies(specContent, policies, specType)
+
 	// Make a best effort to update the endpoints - required because the SDK is parsing from spec and not setting the
 	// endpoint information independently.
 	switch specType {
 	case apic.Oas2:
 		specContent, err = setOAS2Endpoint(endpointURI, specContent)
-		specContent, err = setOAS2policies(specContent, policies, specType)
+
 	case apic.Oas3:
 		specContent, err = setOAS3Endpoint(endpointURI, specContent)
-		specContent, err = setOAS3policies(specContent, policies, specType)
+
 	case apic.Wsdl:
 		specContent, err = setWSDLEndpoint(endpointURI, specContent)
 	}
@@ -348,18 +352,41 @@ func removeOASpolicies(specContent []byte, specType string) ([]byte, error) {
 	return nil, errors.New("Invalid Spec Type, Only OAS specs are supported")
 }
 
-func setOAS2policies(sc []byte, policies anypoint.Policies, specType string) ([]byte, error) {
+// setAuthPolicies sets the auth policies found in the spec
+func setAuthPolicies(specContent []byte, policies anypoint.Policies, specType string) ([]byte, error) {
 
 	authPolicy, configuration := getAuthPolicy(policies)
 
 	// Removing pre-existing auth security policies
-	sc, err := removeOASpolicies(sc, specType)
+	sc, err := removeOASpolicies(specContent, specType)
 	if err != nil {
 		return sc, err
 	}
 
+	switch specType {
+	case apic.Oas2:
+
+		specContent, err = configureOAS2policies(specContent, authPolicy, configuration)
+		if err != nil {
+			return nil, err
+		}
+		return specContent, nil
+	case apic.Oas3:
+		specContent, err = configureOAS3policies(specContent, authPolicy, configuration)
+		if err != nil {
+			return nil, err
+		}
+		return specContent, nil
+	}
+
+	return nil, errors.New("invalid Spec Type, Only OAS specs are supported to set auth policies")
+}
+
+// configureOAS2policies adds the policy security definition in OAS2
+func configureOAS2policies(sc []byte, authPolicy string, configuration map[string]interface{}) ([]byte, error) {
+
 	oas2Spec := openapi2.Swagger{}
-	err = json.Unmarshal(sc, &oas2Spec)
+	err := json.Unmarshal(sc, &oas2Spec)
 	if err != nil {
 		return nil, err
 	}
@@ -399,18 +426,11 @@ func setOAS2policies(sc []byte, policies anypoint.Policies, specType string) ([]
 	return json.Marshal(oas2Spec)
 }
 
-func setOAS3policies(sc []byte, policies anypoint.Policies, specType string) ([]byte, error) {
-
-	authPolicy, configuration := getAuthPolicy(policies)
-
-	//Removing pre-existing auth security policies
-	sc, err := removeOASpolicies(sc, specType)
-	if err != nil {
-		return sc, err
-	}
+// configureOAS3policies adds the policy security definition in OAS3
+func configureOAS3policies(sc []byte, authPolicy string, configuration map[string]interface{}) ([]byte, error) {
 
 	oas3Spec := openapi3.Swagger{}
-	err = json.Unmarshal(sc, &oas3Spec)
+	err := json.Unmarshal(sc, &oas3Spec)
 	if err != nil {
 		return sc, err
 	}
