@@ -80,8 +80,9 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 	if err != nil {
 		return nil, err
 	}
-	authPolicy := getAuthPolicy(policies)
+	authPolicy,_ := getAuthPolicy(policies)
 
+	//TODO can be refactored to not use authpolicy in checksum and use policy
 	isAlreadyPublished, checksum := isPublished(api, authPolicy)
 	if isAlreadyPublished {
 		// If true, then the api is published and there were no changes detected
@@ -116,7 +117,7 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 	if specType == "" {
 		return nil, fmt.Errorf("unknown spec type for '%s (%s)'", api.AssetID, api.AssetVersion)
 	}
-	modifiedSpec, err := updateSpec(specType, api.EndpointURI, authPolicy, specContent)
+	modifiedSpec, err := updateSpec(specType, api.EndpointURI, policies, specContent)
 	if err != nil {
 		return nil, err
 	}
@@ -163,17 +164,17 @@ func shouldDiscoverAPI(endpoint string, discoveryTags, ignoreTags, apiTags []str
 }
 
 // updateSpec Updates the spec endpoints based on the given type.
-func updateSpec(specType, endpointURI, authPolicy string, specContent []byte) ([]byte, error) {
+func updateSpec(specType string, endpointURI string, policies anypoint.Policies, specContent []byte) ([]byte, error) {
 	var err error
 	// Make a best effort to update the endpoints - required because the SDK is parsing from spec and not setting the
 	// endpoint information independently.
 	switch specType {
 	case apic.Oas2:
 		specContent, err = setOAS2Endpoint(endpointURI, specContent)
-		specContent, err = setOAS2policies(specContent, authPolicy, specType)
+		specContent, err = setOAS2policies(specContent, policies, specType)
 	case apic.Oas3:
 		specContent, err = setOAS3Endpoint(endpointURI, specContent)
-		specContent, err = setOAS3policies(specContent, authPolicy, specType)
+		specContent, err = setOAS3policies(specContent, policies, specType)
 	case apic.Wsdl:
 		specContent, err = setWSDLEndpoint(endpointURI, specContent)
 	}
@@ -243,18 +244,18 @@ func getSpecType(file *anypoint.ExchangeFile, specContent []byte) (string, error
 }
 
 // getAuthPolicy gets the authentication policy type.
-func getAuthPolicy(policies anypoint.Policies) string {
-	for _, policy := range policies.Policies {
+func getAuthPolicy(policies anypoint.Policies) (string, map[string]interface{}) {
+	for key, policy := range policies.Policies {
 		if policy.Template.AssetId == anypoint.ClientID || strings.Contains(policy.Template.AssetId, anypoint.SlaAuth) {
-			return apic.Apikey
+			return apic.Apikey, policies.Policies[key].Configuration
 		}
 
 		if policy.Template.AssetId == anypoint.ExternalOauth {
-			return apic.Oauth
+			return apic.Oauth, policies.Policies[key].Configuration
 		}
 	}
 
-	return apic.Passthrough
+	return apic.Passthrough, nil
 }
 
 func setOAS2Endpoint(endpointURL string, specContent []byte) ([]byte, error) {
@@ -347,7 +348,11 @@ func removeOASpolicies(specContent []byte, specType string) ([]byte, error) {
 	return nil, errors.New("Invalid Spec Type, Only OAS specs are supported")
 }
 
-func setOAS2policies(sc []byte, authPolicy string, specType string) ([]byte, error) {
+func setOAS2policies(sc []byte, policies anypoint.Policies, specType string) ([]byte, error) {
+	log.Info("**testing** " )
+	authPolicy, configuration := getAuthPolicy(policies)
+	log.Info("Printing Configuration ",configuration )
+
 	// Removing pre-existing auth security policies
 	sc, err := removeOASpolicies(sc, specType)
 	if err != nil {
@@ -390,7 +395,11 @@ func setOAS2policies(sc []byte, authPolicy string, specType string) ([]byte, err
 	return json.Marshal(oas2Spec)
 }
 
-func setOAS3policies(sc []byte, authPolicy string, specType string) ([]byte, error) {
+func setOAS3policies(sc []byte, policies anypoint.Policies, specType string) ([]byte, error) {
+	log.Info("**testing** " )
+	authPolicy, configuration := getAuthPolicy(policies)
+	log.Info("Printing Configuration ",configuration )
+
 	//Removing pre-existing auth security policies
 	sc, err := removeOASpolicies(sc, specType)
 	if err != nil {
@@ -440,6 +449,7 @@ func setOAS3policies(sc []byte, authPolicy string, specType string) ([]byte, err
 
 		oas3Spec.Components.SecuritySchemes = openapi3.SecuritySchemes{"Oauth": &ssr}
 	}
+	log.Info("Printing configuration of policy ", )
 
 	return json.Marshal(oas3Spec)
 }
