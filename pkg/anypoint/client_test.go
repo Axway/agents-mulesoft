@@ -108,7 +108,10 @@ func TestClient(t *testing.T) {
 	}
 
 	client := NewClient(cfg, SetClient(mcb))
-
+	ma := &MockAuth{
+		ch: make(chan bool),
+	}
+	client.auth = ma
 	status := client.healthcheck("check")
 	assert.Equal(t, hc.OK, status.Result)
 
@@ -162,10 +165,11 @@ func TestClient(t *testing.T) {
 	logrus.Info(i, contentType)
 	assert.NotEmpty(t, i)
 	assert.Empty(t, contentType)
-	// fileContent, err := client.GetExchangeFileContent("https://abc.com", "zip", "mainfile")
-	// assert.Nil(t, err)
-	// assert.NotEmpty(t, fileContent)
 	events, err := client.GetAnalyticsWindow()
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(events))
+
+	go client.auth.Stop()
+	done := <-ma.ch
+	assert.True(t, done)
 }
