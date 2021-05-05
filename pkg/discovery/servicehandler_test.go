@@ -287,8 +287,8 @@ func TestSetOAS2Endpoint(t *testing.T) {
 		{
 			name:        "Should return error if Endpoint URL is not valid",
 			endPointURL: "postgres://user:abc{def=ghi@sdf.com:5432",
-			specContent: []byte("{\"basePath\":\"google.com\",\"host\":\"\",\"schemes\":[\"\"],\"swagger\":\"2.0\"}"),
-			result:      []byte("{\"basePath\":\"google.com\",\"host\":\"\",\"schemes\":[\"\"],\"swagger\":\"2.0\"}"),
+			specContent: []byte(`{"basePath":"google.com","host":"","schemes":[""],"swagger":"2.0"}`),
+			result:      []byte(`{"basePath":"google.com","host":"","schemes":[""],"swagger":"2.0"}`),
 			err: &url.Error{
 				Op:  "parse",
 				URL: "postgres://user:abc{def=ghi@sdf.com:5432",
@@ -305,7 +305,7 @@ func TestSetOAS2Endpoint(t *testing.T) {
 		{
 			name:        "Should return spec that has OAS2 endpoint set",
 			endPointURL: "http://google.com",
-			specContent: []byte("{\"basePath\":\"google.com\",\"host\":\"\",\"schemes\":[\"\"],\"swagger\":\"2.0\"}"),
+			specContent: []byte(`{"basePath":"google.com","host":"","schemes":[""],"swagger":"2.0"}`),
 			result:      []byte(`{"basePath":"/","host":"google.com","schemes":["http"],"swagger":"2.0"}`),
 			err:         nil,
 		},
@@ -342,8 +342,8 @@ func TestSetOAS3Endpoint(t *testing.T) {
 		{
 			name:        "Should return spec that has OAS3 endpoint set",
 			url:         "google.com",
-			specContent: []byte("{\"openapi\": \"3.0.1\"}"),
-			result:      []byte("{\"openapi\":\"3.0.1\",\"servers\":[{\"url\":\"google.com\"}]}"),
+			specContent: []byte(`{"openapi": "3.0.1"}`),
+			result:      []byte(`{"openapi":"3.0.1","servers":[{"url":"google.com"}]}`),
 			err:         nil,
 		},
 	}
@@ -451,7 +451,7 @@ func Test_getSpecType(t *testing.T) {
 			file: &anypoint.ExchangeFile{
 				Classifier: apic.Oas2,
 			},
-			specContent:  []byte("{\"basePath\":\"google.com\",\"host\":\"\",\"schemes\":[\"\"],\"swagger\":\"2.0\"}"),
+			specContent:  []byte(`{"basePath":"google.com","host":"","schemes":[""],"swagger":"2.0"}`),
 			expectedType: apic.Oas2,
 		},
 		{
@@ -459,7 +459,7 @@ func Test_getSpecType(t *testing.T) {
 			file: &anypoint.ExchangeFile{
 				Classifier: apic.Oas3,
 			},
-			specContent:  []byte("{\"openapi\": \"3.0.1\"}"),
+			specContent:  []byte(`{"openapi": "3.0.1"}`),
 			expectedType: apic.Oas3,
 		},
 		{
