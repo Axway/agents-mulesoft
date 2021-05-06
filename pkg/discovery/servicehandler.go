@@ -333,8 +333,8 @@ func removeOASpolicies(specContent []byte, specType string) ([]byte, error) {
 	case apic.Oas2:
 		if spec["securityDefinitions"] != nil {
 			delete(spec, "securityDefinitions")
-			return json.Marshal(spec)
 		}
+		return json.Marshal(spec)
 	case apic.Oas3:
 
 		oas3Spec := openapi3.Swagger{}

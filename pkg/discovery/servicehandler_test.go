@@ -424,7 +424,7 @@ func Test_getAuthPolicy(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			policy := getAuthPolicy(tc.policies)
+			policy,_ := getAuthPolicy(tc.policies)
 			assert.Equal(t, policy, tc.expected)
 		})
 	}
@@ -526,7 +526,7 @@ openapi: 3.0.1
 	}
 }
 
-func Test_updateSpecEndpoints(t *testing.T) {
+func Test_updateSpec(t *testing.T) {
 	tests := []struct {
 		name            string
 		specType        string
@@ -577,7 +577,7 @@ func Test_updateSpecEndpoints(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			content, err := updateSpec(tc.specType, tc.endpoint, tc.authPolicy, tc.content)
+			content, err := updateSpec(tc.specType, tc.endpoint,tc.authPolicy,nil ,tc.content)
 			assert.Nil(t, err)
 			assert.Equal(t, tc.expectedContent, content)
 		})
