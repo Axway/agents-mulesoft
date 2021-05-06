@@ -221,19 +221,19 @@ type AnalyticsEvent struct {
 	ViolatedPolicyName string    `json:"Violated Policy Name"`
 }
 
-const ExternalOauth = "external-oauth2-access-token-enforcement"
-const ClientID = "client-id-enforcement"
-const SlaAuth = "sla-based"
 const (
+	ExternalOauth = "external-oauth2-access-token-enforcement"
+	ClientID = "client-id-enforcement"
+	SlaAuth = "sla-based"
 	ApiKey        = "apiKey"
 	Oauth2        = "oauth2"
 	TokenUrl      = "tokenUrl"
-	CredOrigin    = "credentialsOriginHasHttpBasicAuthenticationHeader"
 	Scopes        = "scopes"
 	Header        = "header"
 	AccessCode    = "accessCode"
 	Authorization = "authorization"
-	DescClienCred = "Provided as: client_id:<INSERT_VALID_CLIENTID_HERE> \n\n client_secret:<INSERT_VALID_SECRET_HERE>"
+	CredOrigin    = "credentialsOriginHasHttpBasicAuthenticationHeader"
+	DescClienCred = "Provided as: client_id:<INSERT_VALID_CLIENTID_HERE> \n\n client_secret:<INSERT_VALID_SECRET_HERE>\n\n"
 	DescOauth2    = "This API supports OAuth 2.0 for authenticating all API requests"
 )
 
