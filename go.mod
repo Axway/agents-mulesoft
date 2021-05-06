@@ -11,7 +11,6 @@ require (
 	github.com/elastic/beats/v7 v7.7.1
 	github.com/garyburd/redigo v1.6.0 // indirect
 	github.com/getkin/kin-openapi v0.59.0
-	github.com/go-openapi/spec v0.0.0-20160808142527-6aced65f8501
 	github.com/googleapis/gnostic v0.3.1 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/imdario/mergo v0.3.9 // indirect
@@ -30,7 +29,7 @@ require (
 	gopkg.in/ini.v1 v1.57.0 // indirect
 	gopkg.in/jcmturner/gokrb5.v7 v7.5.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0
-	sigs.k8s.io/yaml v1.2.0
+	sigs.k8s.io/yaml v1.2.0 // indirect
 )
 
 replace (
