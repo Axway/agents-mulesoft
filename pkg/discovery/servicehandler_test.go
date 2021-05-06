@@ -540,7 +540,7 @@ func Test_updateSpec(t *testing.T) {
 			specType:        apic.Oas2,
 			endpoint:        "https://abc.com/v1",
 			content:         []byte(`{"basePath":"/v2","host":"oldhost.com","schemes":["http"],"swagger":"2.0"}`),
-			expectedContent: []byte(`{"schemes":["https"],"swagger":"2.0","host":"abc.com","basePath":"/v1","paths":null,"definitions":null,"securityDefinitions":{"client-id-enforcement":{"description":"Provided as: client_id:\u003cINSERT_VALID_CLIENTID_HERE\u003e client_secret:\u003cINSERT_VALID_SECRET_HERE\u003e","type":"apiKey","name":"Authorization","in":"header"}}}`),
+			expectedContent: []byte(`{"schemes":["https"],"swagger":"2.0","host":"abc.com","basePath":"/v1","paths":null,"definitions":null,"securityDefinitions":{"client-id-enforcement":{"description":"Provided as: client_id:\u003cINSERT_VALID_CLIENTID_HERE\u003e \n\n client_secret:\u003cINSERT_VALID_SECRET_HERE\u003e\n\n","type":"apiKey","name":"authorization","in":"header"}}}`),
 			authPolicy:      apic.Apikey,
 		},
 		{
@@ -548,7 +548,7 @@ func Test_updateSpec(t *testing.T) {
 			specType:        apic.Oas2,
 			endpoint:        "https://abc.com/v1",
 			content:         []byte(`{"basePath":"/v2","host":"oldhost.com","schemes":["http"],"swagger":"2.0"}`),
-			expectedContent: []byte(`{"schemes":["https"],"swagger":"2.0","host":"abc.com","basePath":"/v1","paths":null,"definitions":null,"securityDefinitions":{"oauth":{"type":"oauth2","flow":"implicit","authorizationUrl":"dummy.io"}}}`),
+			expectedContent: []byte(`{"schemes":["https"],"swagger":"2.0","host":"abc.com","basePath":"/v1","paths":null,"definitions":null,"securityDefinitions":{"oauth2":{"description":"This API supports OAuth 2.0 for authenticating all API requests","type":"oauth2","flow":"accessCode"}}}`),
 			authPolicy:      apic.Oauth,
 		},
 		{
@@ -556,7 +556,7 @@ func Test_updateSpec(t *testing.T) {
 			specType:        apic.Oas3,
 			endpoint:        "https://abc.com",
 			content:         []byte(`{"openapi":"3.0.1","servers":[{"url":"google.com"}]}`),
-			expectedContent: []byte(`{"openapi":"3.0.1","components":{"securitySchemes":{"Oauth":{"description":"This API uses OAuth 2 with the implicit grant flow","flows":{"implicit":{"authorizationUrl":"dummy.io","scopes":{}}},"type":"oauth2"}}},"info":{"title":"","version":""},"paths":null,"servers":[{"url":"https://abc.com"}]}`),
+			expectedContent: []byte(`{"openapi":"3.0.1","components":{"securitySchemes":{"oauth2":{"description":"This API supports OAuth 2.0 for authenticating all API requests","flows":{"authorizationCode":{"scopes":{}}},"type":"oauth2"}}},"info":{"title":"","version":""},"paths":null,"servers":[{"url":"https://abc.com"}]}`),
 			authPolicy:      apic.Oauth,
 		},
 		{
@@ -564,7 +564,7 @@ func Test_updateSpec(t *testing.T) {
 			specType:        apic.Oas3,
 			endpoint:        "https://abc.com",
 			content:         []byte(`{"openapi":"3.0.1","servers":[{"url":"google.com"}]}`),
-			expectedContent: []byte(`{"openapi":"3.0.1","components":{"securitySchemes":{"client-id-enforcement":{"description":"Provided as: client_id:\u003cINSERT_VALID_CLIENTID_HERE\u003e client_secret:\u003cINSERT_VALID_SECRET_HERE\u003e","in":"header","name":"Authorization","type":"apiKey"}}},"info":{"title":"","version":""},"paths":null,"servers":[{"url":"https://abc.com"}]}`),
+			expectedContent: []byte(`{"openapi":"3.0.1","components":{"securitySchemes":{"client-id-enforcement":{"description":"Provided as: client_id:\u003cINSERT_VALID_CLIENTID_HERE\u003e \n\n client_secret:\u003cINSERT_VALID_SECRET_HERE\u003e\n\n","in":"header","name":"authorization","type":"apiKey"}}},"info":{"title":"","version":""},"paths":null,"servers":[{"url":"https://abc.com"}]}`),
 			authPolicy:      apic.Apikey,
 		},
 		{
