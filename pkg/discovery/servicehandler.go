@@ -4,18 +4,15 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"sort"
 	"strings"
 
+	"github.com/getkin/kin-openapi/openapi2"
 	"github.com/getkin/kin-openapi/openapi3"
-	openapi2 "github.com/go-openapi/spec"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 
 	"github.com/Axway/agent-sdk/pkg/apic"
-	"sigs.k8s.io/yaml"
-
 	"github.com/sirupsen/logrus"
 
 	"github.com/Axway/agent-sdk/pkg/cache"
@@ -107,15 +104,14 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 	if err != nil {
 		return nil, err
 	}
-	specContent := specYAMLToJSON(rawSpec) // SDK does not support YAML specifications
-	specType, err := getSpecType(exchFile, specContent)
+	specType, err := getSpecType(exchFile, rawSpec)
 	if err != nil {
 		return nil, err
 	}
 	if specType == "" {
 		return nil, fmt.Errorf("unknown spec type for '%s (%s)'", api.AssetID, api.AssetVersion)
 	}
-	modifiedSpec, err := updateSpec(specType, api.EndpointURI, authPolicy, specContent)
+	modifiedSpec, err := updateSpec(specType, api.EndpointURI, authPolicy, rawSpec)
 	if err != nil {
 		return nil, err
 	}
@@ -167,30 +163,23 @@ func shouldDiscoverAPI(endpoint string, discoveryTags, ignoreTags, apiTags []str
 // updateSpec Updates the spec endpoints based on the given type.
 func updateSpec(specType, endpointURI, authPolicy string, specContent []byte) ([]byte, error) {
 	var err error
+	var oas2Swagger *apic.Oas2Swagger
+	var oas3Swagger *openapi3.Swagger
 	// Make a best effort to update the endpoints - required because the SDK is parsing from spec and not setting the
 	// endpoint information independently.
 	switch specType {
 	case apic.Oas2:
-		processor, err := apic.NewOas2Processor(specContent)
+		oas2Swagger, err = apic.ParseOAS2(specContent)
 		if err != nil {
 			return nil, err
 		}
-		err = processor.SetHostDetails(endpointURI)
-		if err != nil {
-			logrus.Errorf("failed to change the OAS 2 host to %s: %s", endpointURI, err)
-		}
-		return processor.Marshal()
-		// specContent, err = setOAS2Endpoint(endpointURI, specContent)
-		// specContent, err = setOAS2policies(specContent, authPolicy)
+		specContent, err = setOAS2policies(oas2Swagger, authPolicy)
 	case apic.Oas3:
-		processor, err := apic.NewOas3Processor(specContent)
+		oas3Swagger, err = apic.ParseOAS3(specContent)
 		if err != nil {
 			return nil, err
 		}
-		processor.SetServers([]string{endpointURI})
-		processor.Marshal()
-		// specContent, err = setOAS3Endpoint(endpointURI, specContent)
-		// specContent, err = setOAS3policies(specContent, authPolicy)
+		specContent, err = setOAS3policies(oas3Swagger, authPolicy)
 	case apic.Wsdl:
 		specContent, err = setWSDLEndpoint(endpointURI, specContent)
 	}
@@ -212,30 +201,6 @@ func getExchangeAssetSpecFile(exchangeFiles []anypoint.ExchangeFile) *anypoint.E
 		return nil
 	}
 	return &exchangeFiles[0]
-}
-
-// specYAMLToJSON - if the spec is yaml convert it to json, SDK doesn't handle yaml.
-func specYAMLToJSON(specContent []byte) []byte {
-	specMap := make(map[string]interface{})
-	// check if the content is already json
-	err := json.Unmarshal(specContent, &specMap)
-	if err == nil {
-		return specContent
-	}
-
-	// check if the content is already yaml
-	err = yaml.Unmarshal(specContent, &specMap)
-	if err != nil {
-		// Not yaml, nothing more to be done
-		return specContent
-	}
-
-	transcoded, err := yaml.YAMLToJSON(specContent)
-	if err != nil {
-		// Not json encodeable, nothing more to be done
-		return specContent
-	}
-	return transcoded
 }
 
 // getSpecType determines the correct resource type for the asset.
@@ -274,42 +239,6 @@ func getAuthPolicy(policies anypoint.Policies) string {
 	return apic.Passthrough
 }
 
-func setOAS2Endpoint(endpointURL string, specContent []byte) ([]byte, error) {
-	endpoint, err := url.Parse(endpointURL)
-	if err != nil {
-		return specContent, err
-	}
-	spec := make(map[string]interface{})
-	err = json.Unmarshal(specContent, &spec)
-	if err != nil {
-		return specContent, err
-	}
-	spec["host"] = endpoint.Host
-	if endpoint.Path == "" {
-		log.Debug("Empty base path, manually changing to /")
-		spec["basePath"] = "/"
-	} else {
-		spec["basePath"] = endpoint.Path
-	}
-	spec["schemes"] = []string{endpoint.Scheme}
-	return json.Marshal(spec)
-}
-
-func setOAS3Endpoint(url string, specContent []byte) ([]byte, error) {
-	spec := make(map[string]interface{})
-
-	err := json.Unmarshal(specContent, &spec)
-	if err != nil {
-		return specContent, err
-	}
-
-	spec["servers"] = []interface{}{
-		map[string]string{"url": url},
-	}
-
-	return json.Marshal(spec)
-}
-
 func setWSDLEndpoint(_ string, specContent []byte) ([]byte, error) {
 	// TODO
 	return specContent, nil
@@ -334,92 +263,43 @@ func doesAPIContainAnyMatchingTag(tags, apiTags []string) bool {
 	return false
 }
 
-// Helper function to remove existing back-end security policies
-func removeOASpolicies(specContent []byte, oasVersion string) ([]byte, error) {
-	spec := make(map[string]interface{})
-	err := json.Unmarshal(specContent, &spec)
-	if err != nil {
-		return specContent, err
-	}
-	// Deleting any pre-existing security definitions
-	if oasVersion == "v2" {
-		if spec["securityDefinitions"] != nil {
-			delete(spec, "securityDefinitions")
-		}
-	}
-	if oasVersion == "v3" {
-
-		oas3Spec := openapi3.Swagger{}
-		err := json.Unmarshal(specContent, &oas3Spec)
-		if err != nil {
-			return specContent, err
-		}
-
-		// reset to empty
-		oas3Spec.Components.SecuritySchemes = nil
-		return json.Marshal(oas3Spec)
-
-	}
-
-	return json.Marshal(spec)
-}
-
 // TODO improve if fields are not complete, introduce per method swagger definitions, set up logic for multiple auth policies, use policy configurations
-func setOAS2policies(sc []byte, authPolicy string) ([]byte, error) {
+func setOAS2policies(swagger *apic.Oas2Swagger, authPolicy string) ([]byte, error) {
 	// Removing pre-existing auth security policies
-	sc, err := removeOASpolicies(sc, "v2")
-	if err != nil {
-		return sc, err
-	}
-
-	oas2Spec := openapi2.Swagger{}
-	err = json.Unmarshal(sc, &oas2Spec)
-	if err != nil {
-		return nil, err
-	}
-
+	swagger.SecurityDefinitions = make(map[string]*openapi2.SecurityScheme)
 	switch authPolicy {
 	case apic.Apikey:
-		ssp := openapi2.SecuritySchemeProps{
+		ss := openapi2.SecurityScheme{
 			Type:        "apiKey",
 			Name:        "Authorization",
 			In:          "header",
 			Description: "Provided as: client_id:<INSERT_VALID_CLIENTID_HERE> client_secret:<INSERT_VALID_SECRET_HERE>",
 		}
-		ss := openapi2.SecurityScheme{
-			VendorExtensible:    openapi2.VendorExtensible{},
-			SecuritySchemeProps: ssp,
-		}
-		sd := openapi2.SecurityDefinitions{
+
+		sd := map[string]*openapi2.SecurityScheme{
 			"client-id-enforcement": &ss,
 		}
-
-		oas2Spec.SwaggerProps.SecurityDefinitions = sd
+		swagger.SecurityDefinitions = sd
 
 	case apic.Oauth:
-		ss := openapi2.OAuth2Implicit("dummy.io")
-		sd := openapi2.SecurityDefinitions{
-			"oauth": ss,
+		ss := openapi2.SecurityScheme{
+			Type:             "oauth2",
+			Flow:             "implicit",
+			AuthorizationURL: "dummy.io",
+		}
+		sd := map[string]*openapi2.SecurityScheme{
+			"oauth": &ss,
 		}
 
-		oas2Spec.SwaggerProps.SecurityDefinitions = sd
+		swagger.SecurityDefinitions = sd
 	}
 
-	return json.Marshal(oas2Spec)
+	return json.Marshal(swagger)
 }
 
-func setOAS3policies(sc []byte, authPolicy string) ([]byte, error) {
-	//Removing pre-existing auth security policies
-	sc, err := removeOASpolicies(sc, "v3")
-	if err != nil {
-		return sc, err
-	}
-
-	oas3Spec := openapi3.Swagger{}
-	err = json.Unmarshal(sc, &oas3Spec)
-	if err != nil {
-		return sc, err
-	}
+func setOAS3policies(spec *openapi3.Swagger, authPolicy string) ([]byte, error) {
+	// remove existing auth policies
+	spec.Components.SecuritySchemes = openapi3.SecuritySchemes{}
 
 	switch authPolicy {
 	case apic.Apikey:
@@ -434,7 +314,7 @@ func setOAS3policies(sc []byte, authPolicy string) ([]byte, error) {
 			Value: &ss,
 		}
 
-		oas3Spec.Components.SecuritySchemes = openapi3.SecuritySchemes{"client-id-enforcement": &ssr}
+		spec.Components.SecuritySchemes = openapi3.SecuritySchemes{"client-id-enforcement": &ssr}
 
 	case apic.Oauth:
 		i := openapi3.OAuthFlow{
@@ -456,10 +336,10 @@ func setOAS3policies(sc []byte, authPolicy string) ([]byte, error) {
 			Value: &ss,
 		}
 
-		oas3Spec.Components.SecuritySchemes = openapi3.SecuritySchemes{"Oauth": &ssr}
+		spec.Components.SecuritySchemes = openapi3.SecuritySchemes{"Oauth": &ssr}
 	}
 
-	return json.Marshal(oas3Spec)
+	return json.Marshal(spec)
 }
 
 // isPublished checks if an api is published with the latest changes. Returns true if it is, and false if it is not.

@@ -2,7 +2,6 @@ package discovery
 
 import (
 	"fmt"
-	"net/url"
 	"testing"
 	"time"
 
@@ -43,7 +42,7 @@ var exchangeAsset = anypoint.ExchangeAsset{
 
 func TestServiceHandler(t *testing.T) {
 	stage := "Sandbox"
-	content := `{"openapi":"3.0.1","servers":[{"url":"https://abc.com"}]}`
+	content := `{"openapi":"3.0.1","servers":[{"url":"https://abc.com"}], "paths":{}, "info":{"title":"petstore3"}}`
 	policies := anypoint.Policies{Policies: []anypoint.Policy{
 		{
 			Template: anypoint.Template{
@@ -276,89 +275,6 @@ func TestGetExchangeAssetSpecFile(t *testing.T) {
 	}
 }
 
-func TestSetOAS2Endpoint(t *testing.T) {
-	tests := []struct {
-		name        string
-		endPointURL string
-		specContent []byte
-		result      []byte
-		err         error
-	}{
-		{
-			name:        "Should return error if Endpoint URL is not valid",
-			endPointURL: "postgres://user:abc{def=ghi@sdf.com:5432",
-			specContent: []byte(`{"basePath":"google.com","host":"","schemes":[""],"swagger":"2.0"}`),
-			result:      []byte(`{"basePath":"google.com","host":"","schemes":[""],"swagger":"2.0"}`),
-			err: &url.Error{
-				Op:  "parse",
-				URL: "postgres://user:abc{def=ghi@sdf.com:5432",
-				Err: fmt.Errorf("net/url: invalid userinfo"),
-			},
-		},
-		{
-			name:        "Should return error if the spec content is not a valid JSON",
-			endPointURL: "http://google.com",
-			specContent: []byte("google.com"),
-			result:      []byte("google.com"),
-			err:         fmt.Errorf("invalid character 'g' looking for beginning of value"),
-		},
-		{
-			name:        "Should return spec that has OAS2 endpoint set",
-			endPointURL: "http://google.com",
-			specContent: []byte(`{"basePath":"google.com","host":"","schemes":[""],"swagger":"2.0"}`),
-			result:      []byte(`{"basePath":"/","host":"google.com","schemes":["http"],"swagger":"2.0"}`),
-			err:         nil,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			spec, err := setOAS2Endpoint(tc.endPointURL, tc.specContent)
-
-			if err != nil {
-				assert.Equal(t, tc.err.Error(), err.Error())
-			}
-
-			assert.Equal(t, tc.result, spec)
-		})
-	}
-}
-
-func TestSetOAS3Endpoint(t *testing.T) {
-	tests := []struct {
-		name        string
-		url         string
-		specContent []byte
-		result      []byte
-		err         error
-	}{
-		{
-			name:        "Should return error if the spec content is not a valid JSON",
-			url:         "google.com",
-			specContent: []byte("google.com"),
-			result:      []byte("google.com"),
-			err:         fmt.Errorf("invalid character 'g' looking for beginning of value"),
-		},
-		{
-			name:        "Should return spec that has OAS3 endpoint set",
-			url:         "google.com",
-			specContent: []byte(`{"openapi": "3.0.1"}`),
-			result:      []byte(`{"openapi":"3.0.1","servers":[{"url":"google.com"}]}`),
-			err:         nil,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			spec, err := setOAS3Endpoint(tc.url, tc.specContent)
-			if err != nil {
-				assert.Equal(t, tc.err.Error(), err.Error())
-			}
-			assert.Equal(t, tc.result, spec)
-		})
-	}
-}
-
 func Test_checksum(t *testing.T) {
 	s1 := checksum(&asset, apic.Passthrough)
 	s2 := checksum(&asset, anypoint.ClientID)
@@ -494,39 +410,7 @@ func Test_getSpecType(t *testing.T) {
 	}
 }
 
-func Test_specYAMLToJSON(t *testing.T) {
-	tests := []struct {
-		name   string
-		input  string
-		output []byte
-	}{
-		{
-			name: "should convert yaml to json",
-			input: `---
-openapi: 3.0.1
-`,
-			output: []byte(`{"openapi":"3.0.1"}`),
-		},
-		{
-			name:   "should return the content when it is already json",
-			input:  `{"openapi":"3.0.1"}`,
-			output: []byte(`{"openapi":"3.0.1"}`),
-		},
-		{
-			name:   "should return the content when it is not yaml or json",
-			input:  `nope`,
-			output: []byte(`nope`),
-		},
-	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			res := specYAMLToJSON([]byte(tc.input))
-			assert.Equal(t, tc.output, res)
-		})
-	}
-}
-
-func Test_updateSpecEndpoints(t *testing.T) {
+func Test_updateSpec(t *testing.T) {
 	tests := []struct {
 		name            string
 		specType        string
@@ -539,32 +423,32 @@ func Test_updateSpecEndpoints(t *testing.T) {
 			name:            "should update an OAS 2 spec with APIKey security",
 			specType:        apic.Oas2,
 			endpoint:        "https://abc.com/v1",
-			content:         []byte(`{"basePath":"/v2","host":"oldhost.com","schemes":["http"],"swagger":"2.0"}`),
-			expectedContent: []byte(`{"schemes":["https"],"swagger":"2.0","host":"abc.com","basePath":"/v1","paths":null,"definitions":null,"securityDefinitions":{"client-id-enforcement":{"description":"Provided as: client_id:\u003cINSERT_VALID_CLIENTID_HERE\u003e client_secret:\u003cINSERT_VALID_SECRET_HERE\u003e","type":"apiKey","name":"Authorization","in":"header"}}}`),
+			content:         []byte(`{"basePath": "/v2","host": "oldhost.com","schemes": ["http"],"swagger": "2.0","info": {"title": "petstore2"},"paths": {}}`),
+			expectedContent: []byte(`{"basePath":"/v2","host":"oldhost.com","info":{"title":"petstore2","version":""},"schemes":["http"],"securityDefinitions":{"client-id-enforcement":{"description":"Provided as: client_id:\u003cINSERT_VALID_CLIENTID_HERE\u003e client_secret:\u003cINSERT_VALID_SECRET_HERE\u003e","in":"header","name":"Authorization","type":"apiKey"}},"swagger":"2.0"}`),
 			authPolicy:      apic.Apikey,
 		},
 		{
 			name:            "should update an OAS 2 spec with OAuth security",
 			specType:        apic.Oas2,
 			endpoint:        "https://abc.com/v1",
-			content:         []byte(`{"basePath":"/v2","host":"oldhost.com","schemes":["http"],"swagger":"2.0"}`),
-			expectedContent: []byte(`{"schemes":["https"],"swagger":"2.0","host":"abc.com","basePath":"/v1","paths":null,"definitions":null,"securityDefinitions":{"oauth":{"type":"oauth2","flow":"implicit","authorizationUrl":"dummy.io"}}}`),
+			content:         []byte(`{"basePath":"/v2","host":"oldhost.com","schemes":["http"],"swagger":"2.0","info":{"title":"petstore2"},"paths":{}}`),
+			expectedContent: []byte(`{"basePath":"/v2","host":"oldhost.com","info":{"title":"petstore2","version":""},"schemes":["http"],"securityDefinitions":{"oauth":{"authorizationUrl":"dummy.io","flow":"implicit","type":"oauth2"}},"swagger":"2.0"}`),
 			authPolicy:      apic.Oauth,
 		},
 		{
 			name:            "should update an OAS 3 spec with OAuth security",
 			specType:        apic.Oas3,
 			endpoint:        "https://abc.com",
-			content:         []byte(`{"openapi":"3.0.1","servers":[{"url":"google.com"}]}`),
-			expectedContent: []byte(`{"openapi":"3.0.1","components":{"securitySchemes":{"Oauth":{"description":"This API uses OAuth 2 with the implicit grant flow","flows":{"implicit":{"authorizationUrl":"dummy.io","scopes":{}}},"type":"oauth2"}}},"info":{"title":"","version":""},"paths":null,"servers":[{"url":"https://abc.com"}]}`),
+			content:         []byte(`{"openapi":"3.0.1","servers":[{"url":"google.com"}],"paths":{},"info":{"title":"petstore3"}}`),
+			expectedContent: []byte(`{"components":{"securitySchemes":{"Oauth":{"description":"This API uses OAuth 2 with the implicit grant flow","flows":{"implicit":{"authorizationUrl":"dummy.io","scopes":{}}},"type":"oauth2"}}},"info":{"title":"petstore3","version":""},"openapi":"3.0.1","paths":{},"servers":[{"url":"google.com"}]}`),
 			authPolicy:      apic.Oauth,
 		},
 		{
 			name:            "should update an OAS 3 spec with APIKey security",
 			specType:        apic.Oas3,
 			endpoint:        "https://abc.com",
-			content:         []byte(`{"openapi":"3.0.1","servers":[{"url":"google.com"}]}`),
-			expectedContent: []byte(`{"openapi":"3.0.1","components":{"securitySchemes":{"client-id-enforcement":{"description":"Provided as: client_id:\u003cINSERT_VALID_CLIENTID_HERE\u003e client_secret:\u003cINSERT_VALID_SECRET_HERE\u003e","in":"header","name":"Authorization","type":"apiKey"}}},"info":{"title":"","version":""},"paths":null,"servers":[{"url":"https://abc.com"}]}`),
+			content:         []byte(`{"openapi":"3.0.1","servers":[{"url":"google.com"}],"paths":{},"info":{"title":"petstore3"}}`),
+			expectedContent: []byte(`{"components":{"securitySchemes":{"client-id-enforcement":{"description":"Provided as: client_id:\u003cINSERT_VALID_CLIENTID_HERE\u003e client_secret:\u003cINSERT_VALID_SECRET_HERE\u003e","in":"header","name":"Authorization","type":"apiKey"}}},"info":{"title":"petstore3","version":""},"openapi":"3.0.1","paths":{},"servers":[{"url":"google.com"}]}`),
 			authPolicy:      apic.Apikey,
 		},
 		{
@@ -582,8 +466,4 @@ func Test_updateSpecEndpoints(t *testing.T) {
 			assert.Equal(t, tc.expectedContent, content)
 		})
 	}
-}
-
-func Test_setOAS2policies(t *testing.T) {
-
 }
