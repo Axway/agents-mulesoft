@@ -369,30 +369,55 @@ func setOAS2policies(sc []byte, authPolicy string, configuration map[string]inte
 	switch authPolicy {
 	case apic.Apikey:
 
+		desc := anypoint.DescClienCred
+		if configuration[anypoint.CredOrigin] != nil {
+			desc += configuration[anypoint.CredOrigin].(string)
+		}
+
 		ssp := openapi2.SecuritySchemeProps{
-			Type:        "apiKey",
-			Name:        "Authorization",
-			In:          "header",
-			Description: "Provided as: client_id:<INSERT_VALID_CLIENTID_HERE> \r\n client_secret:<INSERT_VALID_SECRET_HERE>",
+			Type:        anypoint.ApiKey,
+			Name:        anypoint.Authorization,
+			In:          anypoint.Header,
+			Description: desc,
 		}
 		ss := openapi2.SecurityScheme{
 			VendorExtensible:    openapi2.VendorExtensible{},
 			SecuritySchemeProps: ssp,
 		}
 		sd := openapi2.SecurityDefinitions{
-			"client-id-enforcement": &ss,
+			anypoint.ClientID: &ss,
 		}
 
 		oas2Spec.SwaggerProps.SecurityDefinitions = sd
 
 	case apic.Oauth:
 		var tokenUrl string
-		if configuration["tokenUrl"] != nil {
-			tokenUrl = configuration["tokenUrl"].(string)
+		scopes := make(map[string]string)
+
+		if configuration[anypoint.TokenUrl] != nil {
+			tokenUrl = configuration[anypoint.TokenUrl].(string)
 		}
-		ss := openapi2.OAuth2Implicit(tokenUrl)
+
+		if configuration[anypoint.Scopes] != nil {
+			scopes[anypoint.Scopes] = configuration[anypoint.Scopes].(string)
+		}
+
+		//TODO remove
+		//ss := openapi2.OAuth2AccessToken("",tokenUrl)
+		ssp := openapi2.SecuritySchemeProps{
+			Description:      anypoint.DescOauth2,
+			Type:             anypoint.Oauth2,
+			Flow:             anypoint.AccessCode,
+			TokenURL:         tokenUrl,
+			AuthorizationURL: tokenUrl,
+			Scopes:           scopes,
+		}
+
+		ss := openapi2.SecurityScheme{
+			SecuritySchemeProps: ssp,
+		}
 		sd := openapi2.SecurityDefinitions{
-			"oauth": ss,
+			anypoint.Oauth2: &ss,
 		}
 
 		oas2Spec.SwaggerProps.SecurityDefinitions = sd
@@ -418,45 +443,54 @@ func setOAS3policies(sc []byte, authPolicy string, configuration map[string]inte
 
 	switch authPolicy {
 	case apic.Apikey:
-		ss := openapi3.SecurityScheme{
-			Type:        "apiKey",
-			Name:        "Authorization",
-			In:          "header",
-			Description: "Provided as: client_id:<INSERT_VALID_CLIENTID_HERE> \r\n client_secret:<INSERT_VALID_SECRET_HERE>",
+		desc := anypoint.DescClienCred
+		if configuration[anypoint.CredOrigin] != nil {
+			desc += configuration[anypoint.CredOrigin].(string)
 		}
+
+		ss := openapi3.SecurityScheme{
+			Type:        anypoint.ApiKey,
+			Name:        anypoint.Authorization,
+			In:          anypoint.Header,
+			Description: desc}
 
 		ssr := openapi3.SecuritySchemeRef{
 			Value: &ss,
 		}
 
-		oas3Spec.Components.SecuritySchemes = openapi3.SecuritySchemes{"client-id-enforcement": &ssr}
+		oas3Spec.Components.SecuritySchemes = openapi3.SecuritySchemes{anypoint.ClientID: &ssr}
 
 	case apic.Oauth:
-		var authUrl string
-		if configuration["tokenUrl"] != nil {
-			authUrl = configuration["tokenUrl"].(string)
+		var tokenUrl string
+		scopes := make(map[string]string)
+
+		if configuration[anypoint.TokenUrl] != nil {
+			tokenUrl = configuration[anypoint.TokenUrl].(string)
 		}
 
-		i := openapi3.OAuthFlow{
-			ExtensionProps:   openapi3.ExtensionProps{},
-			AuthorizationURL: authUrl,
-			Scopes:           make(map[string]string),
+		if configuration[anypoint.Scopes] != nil {
+			scopes[anypoint.Scopes] = configuration[anypoint.Scopes].(string)
+
+		}
+
+		ac := openapi3.OAuthFlow{
+			TokenURL:         tokenUrl,
+			AuthorizationURL: tokenUrl,
+			Scopes:           scopes,
 		}
 		oAuthFlow := openapi3.OAuthFlows{
-			ExtensionProps: openapi3.ExtensionProps{},
-			Implicit:       &i,
+			AuthorizationCode: &ac,
 		}
 		ss := openapi3.SecurityScheme{
-			ExtensionProps: openapi3.ExtensionProps{},
-			Type:           "oauth2",
-			Description:    "This API uses OAuth 2 with the implicit grant flow",
-			Flows:          &oAuthFlow,
+			Type:        anypoint.Oauth2,
+			Description: anypoint.DescOauth2,
+			Flows:       &oAuthFlow,
 		}
 		ssr := openapi3.SecuritySchemeRef{
 			Value: &ss,
 		}
 
-		oas3Spec.Components.SecuritySchemes = openapi3.SecuritySchemes{"Oauth": &ssr}
+		oas3Spec.Components.SecuritySchemes = openapi3.SecuritySchemes{anypoint.Oauth2: &ssr}
 	}
 
 	return json.Marshal(oas3Spec)

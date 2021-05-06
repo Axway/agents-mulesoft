@@ -224,6 +224,18 @@ type AnalyticsEvent struct {
 const ExternalOauth = "external-oauth2-access-token-enforcement"
 const ClientID = "client-id-enforcement"
 const SlaAuth = "sla-based"
+const (
+	ApiKey        = "apiKey"
+	Oauth2        = "oauth2"
+	TokenUrl      = "tokenUrl"
+	CredOrigin    = "credentialsOriginHasHttpBasicAuthenticationHeader"
+	Scopes        = "scopes"
+	Header        = "header"
+	AccessCode    = "accessCode"
+	Authorization = "authorization"
+	DescClienCred = "Provided as: client_id:<INSERT_VALID_CLIENTID_HERE> \n\n client_secret:<INSERT_VALID_SECRET_HERE>"
+	DescOauth2    = "This API supports OAuth 2.0 for authenticating all API requests"
+)
 
 // errorString is a trivial implementation of error.
 type errorString struct {
