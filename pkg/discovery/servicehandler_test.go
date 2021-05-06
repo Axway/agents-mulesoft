@@ -684,7 +684,7 @@ func Test_setOAS3policies(t *testing.T) {
 			authPolicy:      apic.Oauth,
 		},
 		{
-			name:            "should return error when authPolicy type is not supported ",
+			name:            "should return error when authPolicy type is not supported",
 			configuration:   nil,
 			content:         []byte(`{"openapi":"3.0.1","servers":[{"url":"google.com"}]}`),
 			expectedContent: []byte(`{"openapi":"3.0.1","servers":[{"url":"google.com"}]}`),
@@ -695,6 +695,49 @@ func Test_setOAS3policies(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			content, err := setOAS3policies(tc.content, tc.authPolicy, tc.configuration)
 			if tc.authPolicy != apic.Oauth && tc.authPolicy != apic.Apikey {
+				assert.NotNil(t, err)
+			} else {
+				assert.Nil(t, err)
+				assert.Equal(t, tc.expectedContent, content)
+
+			}
+
+		})
+	}
+}
+
+func Test_removeOASpolicies(t *testing.T) {
+
+	tests := []struct {
+		name            string
+		expectedContent []byte
+		content         []byte
+		specType        string
+	}{
+		{
+			name:            "should remove Oas2 security policies",
+			content:         []byte(`{"schemes":["http"],"swagger":"2.0","host":"oldhost.com","basePath":"/v2","paths":null,"definitions":null,"securityDefinitions":{"client-id-enforcement":{"description":"Provided as: client_id:\u003cINSERT_VALID_CLIENTID_HERE\u003e \n\n client_secret:\u003cINSERT_VALID_SECRET_HERE\u003e\n\n","type":"apiKey","name":"authorization","in":"header"}}}`),
+			expectedContent: []byte(`{"basePath":"/v2","definitions":null,"host":"oldhost.com","paths":null,"schemes":["http"],"swagger":"2.0"}`),
+			specType:        apic.Oas2,
+		},
+		{
+			name:            "should remove Oas3 security policies",
+			content:         []byte(`{"openapi":"3.0.1","components":{"securitySchemes":{"client-id-enforcement":{"description":"Provided as: client_id:\u003cINSERT_VALID_CLIENTID_HERE\u003e \n\n client_secret:\u003cINSERT_VALID_SECRET_HERE\u003e\n\nhttpBasicAuthenticationHeader","in":"header","name":"authorization","type":"apiKey"}}},"info":{"title":"","version":""},"paths":null,"servers":[{"url":"google.com"}]}`),
+			expectedContent: []byte(`{"openapi":"3.0.1","components":{},"info":{"title":"","version":""},"paths":null,"servers":[{"url":"google.com"}]}`),
+			specType:        apic.Oas3,
+		},
+
+		{
+			name:            "should return error when specType type is not supported ",
+			content:         []byte(`{"openapi":"3.0.1", "servers":[{"url":"google.com"}]}`),
+			expectedContent: []byte(`{"openapi":"3.0.1","components":{},"info":{"title":"","version":""},"paths":null,"servers":[{"url":"google.com"}]}`),
+			specType:        apic.Wsdl,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			content, err := removeOASpolicies(tc.content, tc.specType)
+			if tc.specType != apic.Oas2 && tc.specType != apic.Oas3 {
 				assert.NotNil(t, err)
 			} else {
 				assert.Nil(t, err)

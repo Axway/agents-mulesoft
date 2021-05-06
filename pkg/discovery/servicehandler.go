@@ -347,7 +347,7 @@ func removeOASpolicies(specContent []byte, specType string) ([]byte, error) {
 		return json.Marshal(oas3Spec)
 	}
 
-	return nil, errors.New(anypoint.ErrSpecNotSupported)
+	return specContent, errors.New(anypoint.ErrSpecNotSupported)
 }
 
 // setOAS2policies adds the policy security definition in OAS2
