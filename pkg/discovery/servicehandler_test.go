@@ -424,7 +424,7 @@ func Test_getAuthPolicy(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			policy,_ := getAuthPolicy(tc.policies)
+			policy, _ := getAuthPolicy(tc.policies)
 			assert.Equal(t, policy, tc.expected)
 		})
 	}
@@ -577,7 +577,7 @@ func Test_updateSpec(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			content, err := updateSpec(tc.specType, tc.endpoint,tc.authPolicy,nil ,tc.content)
+			content, err := updateSpec(tc.specType, tc.endpoint, tc.authPolicy, nil, tc.content)
 			assert.Nil(t, err)
 			assert.Equal(t, tc.expectedContent, content)
 		})
@@ -586,4 +586,122 @@ func Test_updateSpec(t *testing.T) {
 
 func Test_setOAS2policies(t *testing.T) {
 
+	tests := []struct {
+		name            string
+		configuration   map[string]interface{}
+		content         []byte
+		expectedContent []byte
+		authPolicy      string
+	}{
+		{
+			name:            "should apply APIKey security policy with no configuration",
+			configuration:   nil,
+			content:         []byte(`{"basePath":"/v2","host":"oldhost.com","schemes":["http"],"swagger":"2.0"}`),
+			expectedContent: []byte(`{"schemes":["http"],"swagger":"2.0","host":"oldhost.com","basePath":"/v2","paths":null,"definitions":null,"securityDefinitions":{"client-id-enforcement":{"description":"Provided as: client_id:\u003cINSERT_VALID_CLIENTID_HERE\u003e \n\n client_secret:\u003cINSERT_VALID_SECRET_HERE\u003e\n\n","type":"apiKey","name":"authorization","in":"header"}}}`),
+			authPolicy:      apic.Apikey,
+		},
+		{
+			name:            "should apply APIKey security policy with Custom configuration set as Basic Auth",
+			configuration:   map[string]interface{}{anypoint.CredOrigin: "httpBasicAuthenticationHeader"},
+			content:         []byte(`{"basePath":"/v2","host":"oldhost.com","schemes":["http"],"swagger":"2.0"}`),
+			expectedContent: []byte(`{"schemes":["http"],"swagger":"2.0","host":"oldhost.com","basePath":"/v2","paths":null,"definitions":null,"securityDefinitions":{"client-id-enforcement":{"description":"Provided as: client_id:\u003cINSERT_VALID_CLIENTID_HERE\u003e \n\n client_secret:\u003cINSERT_VALID_SECRET_HERE\u003e\n\nhttpBasicAuthenticationHeader","type":"apiKey","name":"authorization","in":"header"}}}`),
+			authPolicy:      apic.Apikey,
+		},
+
+		{
+			name:            "should apply OAuth security policy with no scope",
+			configuration:   map[string]interface{}{anypoint.TokenUrl: "www.test.com"},
+			content:         []byte(`{"basePath":"/v2","host":"oldhost.com","schemes":["http"],"swagger":"2.0"}`),
+			expectedContent: []byte(`{"schemes":["http"],"swagger":"2.0","host":"oldhost.com","basePath":"/v2","paths":null,"definitions":null,"securityDefinitions":{"oauth2":{"description":"This API supports OAuth 2.0 for authenticating all API requests","type":"oauth2","flow":"accessCode","authorizationUrl":"www.test.com","tokenUrl":"www.test.com"}}}`),
+			authPolicy:      apic.Oauth,
+		},
+		{
+			name:            "should apply OAuth security policy with scopes",
+			configuration:   map[string]interface{}{anypoint.TokenUrl: "www.test.com", anypoint.Scopes: "read,write"},
+			content:         []byte(`{"basePath":"/v2","host":"oldhost.com","schemes":["http"],"swagger":"2.0"}`),
+			expectedContent: []byte(`{"schemes":["http"],"swagger":"2.0","host":"oldhost.com","basePath":"/v2","paths":null,"definitions":null,"securityDefinitions":{"oauth2":{"description":"This API supports OAuth 2.0 for authenticating all API requests","type":"oauth2","flow":"accessCode","authorizationUrl":"www.test.com","tokenUrl":"www.test.com","scopes":{"scopes":"read,write"}}}}`),
+			authPolicy:      apic.Oauth,
+		},
+		{
+			name:            "should return error when authPolicy type is not supported ",
+			configuration:   nil,
+			content:         []byte(`{"basePath":"/v2","host":"oldhost.com","schemes":["http"],"swagger":"2.0"}`),
+			expectedContent: []byte(`{"basePath":"/v2","host":"oldhost.com","schemes":["http"],"swagger":"2.0"}`),
+			authPolicy:      "JWTToken",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			content, err := setOAS2policies(tc.content, tc.authPolicy, tc.configuration)
+			if tc.authPolicy != apic.Oauth && tc.authPolicy != apic.Apikey {
+				assert.NotNil(t, err)
+			} else {
+				assert.Nil(t, err)
+				assert.Equal(t, tc.expectedContent, content)
+
+			}
+
+		})
+	}
+}
+
+func Test_setOAS3policies(t *testing.T) {
+
+	tests := []struct {
+		name            string
+		configuration   map[string]interface{}
+		content         []byte
+		expectedContent []byte
+		authPolicy      string
+	}{
+		{
+			name:            "should apply APIKey security policy with no configuration",
+			configuration:   nil,
+			content:         []byte(`{"openapi":"3.0.1","servers":[{"url":"google.com"}]}`),
+			expectedContent: []byte(`{"openapi":"3.0.1","components":{"securitySchemes":{"client-id-enforcement":{"description":"Provided as: client_id:\u003cINSERT_VALID_CLIENTID_HERE\u003e \n\n client_secret:\u003cINSERT_VALID_SECRET_HERE\u003e\n\n","in":"header","name":"authorization","type":"apiKey"}}},"info":{"title":"","version":""},"paths":null,"servers":[{"url":"google.com"}]}`),
+			authPolicy:      apic.Apikey,
+		},
+		{
+			name:            "should apply APIKey security policy with Custom configuration set as Basic Auth",
+			configuration:   map[string]interface{}{anypoint.CredOrigin: "httpBasicAuthenticationHeader"},
+			content:         []byte(`{"openapi":"3.0.1","servers":[{"url":"google.com"}]}`),
+			expectedContent: []byte(`{"openapi":"3.0.1","components":{"securitySchemes":{"client-id-enforcement":{"description":"Provided as: client_id:\u003cINSERT_VALID_CLIENTID_HERE\u003e \n\n client_secret:\u003cINSERT_VALID_SECRET_HERE\u003e\n\nhttpBasicAuthenticationHeader","in":"header","name":"authorization","type":"apiKey"}}},"info":{"title":"","version":""},"paths":null,"servers":[{"url":"google.com"}]}`),
+			authPolicy:      apic.Apikey,
+		},
+
+		{
+			name:            "should apply OAuth security policy with no scope",
+			configuration:   map[string]interface{}{anypoint.TokenUrl: "www.test.com"},
+			content:         []byte(`{"openapi":"3.0.1","servers":[{"url":"google.com"}]}`),
+			expectedContent: []byte(`{"openapi":"3.0.1","components":{"securitySchemes":{"oauth2":{"description":"This API supports OAuth 2.0 for authenticating all API requests","flows":{"authorizationCode":{"authorizationUrl":"www.test.com","scopes":{},"tokenUrl":"www.test.com"}},"type":"oauth2"}}},"info":{"title":"","version":""},"paths":null,"servers":[{"url":"google.com"}]}`),
+			authPolicy:      apic.Oauth,
+		},
+		{
+			name:            "should apply OAuth security policy with scopes",
+			configuration:   map[string]interface{}{anypoint.TokenUrl: "www.test.com", anypoint.Scopes: "read,write"},
+			content:         []byte(`{"openapi":"3.0.1","servers":[{"url":"google.com"}]}`),
+			expectedContent: []byte(`{"openapi":"3.0.1","components":{"securitySchemes":{"oauth2":{"description":"This API supports OAuth 2.0 for authenticating all API requests","flows":{"authorizationCode":{"authorizationUrl":"www.test.com","scopes":{"scopes":"read,write"},"tokenUrl":"www.test.com"}},"type":"oauth2"}}},"info":{"title":"","version":""},"paths":null,"servers":[{"url":"google.com"}]}`),
+			authPolicy:      apic.Oauth,
+		},
+		{
+			name:            "should return error when authPolicy type is not supported ",
+			configuration:   nil,
+			content:         []byte(`{"openapi":"3.0.1","servers":[{"url":"google.com"}]}`),
+			expectedContent: []byte(`{"openapi":"3.0.1","servers":[{"url":"google.com"}]}`),
+			authPolicy:      "JWTToken",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			content, err := setOAS3policies(tc.content, tc.authPolicy, tc.configuration)
+			if tc.authPolicy != apic.Oauth && tc.authPolicy != apic.Apikey {
+				assert.NotNil(t, err)
+			} else {
+				assert.Nil(t, err)
+				assert.Equal(t, tc.expectedContent, content)
+
+			}
+
+		})
+	}
 }

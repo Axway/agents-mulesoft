@@ -222,19 +222,21 @@ type AnalyticsEvent struct {
 }
 
 const (
-	ExternalOauth = "external-oauth2-access-token-enforcement"
-	ClientID = "client-id-enforcement"
-	SlaAuth = "sla-based"
-	ApiKey        = "apiKey"
-	Oauth2        = "oauth2"
-	TokenUrl      = "tokenUrl"
-	Scopes        = "scopes"
-	Header        = "header"
-	AccessCode    = "accessCode"
-	Authorization = "authorization"
-	CredOrigin    = "credentialsOriginHasHttpBasicAuthenticationHeader"
-	DescClienCred = "Provided as: client_id:<INSERT_VALID_CLIENTID_HERE> \n\n client_secret:<INSERT_VALID_SECRET_HERE>\n\n"
-	DescOauth2    = "This API supports OAuth 2.0 for authenticating all API requests"
+	ExternalOauth       = "external-oauth2-access-token-enforcement"
+	ClientID            = "client-id-enforcement"
+	SlaAuth             = "sla-based"
+	ApiKey              = "apiKey"
+	Oauth2              = "oauth2"
+	TokenUrl            = "tokenUrl"
+	Scopes              = "scopes"
+	Header              = "header"
+	AccessCode          = "accessCode"
+	Authorization       = "authorization"
+	CredOrigin          = "credentialsOriginHasHttpBasicAuthenticationHeader"
+	DescClienCred       = "Provided as: client_id:<INSERT_VALID_CLIENTID_HERE> \n\n client_secret:<INSERT_VALID_SECRET_HERE>\n\n"
+	DescOauth2          = "This API supports OAuth 2.0 for authenticating all API requests"
+	ErrAuthNotSupported = "only Oauth and ClientID enforcement(ApiKey) security policies are supported"
+	ErrSpecNotSupported = "Invalid Spec Type, Only OAS specs are supported"
 )
 
 // errorString is a trivial implementation of error.

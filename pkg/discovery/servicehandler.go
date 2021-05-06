@@ -82,7 +82,6 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 	}
 	authPolicy, configuration := getAuthPolicy(policies)
 
-	//TODO can be refactored to not use authpolicy in checksum and use policy
 	isAlreadyPublished, checksum := isPublished(api, authPolicy)
 	if isAlreadyPublished {
 		// If true, then the api is published and there were no changes detected
@@ -348,7 +347,7 @@ func removeOASpolicies(specContent []byte, specType string) ([]byte, error) {
 		return json.Marshal(oas3Spec)
 	}
 
-	return nil, errors.New("Invalid Spec Type, Only OAS specs are supported")
+	return nil, errors.New(anypoint.ErrSpecNotSupported)
 }
 
 // setOAS2policies adds the policy security definition in OAS2
@@ -389,6 +388,7 @@ func setOAS2policies(sc []byte, authPolicy string, configuration map[string]inte
 		}
 
 		oas2Spec.SwaggerProps.SecurityDefinitions = sd
+		return json.Marshal(oas2Spec)
 
 	case apic.Oauth:
 		var tokenUrl string
@@ -402,8 +402,6 @@ func setOAS2policies(sc []byte, authPolicy string, configuration map[string]inte
 			scopes[anypoint.Scopes] = configuration[anypoint.Scopes].(string)
 		}
 
-		//TODO remove
-		//ss := openapi2.OAuth2AccessToken("",tokenUrl)
 		ssp := openapi2.SecuritySchemeProps{
 			Description:      anypoint.DescOauth2,
 			Type:             anypoint.Oauth2,
@@ -421,9 +419,10 @@ func setOAS2policies(sc []byte, authPolicy string, configuration map[string]inte
 		}
 
 		oas2Spec.SwaggerProps.SecurityDefinitions = sd
+		return json.Marshal(oas2Spec)
 	}
 
-	return json.Marshal(oas2Spec)
+	return sc, errors.New(anypoint.ErrAuthNotSupported)
 }
 
 // setOAS2policies adds the policy security definition in OAS3
@@ -459,6 +458,7 @@ func setOAS3policies(sc []byte, authPolicy string, configuration map[string]inte
 		}
 
 		oas3Spec.Components.SecuritySchemes = openapi3.SecuritySchemes{anypoint.ClientID: &ssr}
+		return json.Marshal(oas3Spec)
 
 	case apic.Oauth:
 		var tokenUrl string
@@ -491,9 +491,10 @@ func setOAS3policies(sc []byte, authPolicy string, configuration map[string]inte
 		}
 
 		oas3Spec.Components.SecuritySchemes = openapi3.SecuritySchemes{anypoint.Oauth2: &ssr}
+		return json.Marshal(oas3Spec)
 	}
 
-	return json.Marshal(oas3Spec)
+	return sc, errors.New(anypoint.ErrAuthNotSupported)
 }
 
 // isPublished checks if an api is published with the latest changes. Returns true if it is, and false if it is not.
