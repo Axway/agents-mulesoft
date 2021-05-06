@@ -392,10 +392,6 @@ func (c *AnypointClient) invokeJSON(request coreapi.Request, resp interface{}) e
 		return agenterrors.Wrap(ErrCommunicatingWithGateway, err.Error())
 	}
 
-	if string(body) == "[]" {
-		return nil
-	}
-
 	err = json.Unmarshal(body, resp)
 	if err != nil {
 		return agenterrors.Wrap(ErrMarshallingBody, err.Error())
