@@ -70,23 +70,24 @@ func (c *clientId) Subscribe(log logrus.FieldLogger, subs apic.Subscription) err
 }
 
 func (c *clientId) doSubscribe(log logrus.FieldLogger, subs apic.Subscription) (string, string, error) {
-	// Create a new application and create a new contract
-	apiInstanceId := subs.GetRemoteAPIID()
+	// Create a new client application on Mulesoft
+	apiId := subs.GetRemoteAPIID()
 
 	app := subs.GetPropertyValue(appName)
 
 	d := subs.GetPropertyValue(desc)
 
-	// Use this API Instance ID to make a POST call to create a new client application
 	appl := &anypoint.AppRequestBody{
 		Name:        app,
 		Description: d,
 	}
 
-	application, err := c.apc.CreateClientApplication(apiInstanceId, appl)
+	application, err := c.apc.CreateClientApplication(apiId, appl)
 	if err != nil {
-		return "", "", fmt.Errorf("Error creating client app", err)
+		return "", "", fmt.Errorf("Error creating client application", err)
 	}
+
+	log.WithField("Client application", application.Name).Debug("Created a client application on Mulesoft")
 
 	api, err := cache.GetCache().GetBySecondaryKey(subs.GetRemoteAPIID())
 	if err != nil {
@@ -95,26 +96,47 @@ func (c *clientId) doSubscribe(log logrus.FieldLogger, subs apic.Subscription) (
 
 	muleApi := api.(anypoint.API)
 
-	// And make another POST call to create a new contract
+	// Need to fetch the exchange asset to get the version group
+	exchangeAsset, err := c.apc.GetExchangeAsset(muleApi.GroupID, muleApi.AssetID, muleApi.AssetVersion)
+	if err != nil {
+		return "", "", err
+	}
+
+	// Create a new contract for the created client application
 	cnt := &anypoint.Contract{
-		APIID:          apiInstanceId,
+		APIID:          apiId,
 		EnvironmentId:  muleApi.EnvironmentID,
 		AcceptedTerms:  true,
 		OrganizationId: muleApi.OrganizationID,
 		GroupId:        muleApi.GroupID,
 		AssetId:        muleApi.AssetID,
 		Version:        muleApi.AssetVersion,
-		VersionGroup:   muleApi.AssetVersion,
+		VersionGroup:   exchangeAsset.VersionGroup,
 	}
 
 	_, err = c.apc.CreateContract(application.Id, cnt)
 	if err != nil {
-		return "", "", fmt.Errorf("Error while creating a contract")
+		return "", "", fmt.Errorf("Error while creating a contract", err)
 	}
+
+	log.WithField("Client application", application.Name).Debug("Created a new contract")
 
 	return application.ClientId, application.ClientSecret, nil
 }
 
 func (c *clientId) Unsubscribe(log logrus.FieldLogger, subs apic.Subscription) {
-	panic("implement me")
+	log.Info("Delete subscription for ", name)
+
+	app := subs.GetPropertyValue(appName)
+
+	err := c.apc.DeleteClientApplication(app)
+	if err != nil {
+		log.WithError(err).Error("Failed to delete client application")
+		subs.UpdateState(apic.SubscriptionFailedToSubscribe, fmt.Sprintf("Failed to delete client application %s", app))
+		return
+	}
+	err = subs.UpdateState(apic.SubscriptionUnsubscribed, "")
+	if err != nil {
+		log.WithError(err).Error("failed to update subscription state")
+	}
 }

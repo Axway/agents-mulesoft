@@ -107,16 +107,10 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 		if err1 != nil {
 			return nil, err1
 		}
-		schema := createSubscriptionSchemaForSLATier(apiID, tiers)
-
-		s.subscriptionManager.RegisterNewSchema(func(apic *anypoint.AnypointClient) subscription.Handler {
-			return slatier.New(apiID, s.client.(*anypoint.AnypointClient), schema)
-		}, s.client.(*anypoint.AnypointClient))
-
-		if err1 = agent.GetCentralClient().RegisterSubscriptionSchema(schema); err1 != nil {
-			return nil, fmt.Errorf("failed to register subscription schema %s: %w", schema.GetSubscriptionName(), err1)
+		schema, err1 := s.createSubscriptionSchemaForSLATier(apiID, tiers)
+		if err1 != nil {
+			return nil, err1
 		}
-		log.Infof("Schema registered: %s", schema.GetSubscriptionName())
 
 		subSchName = schema.GetSubscriptionName()
 	}
@@ -167,27 +161,25 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 	}
 
 	return &ServiceDetail{
-		APIName:          api.AssetID,
-		APISpec:          modifiedSpec,
-		AuthPolicy:       authPolicy,
-		ID:               fmt.Sprint(api.ID),
-		Image:            icon,
-		ImageContentType: iconContentType,
-		ResourceType:     specType,
-		ServiceAttributes: map[string]string{"checksum": checksum,
-			"assetVersion":      exchangeAsset.Version,
-			"assetVersionGroup": exchangeAsset.VersionGroup},
-		Stage:            s.stage,
-		Tags:             api.Tags,
-		Title:            asset.ExchangeAssetName,
-		Version:          api.AssetVersion,
-		SubscriptionName: subSchName,
-		Status:           apic.PublishedStatus,
+		APIName:           api.AssetID,
+		APISpec:           modifiedSpec,
+		AuthPolicy:        authPolicy,
+		ID:                fmt.Sprint(api.ID),
+		Image:             icon,
+		ImageContentType:  iconContentType,
+		ResourceType:      specType,
+		ServiceAttributes: map[string]string{"checksum": checksum},
+		Stage:             s.stage,
+		Tags:              api.Tags,
+		Title:             asset.ExchangeAssetName,
+		Version:           api.AssetVersion,
+		SubscriptionName:  subSchName,
+		Status:            apic.PublishedStatus,
 	}, nil
 }
 
-func createSubscriptionSchemaForSLATier(apiID string,
-	tiers anypoint.Tiers) apic.SubscriptionSchema {
+func (s *serviceHandler) createSubscriptionSchemaForSLATier(apiID string,
+	tiers anypoint.Tiers) (apic.SubscriptionSchema, error) {
 	schema := apic.NewSubscriptionSchema(apiID)
 
 	var names []string
@@ -197,11 +189,20 @@ func createSubscriptionSchemaForSLATier(apiID string,
 		names = append(names, t)
 	}
 
-	schema.AddProperty(slatier.AppName, "string", "Name of the application", "", true, nil)
+	schema.AddProperty(slatier.AppName, "string", "Name of the new app", "", true, nil)
 	schema.AddProperty(slatier.Desc, "string", "", "", false, nil)
 	schema.AddProperty(slatier.TierLabel, "string", "", "", true, names)
 
-	return schema
+	s.subscriptionManager.RegisterNewSchema(func(apic *anypoint.AnypointClient) subscription.Handler {
+		return slatier.New(apiID, s.client.(*anypoint.AnypointClient), schema)
+	}, s.client.(*anypoint.AnypointClient))
+
+	if err := agent.GetCentralClient().RegisterSubscriptionSchema(schema); err != nil {
+		return nil, fmt.Errorf("failed to register subscription schema %s: %w", schema.GetSubscriptionName(), err)
+	}
+	log.Infof("Schema registered: %s", schema.GetSubscriptionName())
+
+	return schema, nil
 }
 
 // shouldDiscoverAPI determines if the API should be pushed to Central or not

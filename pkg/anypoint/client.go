@@ -390,9 +390,45 @@ func (c *AnypointClient) CreateClientApplication(apiInstanceID string, app *AppR
 	return &application, nil
 }
 
+func (c *AnypointClient) DeleteClientApplication(apiInstanceID string) error {
+	url := fmt.Sprintf("%s/exchange/api/v2/organizations/%s/applications/%s", c.baseURL, c.auth.GetOrgID(), apiInstanceID)
+
+	headers := map[string]string{
+		"Authorization": "Bearer " + c.auth.GetToken(),
+	}
+
+	request := coreapi.Request{
+		Method:      coreapi.DELETE,
+		URL:         url,
+		QueryParams: nil,
+		Headers:     headers,
+		Body:        nil,
+	}
+
+	return c.invokeDelete(request)
+}
+
 func (c *AnypointClient) CreateContract(appID int64, contract *Contract) (*Contract, error) {
 	var cnt Contract
 
+	url := fmt.Sprintf("%s/exchange/api/v1/organizations/%s/applications/%d/contracts", c.baseURL, c.auth.GetOrgID(), appID)
+
+	buffer, err := json.Marshal(contract)
+	if err != nil {
+		return nil, agenterrors.Wrap(ErrMarshallingBody, err.Error())
+	}
+
+	err = c.invokeJSONPost(url, nil, buffer, &cnt)
+	if err != nil {
+		return nil, err
+	}
+
+	return &cnt, nil
+}
+
+// TODO improve this
+func (c *AnypointClient) CreateSLAContract(appID int64, contract *SLAContract) (*SLAContract, error) {
+	var cnt SLAContract
 	url := fmt.Sprintf("%s/exchange/api/v1/organizations/%s/applications/%d/contracts", c.baseURL, c.auth.GetOrgID(), appID)
 
 	buffer, err := json.Marshal(contract)
@@ -461,6 +497,18 @@ func (c *AnypointClient) invokeJSONPost(url string, query map[string]string, bod
 	}
 
 	return c.invokeJSON(request, resp)
+}
+
+func (c *AnypointClient) invokeDelete(request coreapi.Request) error {
+	response, err := c.apiClient.Send(request)
+	if err != nil {
+		return agenterrors.Wrap(ErrCommunicatingWithGateway, err.Error())
+	}
+
+	if response.Code != http.StatusNoContent {
+		agenterrors.Wrap(ErrCommunicatingWithGateway, fmt.Sprint(response.Code))
+	}
+	return nil
 }
 
 func (c *AnypointClient) invokeJSON(request coreapi.Request, resp interface{}) error {

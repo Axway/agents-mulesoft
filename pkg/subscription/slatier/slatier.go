@@ -5,12 +5,13 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Axway/agents-mulesoft/pkg/subscription"
+
 	"github.com/Axway/agents-mulesoft/pkg/subscription/clientid"
 
 	"github.com/Axway/agent-sdk/pkg/apic"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
-	"github.com/Axway/agents-mulesoft/pkg/subscription"
 	"github.com/sirupsen/logrus"
 )
 
@@ -21,6 +22,7 @@ type slaTier struct {
 }
 
 const (
+	// TODO extract the first two to a file that defines all constants
 	AppName   = "appName"
 	Desc      = "description"
 	TierLabel = "SLA Tier"
@@ -34,8 +36,19 @@ func New(name string, apc *anypoint.AnypointClient, schema apic.SubscriptionSche
 	}
 }
 
+func (s *slaTier) Name() string {
+	return s.name
+}
+
 func (s *slaTier) Schema() apic.SubscriptionSchema {
 	return s.schema
+}
+
+func (s *slaTier) IsApplicable(pd subscription.PolicyDetail) bool {
+	if pd.IsSlaBased {
+		return pd.APIId == s.name && pd.Policy == apic.Apikey
+	}
+	return false
 }
 
 func (s *slaTier) Subscribe(log logrus.FieldLogger, subs apic.Subscription) error {
@@ -51,24 +64,21 @@ func (s *slaTier) Subscribe(log logrus.FieldLogger, subs apic.Subscription) erro
 
 func (s *slaTier) doSubscribe(log logrus.FieldLogger, subs apic.Subscription) (string, string, error) {
 	// Create a new application and create a new contract
-	apiInstanceId := subs.GetRemoteAPIID()
-
+	apiID := subs.GetRemoteAPIID()
 	app := subs.GetPropertyValue(AppName)
-
-	subs.GetCatalogItemID()
-
 	d := subs.GetPropertyValue(Desc)
 
-	// Use this API Instance ID to make a POST call to create a new client application
 	appl := &anypoint.AppRequestBody{
 		Name:        app,
 		Description: d,
 	}
 
-	application, err := s.apc.CreateClientApplication(apiInstanceId, appl)
+	application, err := s.apc.CreateClientApplication(apiID, appl)
 	if err != nil {
-		return "", "", fmt.Errorf("Error creating client app", err)
+		return "", "", fmt.Errorf("Error creating client app: %s", err)
 	}
+
+	log.WithField("Client application", application.Name).Debug("Created a client application on Mulesoft")
 
 	api, err := cache.GetCache().GetBySecondaryKey(subs.GetRemoteAPIID())
 	if err != nil {
@@ -91,8 +101,8 @@ func (s *slaTier) doSubscribe(log logrus.FieldLogger, subs apic.Subscription) (s
 		return "", "", err
 	}
 
-	cnt := &anypoint.Contract{
-		APIID:           apiInstanceId,
+	cnt := &anypoint.SLAContract{
+		APIID:           apiID,
 		EnvironmentId:   muleApi.EnvironmentID,
 		AcceptedTerms:   true,
 		OrganizationId:  muleApi.OrganizationID,
@@ -103,25 +113,28 @@ func (s *slaTier) doSubscribe(log logrus.FieldLogger, subs apic.Subscription) (s
 		RequestedTierID: tId,
 	}
 
-	_, err = s.apc.CreateContract(application.Id, cnt)
+	_, err = s.apc.CreateSLAContract(application.Id, cnt)
 	if err != nil {
 		return "", "", fmt.Errorf("Error while creating a contract")
 	}
+	log.WithField("Client application", application.Name).Debug("Created a new contract")
 
 	return application.ClientId, application.ClientSecret, nil
 }
 
 func (s *slaTier) Unsubscribe(log logrus.FieldLogger, subs apic.Subscription) {
-	panic("implement me")
-}
+	log.Info("Delete SLA Tier subscription for ", s.name)
 
-func (s *slaTier) IsApplicable(pd subscription.PolicyDetail) bool {
-	if pd.IsSlaBased {
-		return pd.APIId == s.name && pd.Policy == apic.Apikey
+	app := subs.GetPropertyValue(AppName)
+
+	err := s.apc.DeleteClientApplication(app)
+	if err != nil {
+		log.WithError(err).Error("Failed to delete client application")
+		subs.UpdateState(apic.SubscriptionFailedToSubscribe, fmt.Sprintf("Failed to delete client application %s", app))
+		return
 	}
-	return false
-}
-
-func (s *slaTier) Name() string {
-	return s.name
+	err = subs.UpdateState(apic.SubscriptionUnsubscribed, "")
+	if err != nil {
+		log.WithError(err).Error("failed to update subscription state")
+	}
 }

@@ -105,7 +105,7 @@ func (dg *duplicateGuard) markActive(id string) bool {
 	return false
 }
 
-// markActive returns
+// markInactive returns
 func (dg *duplicateGuard) markInactive(id string) bool {
 	dg.lock.Lock()
 	defer dg.lock.Unlock()
@@ -150,6 +150,8 @@ func (sm *Manager) GetSubscriptionSchemaName(pd PolicyDetail) string {
 }
 
 func (sm *Manager) ProcessSubscribe(subscription apic.Subscription) {
+	defer sm.dg.markInactive(subscription.GetID())
+	sm.dg.markActive(subscription.GetID())
 	log := sm.log.
 		WithField("subscriptionID", subscription.GetID()).
 		WithField("catalogItemID", subscription.GetCatalogItemID()).
