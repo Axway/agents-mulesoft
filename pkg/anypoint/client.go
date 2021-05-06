@@ -392,7 +392,6 @@ func (c *AnypointClient) invokeJSON(request coreapi.Request, resp interface{}) e
 		return agenterrors.Wrap(ErrCommunicatingWithGateway, err.Error())
 	}
 
-	// TODO this is to prevent Mule 3 APIs with no policies crashing the discovery agent -> need to verify if still required
 	if string(body) == "[]" {
 		return nil
 	}
