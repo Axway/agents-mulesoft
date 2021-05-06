@@ -239,6 +239,66 @@ const (
 	ErrSpecNotSupported = "Invalid Spec Type, Only OAS specs are supported"
 )
 
+type Application struct {
+	RedirectUri          []interface{} `json:"redirectUri"`
+	Name                 string        `json:"name"`
+	Description          string        `json:"description"`
+	ClientId             string        `json:"clientId"`
+	ClientSecret         string        `json:"clientSecret"`
+	MasterOrganizationId string        `json:"masterOrganizationId"`
+	GrantTypes           []interface{} `json:"grantTypes"`
+	Id                   int64         `json:"id"`
+	APIEndpoints         bool          `json:"apiEndpoints"`
+	ClientProvider       struct {
+		ProviderId interface{} `json:"providerId"`
+	} `json:"clientProvider"`
+}
+
+type AppRequestBody struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
+type Contract struct {
+	APIID           string `json:"apiId"`
+	EnvironmentId   string `json:"environmentId"`
+	AcceptedTerms   bool   `json:"acceptedTerms"`
+	OrganizationId  string `json:"organizationId"`
+	GroupId         string `json:"groupId"`
+	AssetId         string `json:"assetId"`
+	Version         string `json:"version"`
+	VersionGroup    string `json:"versionGroup"`
+	RequestedTierID int64  `json:"requestedTierId"`
+}
+
+type ContractResp struct {
+	Id            int    `json:"id"`
+	Status        string `json:"status"`
+	ApplicationId int    `json:"applicationId"`
+	ClientId      string `json:"clientId"`
+	ClientSecret  string `json:"clientSecret"`
+	API           API    `json:"api"`
+}
+
+type Tiers struct {
+	Total int       `json:"total"`
+	Tiers []SLATier `json:"tiers"`
+}
+
+type SLATier struct {
+	Id          int         `json:"id"`
+	Name        string      `json:"name"`
+	Description interface{} `json:"description"`
+	Limits      []Limits    `json:"limits"`
+	Status      string      `json:"status"`
+}
+
+type Limits struct {
+	Visible                  bool `json:"visible"`
+	TimePeriodInMilliseconds int  `json:"timePeriodInMilliseconds"`
+	MaximumRequests          int  `json:"maximumRequests"`
+}
+
 // errorString is a trivial implementation of error.
 type errorString struct {
 	s string

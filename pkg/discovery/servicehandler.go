@@ -7,7 +7,12 @@ import (
 	"fmt"
 	"net/url"
 	"sort"
+	"strconv"
 	"strings"
+
+	"github.com/Axway/agents-mulesoft/pkg/subscription/slatier"
+
+	"github.com/Axway/agents-mulesoft/pkg/subscription"
 
 	"github.com/getkin/kin-openapi/openapi3"
 	openapi2 "github.com/go-openapi/spec"
@@ -32,12 +37,11 @@ type ServiceHandler interface {
 }
 
 type serviceHandler struct {
-	assetCache          cache.Cache
-	freshCache          cache.Cache
 	stage               string
 	discoveryTags       []string
 	discoveryIgnoreTags []string
 	client              anypoint.Client
+	subscriptionManager *subscription.Manager
 }
 
 func (s *serviceHandler) OnConfigChange(cfg *config.MulesoftConfig) {
@@ -51,11 +55,17 @@ func (s *serviceHandler) OnConfigChange(cfg *config.MulesoftConfig) {
 func (s *serviceHandler) ToServiceDetails(asset *anypoint.Asset) []*ServiceDetail {
 	serviceDetails := []*ServiceDetail{}
 	for _, api := range asset.APIs {
-		// Cache - update the existing to ensure it contains anything new, but create fresh cache
-		// to ensure deletions are detected.
 		key := formatCacheKey(fmt.Sprint(api.ID), s.stage)
-		s.assetCache.Set(key, api)
-		s.freshCache.Set(key, api) // Need to handle if the API exists but becomes undiscoverable
+		// TODO Implement deletion of items from cache
+		err := cache.GetCache().Set(key, api)
+		if err != nil {
+			log.Errorf("Unable to set cache", err)
+		}
+
+		err = cache.GetCache().SetWithSecondaryKey(key, strconv.FormatInt(api.ID, 10), api)
+		if err != nil {
+			log.Errorf("Unable to set cache with secondary key", err)
+		}
 
 		serviceDetail, err := s.getServiceDetail(asset, &api)
 		if err != nil {
@@ -80,8 +90,38 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 	if err != nil {
 		return nil, err
 	}
-	authPolicy, configuration := getAuthPolicy(policies)
+	authPolicy, isSlaBased := getAuthPolicy(policies)
 
+	apiID := strconv.FormatInt(api.ID, 10)
+
+	subSchName := s.subscriptionManager.GetSubscriptionSchemaName(subscription.PolicyDetail{
+		Policy:     authPolicy,
+		IsSlaBased: isSlaBased,
+		APIId:      apiID,
+	})
+
+	// If the API has a new SLA Tier policy, create a new subscription schema for it
+	if subSchName == "" && isSlaBased {
+		// Get details of the SLA tiers
+		tiers, err1 := s.client.GetSLATiers(api.ID)
+		if err1 != nil {
+			return nil, err1
+		}
+		schema := createSubscriptionSchemaForSLATier(apiID, tiers)
+
+		s.subscriptionManager.RegisterNewSchema(func(apic *anypoint.AnypointClient) subscription.Handler {
+			return slatier.New(apiID, s.client.(*anypoint.AnypointClient), schema)
+		}, s.client.(*anypoint.AnypointClient))
+
+		if err1 = agent.GetCentralClient().RegisterSubscriptionSchema(schema); err1 != nil {
+			return nil, fmt.Errorf("failed to register subscription schema %s: %w", schema.GetSubscriptionName(), err1)
+		}
+		log.Infof("Schema registered: %s", schema.GetSubscriptionName())
+
+		subSchName = schema.GetSubscriptionName()
+	}
+
+	//TODO can be refactored to not use authpolicy in checksum and use policy
 	isAlreadyPublished, checksum := isPublished(api, authPolicy)
 	if isAlreadyPublished {
 		// If true, then the api is published and there were no changes detected
@@ -127,19 +167,41 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 	}
 
 	return &ServiceDetail{
-		APIName:           api.AssetID,
-		APISpec:           modifiedSpec,
-		AuthPolicy:        authPolicy,
-		ID:                fmt.Sprint(api.ID),
-		Image:             icon,
-		ImageContentType:  iconContentType,
-		ResourceType:      specType,
-		ServiceAttributes: map[string]string{"checksum": checksum},
-		Stage:             s.stage,
-		Tags:              api.Tags,
-		Title:             asset.ExchangeAssetName,
-		Version:           api.AssetVersion,
+		APIName:          api.AssetID,
+		APISpec:          modifiedSpec,
+		AuthPolicy:       authPolicy,
+		ID:               fmt.Sprint(api.ID),
+		Image:            icon,
+		ImageContentType: iconContentType,
+		ResourceType:     specType,
+		ServiceAttributes: map[string]string{"checksum": checksum,
+			"assetVersion":      exchangeAsset.Version,
+			"assetVersionGroup": exchangeAsset.VersionGroup},
+		Stage:            s.stage,
+		Tags:             api.Tags,
+		Title:            asset.ExchangeAssetName,
+		Version:          api.AssetVersion,
+		SubscriptionName: subSchName,
+		Status:           apic.PublishedStatus,
 	}, nil
+}
+
+func createSubscriptionSchemaForSLATier(apiID string,
+	tiers anypoint.Tiers) apic.SubscriptionSchema {
+	schema := apic.NewSubscriptionSchema(apiID)
+
+	var names []string
+
+	for _, tier := range tiers.Tiers {
+		t := fmt.Sprintf("%v-%s", tier.Id, tier.Name)
+		names = append(names, t)
+	}
+
+	schema.AddProperty(slatier.AppName, "string", "Name of the application", "", true, nil)
+	schema.AddProperty(slatier.Desc, "string", "", "", false, nil)
+	schema.AddProperty(slatier.TierLabel, "string", "", "", true, names)
+
+	return schema
 }
 
 // shouldDiscoverAPI determines if the API should be pushed to Central or not
@@ -246,19 +308,22 @@ func getSpecType(file *anypoint.ExchangeFile, specContent []byte) (string, error
 }
 
 // getAuthPolicy gets the authentication policy type.
-func getAuthPolicy(policies anypoint.Policies) (string, map[string]interface{}) {
+func getAuthPolicy(policies anypoint.Policies) (string, bool) {
 	for _, policy := range policies.Policies {
-		if policy.Template.AssetId == anypoint.ClientID || strings.Contains(policy.Template.AssetId, anypoint.SlaAuth) {
-			return apic.Apikey, policy.Configuration
+		if policy.Template.AssetId == anypoint.ClientID {
+			return apic.Apikey, false
+		}
 
+		if strings.Contains(policy.Template.AssetId, anypoint.SlaAuth) {
+			return apic.Apikey, true
 		}
 
 		if policy.Template.AssetId == anypoint.ExternalOauth {
-			return apic.Oauth, policy.Configuration
+			return apic.Oauth, false
 		}
 	}
 
-	return apic.Passthrough, nil
+	return apic.Passthrough, false
 }
 
 func setOAS2Endpoint(endpointURL string, specContent []byte) ([]byte, error) {

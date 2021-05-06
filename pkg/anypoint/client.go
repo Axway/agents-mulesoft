@@ -7,15 +7,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/Axway/agent-sdk/pkg/cache"
 
-	agenterrors "github.com/Axway/agent-sdk/pkg/util/errors"
-
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
+	agenterrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 
 	"github.com/Axway/agents-mulesoft/pkg/config"
@@ -42,6 +42,9 @@ type Client interface {
 	GetExchangeAssetIcon(icon string) (string, string, error)
 	GetExchangeFileContent(link, packaging, mainFile string) ([]byte, error)
 	GetAnalyticsWindow() ([]AnalyticsEvent, error)
+	CreateClientApplication(string, *AppRequestBody) (*Application, error)
+	CreateContract(int64, *Contract) (*Contract, error)
+	GetSLATiers(int642 int64) (Tiers, error)
 }
 
 type AnalyticsClient interface {
@@ -105,12 +108,12 @@ func (c *AnypointClient) OnConfigChange(mulesoftConfig *config.MulesoftConfig) {
 	var err error
 	c.auth, err = NewAuth(c)
 	if err != nil {
-		log.Fatalf("Failed to authenticate: %s", err.Error())
+		logrus.Fatalf("Failed to authenticate: %s", err.Error())
 	}
 
 	c.environment, err = c.GetEnvironmentByName(mulesoftConfig.Environment)
 	if err != nil {
-		log.Fatalf("Failed to connect to Mulesoft environment %s: %s", mulesoftConfig.Environment, err.Error())
+		logrus.Fatalf("Failed to connect to Mulesoft environment %s: %s", mulesoftConfig.Environment, err.Error())
 	}
 }
 
@@ -349,6 +352,62 @@ func (c *AnypointClient) GetAnalyticsWindow() ([]AnalyticsEvent, error) {
 	return events, err
 }
 
+func (c *AnypointClient) GetSLATiers(apiId int64) (Tiers, error) {
+	var slatiers Tiers
+	headers := map[string]string{
+		"Authorization": "Bearer " + c.auth.GetToken(),
+	}
+	url := fmt.Sprintf("%s/apimanager/api/v1/organizations/%s/environments/%s/apis/%d/tiers",
+		c.baseURL, c.auth.GetOrgID(), c.environment.ID, apiId)
+
+	request := coreapi.Request{
+		Method:      coreapi.GET,
+		URL:         url,
+		QueryParams: nil,
+		Headers:     headers,
+	}
+	err := c.invokeJSON(request, &slatiers)
+	return slatiers, err
+}
+
+func (c *AnypointClient) CreateClientApplication(apiInstanceID string, app *AppRequestBody) (*Application, error) {
+	var application Application
+	query := map[string]string{
+		"apiInstanceID": apiInstanceID,
+	}
+
+	url := fmt.Sprintf("%s/exchange/api/v1/organizations/%s/applications", c.baseURL, c.auth.GetOrgID())
+
+	buffer, err := json.Marshal(app)
+	if err != nil {
+		return nil, agenterrors.Wrap(ErrMarshallingBody, err.Error())
+	}
+
+	err = c.invokeJSONPost(url, query, buffer, &application)
+	if err != nil {
+		return nil, err
+	}
+	return &application, nil
+}
+
+func (c *AnypointClient) CreateContract(appID int64, contract *Contract) (*Contract, error) {
+	var cnt Contract
+
+	url := fmt.Sprintf("%s/exchange/api/v1/organizations/%s/applications/%d/contracts", c.baseURL, c.auth.GetOrgID(), appID)
+
+	buffer, err := json.Marshal(contract)
+	if err != nil {
+		return nil, agenterrors.Wrap(ErrMarshallingBody, err.Error())
+	}
+
+	err = c.invokeJSONPost(url, nil, buffer, &cnt)
+	if err != nil {
+		return nil, err
+	}
+
+	return &cnt, nil
+}
+
 func (c *AnypointClient) getLastRun() (string, string) {
 	tStamp, _ := c.cache.Get(CacheKeyTimeStamp)
 	now := time.Now()
@@ -386,6 +445,24 @@ func (c *AnypointClient) invokeJSONGet(url string, page *Page, resp interface{})
 	return c.invokeJSON(request, resp)
 }
 
+func (c *AnypointClient) invokeJSONPost(url string, query map[string]string, body []byte, resp interface{}) error {
+	headers := map[string]string{
+		"Authorization": "Bearer " + c.auth.GetToken(),
+		"Content-Type":  "application/json",
+		"Accept":        "application/json",
+	}
+
+	request := coreapi.Request{
+		Method:      coreapi.POST,
+		URL:         url,
+		QueryParams: query,
+		Headers:     headers,
+		Body:        body,
+	}
+
+	return c.invokeJSON(request, resp)
+}
+
 func (c *AnypointClient) invokeJSON(request coreapi.Request, resp interface{}) error {
 	body, _, err := c.invoke(request)
 	if err != nil {
@@ -415,7 +492,8 @@ func (c *AnypointClient) invoke(request coreapi.Request) ([]byte, map[string][]s
 	if err != nil {
 		return nil, nil, agenterrors.Wrap(ErrCommunicatingWithGateway, err.Error())
 	}
-	if response.Code != http.StatusOK {
+
+	if !(response.Code == http.StatusOK || response.Code == http.StatusCreated) {
 		return nil, nil, agenterrors.Wrap(ErrCommunicatingWithGateway, fmt.Sprint(response.Code))
 	}
 
