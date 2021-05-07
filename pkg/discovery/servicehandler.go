@@ -8,14 +8,14 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Axway/agents-mulesoft/pkg/subscription"
 	"github.com/Axway/agents-mulesoft/pkg/subscription/slatier"
+
+	"github.com/Axway/agents-mulesoft/pkg/subscription"
 	"github.com/getkin/kin-openapi/openapi2"
 
 	"github.com/getkin/kin-openapi/openapi3"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
-	"github.com/Axway/agent-sdk/pkg/util/log"
 
 	"github.com/Axway/agent-sdk/pkg/apic"
 	"sigs.k8s.io/yaml"
@@ -23,6 +23,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Axway/agent-sdk/pkg/cache"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 	"github.com/Axway/agents-mulesoft/pkg/config"
 )
@@ -145,6 +146,7 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 	log.WithField("policy", authPolicy).Debugf("change detected in published asset")
 
 	// Potentially discoverable API, gather the details
+	log.Infof("Gathering details for %s(%d)", asset.AssetID, api.ID)
 	exchangeAsset, err := s.client.GetExchangeAsset(api.GroupID, api.AssetID, api.AssetVersion)
 	if err != nil {
 		return nil, err
@@ -441,7 +443,7 @@ func setOAS2policies(swagger *openapi2.T, authPolicy string, configuration map[s
 
 		swagger.SecurityDefinitions = sd
 	}
-	// return sc, errors.New(anypoint.ErrAuthNotSupported)
+	// return sc, agenterrors.New(1161, anypoint.ErrAuthNotSupported)
 	return json.Marshal(swagger)
 }
 
@@ -503,7 +505,7 @@ func setOAS3policies(spec *openapi3.T, authPolicy string, configuration map[stri
 		spec.Components.SecuritySchemes = openapi3.SecuritySchemes{anypoint.Oauth2: &ssr}
 	}
 
-	// return sc, errors.New(anypoint.ErrAuthNotSupported)
+	// return sc, agenterrors.New(1162, anypoint.ErrAuthNotSupported)
 	return json.Marshal(spec)
 }
 
