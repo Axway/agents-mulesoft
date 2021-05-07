@@ -18,12 +18,12 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 
 	"github.com/Axway/agent-sdk/pkg/apic"
 	"sigs.k8s.io/yaml"
 
 	"github.com/Axway/agent-sdk/pkg/cache"
-	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 	"github.com/Axway/agents-mulesoft/pkg/config"
 )
