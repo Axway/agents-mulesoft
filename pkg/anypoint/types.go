@@ -223,3 +223,4 @@ type AnalyticsEvent struct {
 
 const ExternalOauth = "external-oauth2-access-token-enforcement"
 const ClientID = "client-id-enforcement"
+const SlaAuth = "sla-based"

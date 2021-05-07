@@ -9,6 +9,7 @@ import (
 
 	"github.com/getkin/kin-openapi/openapi2"
 	"github.com/getkin/kin-openapi/openapi3"
+	"sigs.k8s.io/yaml"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 
@@ -104,6 +105,8 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 	if err != nil {
 		return nil, err
 	}
+
+	rawSpec = specYAMLToJSON(rawSpec)
 	specType, err := getSpecType(exchFile, rawSpec)
 	if err != nil {
 		return nil, err
@@ -163,13 +166,17 @@ func shouldDiscoverAPI(endpoint string, discoveryTags, ignoreTags, apiTags []str
 // updateSpec Updates the spec endpoints based on the given type.
 func updateSpec(specType, endpointURI, authPolicy string, specContent []byte) ([]byte, error) {
 	var err error
-	var oas2Swagger *apic.Oas2Swagger
-	var oas3Swagger *openapi3.Swagger
+	var oas2Swagger *openapi2.T
+	var oas3Swagger *openapi3.T
 	// Make a best effort to update the endpoints - required because the SDK is parsing from spec and not setting the
 	// endpoint information independently.
 	switch specType {
 	case apic.Oas2:
 		oas2Swagger, err = apic.ParseOAS2(specContent)
+		if err != nil {
+			return nil, err
+		}
+		err := apic.SetHostDetails(oas2Swagger, endpointURI)
 		if err != nil {
 			return nil, err
 		}
@@ -179,6 +186,7 @@ func updateSpec(specType, endpointURI, authPolicy string, specContent []byte) ([
 		if err != nil {
 			return nil, err
 		}
+		apic.SetServers([]string{endpointURI}, oas3Swagger)
 		specContent, err = setOAS3policies(oas3Swagger, authPolicy)
 	case apic.Wsdl:
 		specContent, err = setWSDLEndpoint(endpointURI, specContent)
@@ -201,6 +209,30 @@ func getExchangeAssetSpecFile(exchangeFiles []anypoint.ExchangeFile) *anypoint.E
 		return nil
 	}
 	return &exchangeFiles[0]
+}
+
+// specYAMLToJSON - if the spec is yaml convert it to json, SDK doesn't handle yaml.
+func specYAMLToJSON(specContent []byte) []byte {
+	specMap := make(map[string]interface{})
+	// check if the content is already json
+	err := json.Unmarshal(specContent, &specMap)
+	if err == nil {
+		return specContent
+	}
+
+	// check if the content is already yaml
+	err = yaml.Unmarshal(specContent, &specMap)
+	if err != nil {
+		// Not yaml, nothing more to be done
+		return specContent
+	}
+
+	transcoded, err := yaml.YAMLToJSON(specContent)
+	if err != nil {
+		// Not json encodeable, nothing more to be done
+		return specContent
+	}
+	return transcoded
 }
 
 // getSpecType determines the correct resource type for the asset.
@@ -227,7 +259,7 @@ func getSpecType(file *anypoint.ExchangeFile, specContent []byte) (string, error
 // getAuthPolicy gets the authentication policy type.
 func getAuthPolicy(policies anypoint.Policies) string {
 	for _, policy := range policies.Policies {
-		if policy.Template.AssetId == anypoint.ClientID {
+		if policy.Template.AssetId == anypoint.ClientID || strings.Contains(policy.Template.AssetId, anypoint.SlaAuth) {
 			return apic.Apikey
 		}
 
@@ -264,7 +296,7 @@ func doesAPIContainAnyMatchingTag(tags, apiTags []string) bool {
 }
 
 // TODO improve if fields are not complete, introduce per method swagger definitions, set up logic for multiple auth policies, use policy configurations
-func setOAS2policies(swagger *apic.Oas2Swagger, authPolicy string) ([]byte, error) {
+func setOAS2policies(swagger *openapi2.T, authPolicy string) ([]byte, error) {
 	// Removing pre-existing auth security policies
 	swagger.SecurityDefinitions = make(map[string]*openapi2.SecurityScheme)
 	switch authPolicy {
@@ -297,7 +329,7 @@ func setOAS2policies(swagger *apic.Oas2Swagger, authPolicy string) ([]byte, erro
 	return json.Marshal(swagger)
 }
 
-func setOAS3policies(spec *openapi3.Swagger, authPolicy string) ([]byte, error) {
+func setOAS3policies(spec *openapi3.T, authPolicy string) ([]byte, error) {
 	// remove existing auth policies
 	spec.Components.SecuritySchemes = openapi3.SecuritySchemes{}
 
