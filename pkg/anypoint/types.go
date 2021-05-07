@@ -237,6 +237,11 @@ const (
 	DescOauth2          = "This API supports OAuth 2.0 for authenticating all API requests"
 	ErrAuthNotSupported = "only Oauth and ClientID enforcement(ApiKey) security policies are supported"
 	ErrSpecNotSupported = "Invalid Spec Type, Only OAS specs are supported"
+	ClientIDProp        = "client_id"
+	ClientSecretProp    = "client_secret"
+	AppName             = "appName"
+	Description         = "description"
+	TierLabel           = "SLA Tier"
 )
 
 type Application struct {

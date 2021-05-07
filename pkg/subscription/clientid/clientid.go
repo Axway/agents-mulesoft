@@ -16,15 +16,10 @@ type clientId struct {
 }
 
 const (
-	name             = "client-id-enforcement"
-	appName          = "appName"
-	desc             = "description"
-	ClientIDProp     = "client_id"
-	ClientSecretProp = "client_secret"
+	name = "client-id-enforcement"
 )
 
 func init() {
-	fmt.Print("Initing clientid.go")
 	subscription.Register(func(apc *anypoint.AnypointClient) subscription.Handler {
 		return &clientId{apc: apc}
 	})
@@ -37,14 +32,14 @@ func (c *clientId) IsApplicable(pd subscription.PolicyDetail) bool {
 func (c *clientId) Schema() apic.SubscriptionSchema {
 	schema := apic.NewSubscriptionSchema(name)
 
-	schema.AddProperty(appName,
+	schema.AddProperty(anypoint.AppName,
 		"string",
 		"Name of the new app",
 		"",
 		true,
 		nil)
 
-	schema.AddProperty(desc,
+	schema.AddProperty(anypoint.Description,
 		"string",
 		"Description",
 		"",
@@ -66,16 +61,17 @@ func (c *clientId) Subscribe(log logrus.FieldLogger, subs apic.Subscription) err
 		return subs.UpdateState(apic.SubscriptionFailedToSubscribe, err.Error())
 	}
 
-	return subs.UpdateStateWithProperties(apic.SubscriptionActive, "", map[string]interface{}{ClientIDProp: clientID, ClientSecretProp: clientSecret})
+	return subs.UpdateStateWithProperties(apic.SubscriptionActive, "", map[string]interface{}{
+		anypoint.ClientIDProp: clientID, anypoint.ClientSecretProp: clientSecret})
 }
 
 func (c *clientId) doSubscribe(log logrus.FieldLogger, subs apic.Subscription) (string, string, error) {
 	// Create a new client application on Mulesoft
 	apiId := subs.GetRemoteAPIID()
 
-	app := subs.GetPropertyValue(appName)
+	app := subs.GetPropertyValue(anypoint.AppName)
 
-	d := subs.GetPropertyValue(desc)
+	d := subs.GetPropertyValue(anypoint.Description)
 
 	appl := &anypoint.AppRequestBody{
 		Name:        app,
@@ -127,12 +123,15 @@ func (c *clientId) doSubscribe(log logrus.FieldLogger, subs apic.Subscription) (
 func (c *clientId) Unsubscribe(log logrus.FieldLogger, subs apic.Subscription) {
 	log.Info("Delete subscription for ", name)
 
-	app := subs.GetPropertyValue(appName)
+	app := subs.GetPropertyValue(anypoint.AppName)
 
 	err := c.apc.DeleteClientApplication(app)
 	if err != nil {
 		log.WithError(err).Error("Failed to delete client application")
-		subs.UpdateState(apic.SubscriptionFailedToSubscribe, fmt.Sprintf("Failed to delete client application %s", app))
+		err1 := subs.UpdateState(apic.SubscriptionFailedToSubscribe, fmt.Sprintf("Failed to delete client application %s", app))
+		if err1 != nil {
+			log.WithError(err1).Error("Error updating the subscription state")
+		}
 		return
 	}
 	err = subs.UpdateState(apic.SubscriptionUnsubscribed, "")

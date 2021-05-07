@@ -44,7 +44,7 @@ type Client interface {
 	GetAnalyticsWindow() ([]AnalyticsEvent, error)
 	CreateClientApplication(string, *AppRequestBody) (*Application, error)
 	CreateContract(int64, *Contract) (*Contract, error)
-	GetSLATiers(int642 int64) (Tiers, error)
+	GetSLATiers(int642 int64) (*Tiers, error)
 }
 
 type AnalyticsClient interface {
@@ -352,7 +352,7 @@ func (c *AnypointClient) GetAnalyticsWindow() ([]AnalyticsEvent, error) {
 	return events, err
 }
 
-func (c *AnypointClient) GetSLATiers(apiId int64) (Tiers, error) {
+func (c *AnypointClient) GetSLATiers(apiId int64) (*Tiers, error) {
 	var slatiers Tiers
 	headers := map[string]string{
 		"Authorization": "Bearer " + c.auth.GetToken(),
@@ -367,7 +367,7 @@ func (c *AnypointClient) GetSLATiers(apiId int64) (Tiers, error) {
 		Headers:     headers,
 	}
 	err := c.invokeJSON(request, &slatiers)
-	return slatiers, err
+	return &slatiers, err
 }
 
 func (c *AnypointClient) CreateClientApplication(apiInstanceID string, app *AppRequestBody) (*Application, error) {

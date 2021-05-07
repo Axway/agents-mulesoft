@@ -7,8 +7,6 @@ import (
 
 	"github.com/Axway/agents-mulesoft/pkg/subscription"
 
-	"github.com/Axway/agents-mulesoft/pkg/subscription/clientid"
-
 	"github.com/Axway/agent-sdk/pkg/apic"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
@@ -20,13 +18,6 @@ type slaTier struct {
 	schema apic.SubscriptionSchema
 	apc    *anypoint.AnypointClient
 }
-
-const (
-	// TODO extract the first two to a file that defines all constants
-	AppName   = "appName"
-	Desc      = "description"
-	TierLabel = "SLA Tier"
-)
 
 func New(name string, apc *anypoint.AnypointClient, schema apic.SubscriptionSchema) *slaTier {
 	return &slaTier{
@@ -59,14 +50,15 @@ func (s *slaTier) Subscribe(log logrus.FieldLogger, subs apic.Subscription) erro
 		return subs.UpdateState(apic.SubscriptionFailedToSubscribe, err.Error())
 	}
 
-	return subs.UpdateStateWithProperties(apic.SubscriptionActive, "", map[string]interface{}{clientid.ClientIDProp: clientID, clientid.ClientSecretProp: clientSecret})
+	return subs.UpdateStateWithProperties(apic.SubscriptionActive, "", map[string]interface{}{
+		anypoint.ClientIDProp: clientID, anypoint.ClientSecretProp: clientSecret})
 }
 
 func (s *slaTier) doSubscribe(log logrus.FieldLogger, subs apic.Subscription) (string, string, error) {
 	// Create a new application and create a new contract
 	apiID := subs.GetRemoteAPIID()
-	app := subs.GetPropertyValue(AppName)
-	d := subs.GetPropertyValue(Desc)
+	app := subs.GetPropertyValue(anypoint.AppName)
+	d := subs.GetPropertyValue(anypoint.Description)
 
 	appl := &anypoint.AppRequestBody{
 		Name:        app,
@@ -87,10 +79,9 @@ func (s *slaTier) doSubscribe(log logrus.FieldLogger, subs apic.Subscription) (s
 
 	muleApi := api.(anypoint.API)
 
-	tier := subs.GetPropertyValue(TierLabel)
+	tier := subs.GetPropertyValue(anypoint.TierLabel)
 
-	tierID := strings.Split(tier, "-")[0]
-	tId, err := strconv.ParseInt(tierID, 10, 64)
+	tId, err := parseTierID(tier)
 	if err != nil {
 		return "", "", err
 	}
@@ -122,15 +113,23 @@ func (s *slaTier) doSubscribe(log logrus.FieldLogger, subs apic.Subscription) (s
 	return application.ClientId, application.ClientSecret, nil
 }
 
+func parseTierID(tierValue string) (int64, error) {
+	tierID := strings.Split(tierValue, "-")[0]
+	return strconv.ParseInt(tierID, 10, 64)
+}
+
 func (s *slaTier) Unsubscribe(log logrus.FieldLogger, subs apic.Subscription) {
 	log.Info("Delete SLA Tier subscription for ", s.name)
 
-	app := subs.GetPropertyValue(AppName)
+	app := subs.GetPropertyValue(anypoint.AppName)
 
 	err := s.apc.DeleteClientApplication(app)
 	if err != nil {
 		log.WithError(err).Error("Failed to delete client application")
-		subs.UpdateState(apic.SubscriptionFailedToSubscribe, fmt.Sprintf("Failed to delete client application %s", app))
+		err1 := subs.UpdateState(apic.SubscriptionFailedToSubscribe, fmt.Sprintf("Failed to delete client application %s", app))
+		if err1 != nil {
+			log.WithError(err1).Error("Failed to update the subscription state")
+		}
 		return
 	}
 	err = subs.UpdateState(apic.SubscriptionUnsubscribed, "")

@@ -193,7 +193,7 @@ func (sm *Manager) ProcessUnsubscribe(subscription apic.Subscription) {
 		WithField("remoteID", subscription.GetRemoteAPIID()).
 		WithField("consumerInstanceID", subscription.GetApicID())
 
-	if sm.dg.markActive(subscription.GetID()) {
+	if !sm.dg.markActive(subscription.GetID()) {
 		sm.log.Info("duplicate subscription event; already handling subscription")
 		return
 	}

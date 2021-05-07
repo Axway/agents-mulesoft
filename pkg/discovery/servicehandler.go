@@ -62,6 +62,7 @@ func (s *serviceHandler) ToServiceDetails(asset *anypoint.Asset) []*ServiceDetai
 			log.Errorf("Unable to set cache", err)
 		}
 
+		// TODO Handle purging of cache
 		err = cache.GetCache().SetWithSecondaryKey(key, strconv.FormatInt(api.ID, 10), api)
 		if err != nil {
 			log.Errorf("Unable to set cache with secondary key", err)
@@ -179,7 +180,7 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 }
 
 func (s *serviceHandler) createSubscriptionSchemaForSLATier(apiID string,
-	tiers anypoint.Tiers) (apic.SubscriptionSchema, error) {
+	tiers *anypoint.Tiers) (apic.SubscriptionSchema, error) {
 	schema := apic.NewSubscriptionSchema(apiID)
 
 	var names []string
@@ -189,9 +190,9 @@ func (s *serviceHandler) createSubscriptionSchemaForSLATier(apiID string,
 		names = append(names, t)
 	}
 
-	schema.AddProperty(slatier.AppName, "string", "Name of the new app", "", true, nil)
-	schema.AddProperty(slatier.Desc, "string", "", "", false, nil)
-	schema.AddProperty(slatier.TierLabel, "string", "", "", true, names)
+	schema.AddProperty(anypoint.AppName, "string", "Name of the new app", "", true, nil)
+	schema.AddProperty(anypoint.Description, "string", "", "", false, nil)
+	schema.AddProperty(anypoint.TierLabel, "string", "", "", true, names)
 
 	s.subscriptionManager.RegisterNewSchema(func(apic *anypoint.AnypointClient) subscription.Handler {
 		return slatier.New(apiID, s.client.(*anypoint.AnypointClient), schema)
