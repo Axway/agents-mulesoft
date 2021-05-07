@@ -15,6 +15,7 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 
 	"github.com/Axway/agent-sdk/pkg/apic"
 	"sigs.k8s.io/yaml"
@@ -22,7 +23,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Axway/agent-sdk/pkg/cache"
-	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 	"github.com/Axway/agents-mulesoft/pkg/config"
 )
@@ -51,23 +51,33 @@ func (s *serviceHandler) OnConfigChange(cfg *config.MulesoftConfig) {
 // can resolve to multiple ServiceDetails.
 func (s *serviceHandler) ToServiceDetails(asset *anypoint.Asset) []*ServiceDetail {
 	serviceDetails := []*ServiceDetail{}
+	log := logrus.WithFields(logrus.Fields{
+		"assetName": asset.AssetID,
+		"assetID":   asset.ID,
+	})
 	for _, api := range asset.APIs {
+		fields := logrus.Fields{
+			"apiID":           api.ID,
+			"apiAssetVersion": api.AssetVersion,
+		}
+
 		key := formatCacheKey(fmt.Sprint(api.ID), s.stage)
+
 		// TODO Implement deletion of items from cache
 		err := cache.GetCache().Set(key, api)
 		if err != nil {
-			log.Errorf("Unable to set cache", err)
+			log.WithFields(fields).Errorf("unable to set cache", err)
 		}
 
 		// TODO Handle purging of cache
 		err = cache.GetCache().SetWithSecondaryKey(key, strconv.FormatInt(api.ID, 10), api)
 		if err != nil {
-			log.Errorf("Unable to set cache with secondary key", err)
+			log.WithFields(fields).Errorf("unable to set cache with secondary key", err)
 		}
 
 		serviceDetail, err := s.getServiceDetail(asset, &api)
 		if err != nil {
-			log.Errorf("Error gathering information for '%s(%d)': %s", asset.Name, asset.ID, err.Error())
+			log.WithFields(fields).Errorf("error getting the service details: %s", err.Error())
 			continue
 		}
 		if serviceDetail != nil {
@@ -79,7 +89,16 @@ func (s *serviceHandler) ToServiceDetails(asset *anypoint.Asset) []*ServiceDetai
 
 // getServiceDetail gets the ServiceDetail for the API asset.
 func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.API) (*ServiceDetail, error) {
+	log := logrus.WithFields(logrus.Fields{
+		"assetName":       asset.AssetID,
+		"assetID":         asset.ID,
+		"apiID":           api.ID,
+		"apiAssetVersion": api.AssetVersion,
+	})
 	if !shouldDiscoverAPI(api.EndpointURI, s.discoveryTags, s.discoveryIgnoreTags, api.Tags) {
+		log.WithFields(logrus.Fields{
+			"endpoint": api.EndpointURI,
+		}).Debug("skipping discovery for api")
 		return nil, nil
 	}
 
@@ -117,12 +136,15 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 	isAlreadyPublished, checksum := isPublished(api, authPolicy)
 	if isAlreadyPublished {
 		// If true, then the api is published and there were no changes detected
+		log.WithFields(logrus.Fields{
+			"policy": authPolicy,
+			"msg":    "api is already published",
+		})
 		return nil, nil
 	}
-	log.Debugf("Change detected in published asset %s(%d)", asset.AssetID, api.ID)
+	log.WithField("policy", authPolicy).Debugf("change detected in published asset")
 
 	// Potentially discoverable API, gather the details
-	log.Infof("Gathering details for %s(%d)", asset.AssetID, api.ID)
 	exchangeAsset, err := s.client.GetExchangeAsset(api.GroupID, api.AssetID, api.AssetVersion)
 	if err != nil {
 		return nil, err
@@ -132,7 +154,7 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 
 	if exchFile == nil {
 		// SDK needs a spec
-		log.Debugf("No supported specification file found for asset '%s (%s)'", api.AssetID, api.AssetVersion)
+		log.Debugf("no supported specification file found")
 		return nil, nil
 	}
 
@@ -146,7 +168,7 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 		return nil, err
 	}
 	if specType == "" {
-		return nil, fmt.Errorf("unknown spec type for '%s (%s)'", api.AssetID, api.AssetVersion)
+		return nil, fmt.Errorf("unknown spec type")
 	}
 	modifiedSpec, err := updateSpec(specType, api.EndpointURI, authPolicy, configuration, specContent)
 	if err != nil {
@@ -179,8 +201,10 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 	}, nil
 }
 
-func (s *serviceHandler) createSubscriptionSchemaForSLATier(apiID string,
-	tiers *anypoint.Tiers) (apic.SubscriptionSchema, error) {
+func (s *serviceHandler) createSubscriptionSchemaForSLATier(
+	apiID string,
+	tiers *anypoint.Tiers,
+) (apic.SubscriptionSchema, error) {
 	schema := apic.NewSubscriptionSchema(apiID)
 
 	var names []string
@@ -227,12 +251,13 @@ func shouldDiscoverAPI(endpoint string, discoveryTags, ignoreTags, apiTags []str
 }
 
 // updateSpec Updates the spec endpoints based on the given type.
-func updateSpec(specType string, endpointURI string, authPolicy string, configuration map[string]interface{}, specContent []byte) ([]byte, error) {
+func updateSpec(
+	specType, endpointURI, authPolicy string, configuration map[string]interface{}, specContent []byte,
+) ([]byte, error) {
 	var err error
 	var oas2Swagger *openapi2.T
 	var oas3Swagger *openapi3.T
-	// Make a best effort to update the endpoints - required because the SDK is parsing from spec and not setting the
-	// endpoint information independently.
+
 	switch specType {
 	case apic.Oas2:
 		oas2Swagger, err = apic.ParseOAS2(specContent)
@@ -241,7 +266,7 @@ func updateSpec(specType string, endpointURI string, authPolicy string, configur
 		}
 		err := apic.SetHostDetails(oas2Swagger, endpointURI)
 		if err != nil {
-			return nil, err
+			logrus.Debug("failed to update the spec with the given endpoint: %s", endpointURI)
 		}
 		specContent, err = setOAS2policies(oas2Swagger, authPolicy, configuration)
 
@@ -366,6 +391,7 @@ func doesAPIContainAnyMatchingTag(tags, apiTags []string) bool {
 
 // TODO improve if fields are not complete, introduce per method swagger definitions, set up logic for multiple auth policies, use policy configurations
 func setOAS2policies(swagger *openapi2.T, authPolicy string, configuration map[string]interface{}) ([]byte, error) {
+	// remove existing security
 	swagger.SecurityDefinitions = make(map[string]*openapi2.SecurityScheme)
 	switch authPolicy {
 	case apic.Apikey:
@@ -419,6 +445,8 @@ func setOAS2policies(swagger *openapi2.T, authPolicy string, configuration map[s
 }
 
 func setOAS3policies(spec *openapi3.T, authPolicy string, configuration map[string]interface{}) ([]byte, error) {
+	// remove existing security
+	spec.Components.SecuritySchemes = make(openapi3.SecuritySchemes)
 	switch authPolicy {
 	case apic.Apikey:
 		desc := anypoint.DescClienCred

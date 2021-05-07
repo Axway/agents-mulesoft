@@ -61,10 +61,9 @@ func (me *MuleEventEmitter) pollForEvents() {
 				currentTime := time.Now()
 				duration := currentTime.Sub(oldTime)
 				logrus.WithFields(logrus.Fields{
-					"msg":      "retrieved events from anypoint",
 					"duration": duration * time.Millisecond,
 					"count":    len(events),
-				})
+				}).Debug("retrieved events from anypoint")
 				if err != nil {
 					logp.Warn("Client Failure: %s", err.Error())
 				}
