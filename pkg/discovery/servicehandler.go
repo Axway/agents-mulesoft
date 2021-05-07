@@ -470,7 +470,11 @@ func setOAS3policies(spec *openapi3.T, authPolicy string, configuration map[stri
 		scopes := make(map[string]string)
 
 		if configuration[anypoint.TokenUrl] != nil {
-			tokenUrl = configuration[anypoint.TokenUrl].(string)
+			var ok bool
+			tokenUrl, ok = configuration[anypoint.TokenUrl].(string)
+			if !ok {
+				return nil, fmt.Errorf("Unable to perform type assertion on %#v", configuration[anypoint.TokenUrl])
+			}
 		}
 
 		if configuration[anypoint.Scopes] != nil {

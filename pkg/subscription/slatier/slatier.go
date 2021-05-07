@@ -67,7 +67,7 @@ func (s *slaTier) doSubscribe(log logrus.FieldLogger, subs apic.Subscription) (s
 
 	application, err := s.apc.CreateClientApplication(apiID, appl)
 	if err != nil {
-		return "", "", fmt.Errorf("Error creating client app: %s", err.Error())
+		return "", "", fmt.Errorf("Error creating client app: %s", err)
 	}
 
 	err = cache.GetCache().Set(appName, application.Id)
@@ -114,7 +114,7 @@ func (s *slaTier) doSubscribe(log logrus.FieldLogger, subs apic.Subscription) (s
 
 	_, err = s.apc.CreateContract(application.Id, cnt)
 	if err != nil {
-		return "", "", fmt.Errorf("Error while creating a contract %s", err.Error())
+		return "", "", fmt.Errorf("Error while creating a contract %s", err)
 	}
 	log.WithField("Client application", application.Name).Debug("Created a new contract")
 
