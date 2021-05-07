@@ -10,9 +10,11 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var constructors = []func(client *anypoint.AnypointClient) Handler{}
+type constructor func(client *anypoint.AnypointClient) Handler
 
-func Register(constructor func(client *anypoint.AnypointClient) Handler) {
+var constructors []constructor
+
+func Register(constructor constructor) {
 	constructors = append(constructors, constructor)
 }
 
@@ -77,8 +79,10 @@ func New(log logrus.FieldLogger,
 	}
 }
 
-func (sm *Manager) RegisterNewSchema(schemaConstructor func(client *anypoint.AnypointClient) Handler,
-	apc *anypoint.AnypointClient) {
+func (sm *Manager) RegisterNewSchema(
+	schemaConstructor constructor,
+	apc *anypoint.AnypointClient,
+) {
 	h := schemaConstructor(apc)
 	sm.handlers[h.Name()] = h
 }
