@@ -45,7 +45,7 @@ func TestServiceHandler(t *testing.T) {
 	policies := anypoint.Policies{Policies: []anypoint.Policy{
 		{
 			Template: anypoint.Template{
-				AssetId: anypoint.ClientID,
+				AssetID: anypoint.ClientID,
 			},
 		},
 	}}
@@ -79,7 +79,7 @@ func TestServiceHandlerDidNotDiscoverAPI(t *testing.T) {
 	policies := anypoint.Policies{Policies: []anypoint.Policy{
 		{
 			Template: anypoint.Template{
-				AssetId: anypoint.ClientID,
+				AssetID: anypoint.ClientID,
 			},
 		},
 	}}
@@ -286,7 +286,7 @@ func Test_getAuthPolicy(t *testing.T) {
 				Policies: []anypoint.Policy{
 					{
 						Template: anypoint.Template{
-							AssetId: anypoint.ClientID,
+							AssetID: anypoint.ClientID,
 						},
 					},
 				},
@@ -299,7 +299,7 @@ func Test_getAuthPolicy(t *testing.T) {
 				Policies: []anypoint.Policy{
 					{
 						Template: anypoint.Template{
-							AssetId: anypoint.ExternalOauth,
+							AssetID: anypoint.ExternalOauth,
 						},
 					},
 				},
@@ -312,12 +312,12 @@ func Test_getAuthPolicy(t *testing.T) {
 				Policies: []anypoint.Policy{
 					{
 						Template: anypoint.Template{
-							AssetId: "fake",
+							AssetID: "fake",
 						},
 					},
 					{
 						Template: anypoint.Template{
-							AssetId: anypoint.ClientID,
+							AssetID: anypoint.ClientID,
 						},
 					},
 				},

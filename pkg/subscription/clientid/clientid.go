@@ -84,7 +84,7 @@ func (c *clientId) doSubscribe(log logrus.FieldLogger, subs apic.Subscription) (
 	}
 
 	// Add App name and ID to cache, need it later during unsubscribing
-	err = cache.GetCache().Set(appName, application.Id)
+	err = cache.GetCache().Set(appName, application.ID)
 	if err != nil {
 		return "", "", err
 	}
@@ -110,23 +110,23 @@ func (c *clientId) doSubscribe(log logrus.FieldLogger, subs apic.Subscription) (
 	// Create a new contract for the created client application
 	cnt := &anypoint.Contract{
 		APIID:          apiId,
-		EnvironmentId:  muleApi.EnvironmentID,
+		EnvironmentID:  muleApi.EnvironmentID,
 		AcceptedTerms:  true,
-		OrganizationId: muleApi.OrganizationID,
-		GroupId:        muleApi.GroupID,
-		AssetId:        muleApi.AssetID,
+		OrganizationID: muleApi.OrganizationID,
+		GroupID:        muleApi.GroupID,
+		AssetID:        muleApi.AssetID,
 		Version:        muleApi.AssetVersion,
 		VersionGroup:   exchangeAsset.VersionGroup,
 	}
 
-	_, err = c.apc.CreateContract(application.Id, cnt)
+	_, err = c.apc.CreateContract(application.ID, cnt)
 	if err != nil {
 		return "", "", fmt.Errorf("Error while creating a contract %s", err)
 	}
 
 	log.WithField("Client application", application.Name).Debug("Created a new contract")
 
-	return application.ClientId, application.ClientSecret, nil
+	return application.ClientID, application.ClientSecret, nil
 }
 
 func (c *clientId) Unsubscribe(log logrus.FieldLogger, subs apic.Subscription) {

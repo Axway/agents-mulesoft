@@ -212,7 +212,7 @@ func (s *serviceHandler) createSubscriptionSchemaForSLATier(
 	var names []string
 
 	for _, tier := range tiers.Tiers {
-		t := fmt.Sprintf("%v-%s", tier.Id, tier.Name)
+		t := fmt.Sprintf("%v-%s", tier.ID, tier.Name)
 		names = append(names, t)
 	}
 
@@ -352,15 +352,15 @@ func getSpecType(file *anypoint.ExchangeFile, specContent []byte) (string, error
 // getAuthPolicy gets the authentication policy type.
 func getAuthPolicy(policies anypoint.Policies) (string, map[string]interface{}, bool) {
 	for _, policy := range policies.Policies {
-		if policy.Template.AssetId == anypoint.ClientID {
+		if policy.Template.AssetID == anypoint.ClientID {
 			return apic.Apikey, policy.Configuration, false
 		}
 
-		if strings.Contains(policy.Template.AssetId, anypoint.SlaAuth) {
+		if strings.Contains(policy.Template.AssetID, anypoint.SlaAuth) {
 			return apic.Apikey, policy.Configuration, true
 		}
 
-		if policy.Template.AssetId == anypoint.ExternalOauth {
+		if policy.Template.AssetID == anypoint.ExternalOauth {
 			return apic.Oauth, policy.Configuration, false
 		}
 	}

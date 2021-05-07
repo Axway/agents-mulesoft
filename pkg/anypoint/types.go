@@ -105,8 +105,8 @@ type Policy struct {
 }
 
 type Template struct {
-	GroupId      string `json:"groupId"`
-	AssetId      string `json:"assetId"`
+	GroupID      string `json:"groupId"`
+	AssetID      string `json:"assetId"`
 	Assetversion string `json:"assetVersion"`
 }
 
@@ -248,9 +248,9 @@ const (
 type Application struct {
 	Name         string `json:"name"`
 	Description  string `json:"description"`
-	ClientId     string `json:"clientId"`
+	ClientID     string `json:"clientId"`
 	ClientSecret string `json:"clientSecret"`
-	Id           int64  `json:"id"`
+	ID           int64  `json:"id"`
 	APIEndpoints bool   `json:"apiEndpoints,omitempty"`
 }
 
@@ -261,21 +261,21 @@ type AppRequestBody struct {
 
 type Contract struct {
 	APIID           string `json:"apiId"`
-	EnvironmentId   string `json:"environmentId"`
+	EnvironmentID   string `json:"environmentId"`
 	AcceptedTerms   bool   `json:"acceptedTerms"`
-	OrganizationId  string `json:"organizationId"`
-	GroupId         string `json:"groupId"`
-	AssetId         string `json:"assetId"`
+	OrganizationID  string `json:"organizationId"`
+	GroupID         string `json:"groupId"`
+	AssetID         string `json:"assetId"`
 	Version         string `json:"version"`
 	VersionGroup    string `json:"versionGroup"`
 	RequestedTierID int64  `json:"requestedTierId,omitempty"`
 }
 
 type ContractResponse struct {
-	Id            int    `json:"id"`
+	ID            int    `json:"id"`
 	Status        string `json:"status"`
-	ApplicationId int    `json:"applicationId"`
-	ClientId      string `json:"clientId"`
+	ApplicationID int    `json:"applicationId"`
+	ClientID      string `json:"clientId"`
 	ClientSecret  string `json:"clientSecret"`
 	API           API    `json:"api"`
 }
@@ -286,7 +286,7 @@ type Tiers struct {
 }
 
 type SLATier struct {
-	Id          int         `json:"id"`
+	ID          int         `json:"id"`
 	Name        string      `json:"name"`
 	Description interface{} `json:"description"`
 	Limits      []Limits    `json:"limits"`

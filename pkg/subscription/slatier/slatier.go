@@ -70,7 +70,7 @@ func (s *slaTier) doSubscribe(log logrus.FieldLogger, subs apic.Subscription) (s
 		return "", "", fmt.Errorf("Error creating client app: %s", err)
 	}
 
-	err = cache.GetCache().Set(appName, application.Id)
+	err = cache.GetCache().Set(appName, application.ID)
 	if err != nil {
 		return "", "", err
 	}
@@ -102,23 +102,23 @@ func (s *slaTier) doSubscribe(log logrus.FieldLogger, subs apic.Subscription) (s
 
 	cnt := &anypoint.Contract{
 		APIID:           apiID,
-		EnvironmentId:   muleApi.EnvironmentID,
+		EnvironmentID:   muleApi.EnvironmentID,
 		AcceptedTerms:   true,
-		OrganizationId:  muleApi.OrganizationID,
-		GroupId:         muleApi.GroupID,
-		AssetId:         muleApi.AssetID,
+		OrganizationID:  muleApi.OrganizationID,
+		GroupID:         muleApi.GroupID,
+		AssetID:         muleApi.AssetID,
 		Version:         muleApi.AssetVersion,
 		VersionGroup:    exchangeAsset.VersionGroup,
 		RequestedTierID: tId,
 	}
 
-	_, err = s.apc.CreateContract(application.Id, cnt)
+	_, err = s.apc.CreateContract(application.ID, cnt)
 	if err != nil {
 		return "", "", fmt.Errorf("Error while creating a contract %s", err)
 	}
 	log.WithField("Client application", application.Name).Debug("Created a new contract")
 
-	return application.ClientId, application.ClientSecret, nil
+	return application.ClientID, application.ClientSecret, nil
 }
 
 func parseTierID(tierValue string) (int64, error) {
