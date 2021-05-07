@@ -57,17 +57,22 @@ func (s *slaTier) Subscribe(log logrus.FieldLogger, subs apic.Subscription) erro
 func (s *slaTier) doSubscribe(log logrus.FieldLogger, subs apic.Subscription) (string, string, error) {
 	// Create a new application and create a new contract
 	apiID := subs.GetRemoteAPIID()
-	app := subs.GetPropertyValue(anypoint.AppName)
+	appName := subs.GetPropertyValue(anypoint.AppName)
 	d := subs.GetPropertyValue(anypoint.Description)
 
 	appl := &anypoint.AppRequestBody{
-		Name:        app,
+		Name:        appName,
 		Description: d,
 	}
 
 	application, err := s.apc.CreateClientApplication(apiID, appl)
 	if err != nil {
-		return "", "", fmt.Errorf("Error creating client app: %s", err)
+		return "", "", fmt.Errorf("Error creating client app: %s", err.Error())
+	}
+
+	err = cache.GetCache().Set(appName, application.Id)
+	if err != nil {
+		return "", "", err
 	}
 
 	log.WithField("Client application", application.Name).Debug("Created a client application on Mulesoft")
@@ -77,7 +82,10 @@ func (s *slaTier) doSubscribe(log logrus.FieldLogger, subs apic.Subscription) (s
 		return "", "", err
 	}
 
-	muleApi := api.(anypoint.API)
+	muleApi, ok := api.(anypoint.API)
+	if !ok {
+		return "", "", fmt.Errorf("Unable to perform type assertion on %#v", api)
+	}
 
 	tier := subs.GetPropertyValue(anypoint.TierLabel)
 
@@ -106,7 +114,7 @@ func (s *slaTier) doSubscribe(log logrus.FieldLogger, subs apic.Subscription) (s
 
 	_, err = s.apc.CreateContract(application.Id, cnt)
 	if err != nil {
-		return "", "", fmt.Errorf("Error while creating a contract")
+		return "", "", fmt.Errorf("Error while creating a contract %s", err.Error())
 	}
 	log.WithField("Client application", application.Name).Debug("Created a new contract")
 
@@ -121,12 +129,24 @@ func parseTierID(tierValue string) (int64, error) {
 func (s *slaTier) Unsubscribe(log logrus.FieldLogger, subs apic.Subscription) {
 	log.Info("Delete SLA Tier subscription for ", s.name)
 
-	app := subs.GetPropertyValue(anypoint.AppName)
+	appName := subs.GetPropertyValue(anypoint.AppName)
 
-	err := s.apc.DeleteClientApplication(app)
+	appID, err := cache.GetCache().Get(appName)
+	if err != nil {
+		log.WithError(err).Error("Error while retrieving item with key %s from cache", appName)
+		return
+	}
+
+	muleAppID, ok := appID.(int64)
+	if !ok {
+		log.WithError(err).Error("Error while performing type assertion on %#v", appID)
+		return
+	}
+
+	err = s.apc.DeleteClientApplication(muleAppID)
 	if err != nil {
 		log.WithError(err).Error("Failed to delete client application")
-		err1 := subs.UpdateState(apic.SubscriptionFailedToSubscribe, fmt.Sprintf("Failed to delete client application %s", app))
+		err1 := subs.UpdateState(apic.SubscriptionFailedToSubscribe, fmt.Sprintf("Failed to delete client application with ID %v", appID))
 		if err1 != nil {
 			log.WithError(err1).Error("Failed to update the subscription state")
 		}

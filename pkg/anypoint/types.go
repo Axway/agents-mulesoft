@@ -250,7 +250,7 @@ type Application struct {
 	ClientId     string `json:"clientId"`
 	ClientSecret string `json:"clientSecret"`
 	Id           int64  `json:"id"`
-	APIEndpoints bool   `json:"apiEndpoints"`
+	APIEndpoints bool   `json:"apiEndpoints,omitempty"`
 }
 
 type AppRequestBody struct {
