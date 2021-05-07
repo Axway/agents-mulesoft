@@ -426,24 +426,6 @@ func (c *AnypointClient) CreateContract(appID int64, contract *Contract) (*Contr
 	return &cnt, nil
 }
 
-// TODO improve this
-func (c *AnypointClient) CreateSLAContract(appID int64, contract *SLAContract) (*SLAContract, error) {
-	var cnt SLAContract
-	url := fmt.Sprintf("%s/exchange/api/v1/organizations/%s/applications/%d/contracts", c.baseURL, c.auth.GetOrgID(), appID)
-
-	buffer, err := json.Marshal(contract)
-	if err != nil {
-		return nil, agenterrors.Wrap(ErrMarshallingBody, err.Error())
-	}
-
-	err = c.invokeJSONPost(url, nil, buffer, &cnt)
-	if err != nil {
-		return nil, err
-	}
-
-	return &cnt, nil
-}
-
 func (c *AnypointClient) getLastRun() (string, string) {
 	tStamp, _ := c.cache.Get(CacheKeyTimeStamp)
 	now := time.Now()

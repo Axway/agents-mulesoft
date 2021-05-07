@@ -254,17 +254,6 @@ type AppRequestBody struct {
 }
 
 type Contract struct {
-	APIID          string `json:"apiId"`
-	EnvironmentId  string `json:"environmentId"`
-	AcceptedTerms  bool   `json:"acceptedTerms"`
-	OrganizationId string `json:"organizationId"`
-	GroupId        string `json:"groupId"`
-	AssetId        string `json:"assetId"`
-	Version        string `json:"version"`
-	VersionGroup   string `json:"versionGroup"`
-}
-
-type SLAContract struct {
 	APIID           string `json:"apiId"`
 	EnvironmentId   string `json:"environmentId"`
 	AcceptedTerms   bool   `json:"acceptedTerms"`
@@ -273,7 +262,7 @@ type SLAContract struct {
 	AssetId         string `json:"assetId"`
 	Version         string `json:"version"`
 	VersionGroup    string `json:"versionGroup"`
-	RequestedTierID int64  `json:"requestedTierId"`
+	RequestedTierID int64  `json:"requestedTierId,omitempty"`
 }
 
 type ContractResponse struct {

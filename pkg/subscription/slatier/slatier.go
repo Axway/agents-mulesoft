@@ -101,7 +101,7 @@ func (s *slaTier) doSubscribe(log logrus.FieldLogger, subs apic.Subscription) (s
 		return "", "", err
 	}
 
-	cnt := &anypoint.SLAContract{
+	cnt := &anypoint.Contract{
 		APIID:           apiID,
 		EnvironmentId:   muleApi.EnvironmentID,
 		AcceptedTerms:   true,
@@ -113,7 +113,7 @@ func (s *slaTier) doSubscribe(log logrus.FieldLogger, subs apic.Subscription) (s
 		RequestedTierID: tId,
 	}
 
-	_, err = s.apc.CreateSLAContract(application.Id, cnt)
+	_, err = s.apc.CreateContract(application.Id, cnt)
 	if err != nil {
 		return "", "", fmt.Errorf("Error while creating a contract")
 	}
