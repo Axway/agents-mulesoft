@@ -42,7 +42,7 @@ func run() error {
 	client := anypoint.NewClient(cfg.MulesoftConfig)
 	sm, err := initSubscriptionManager(client)
 	if err != nil {
-		return fmt.Errorf("Error while initing subscription manager", err)
+		return fmt.Errorf("Error while initing subscription manager %s", err)
 	}
 
 	discoveryAgent := discovery.NewAgent(cfg, client, sm)

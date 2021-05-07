@@ -80,7 +80,7 @@ func (c *clientId) doSubscribe(log logrus.FieldLogger, subs apic.Subscription) (
 
 	application, err := c.apc.CreateClientApplication(apiId, appl)
 	if err != nil {
-		return "", "", fmt.Errorf("Error creating client application %s", err.Error())
+		return "", "", fmt.Errorf("Error creating client application %s", err)
 	}
 
 	// Add App name and ID to cache, need it later during unsubscribing
@@ -121,7 +121,7 @@ func (c *clientId) doSubscribe(log logrus.FieldLogger, subs apic.Subscription) (
 
 	_, err = c.apc.CreateContract(application.Id, cnt)
 	if err != nil {
-		return "", "", fmt.Errorf("Error while creating a contract", err.Error())
+		return "", "", fmt.Errorf("Error while creating a contract %s", err)
 	}
 
 	log.WithField("Client application", application.Name).Debug("Created a new contract")
