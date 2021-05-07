@@ -10,11 +10,16 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type constructor func(client *anypoint.AnypointClient) Handler
+type SchemaHandler interface {
+	GetSubscriptionSchemaName(pd PolicyDetail) string
+	RegisterNewSchema(schemaConstructor SchemaConstructor, apc anypoint.Client)
+}
 
-var constructors []constructor
+type SchemaConstructor func(client anypoint.Client) Handler
 
-func Register(constructor constructor) {
+var constructors []SchemaConstructor
+
+func Register(constructor SchemaConstructor) {
 	constructors = append(constructors, constructor)
 }
 
@@ -59,7 +64,8 @@ type duplicateGuard struct {
 func New(log logrus.FieldLogger,
 	cig ConsumerInstanceGetter,
 	sg SubscriptionsGetter,
-	apc *anypoint.AnypointClient) *Manager {
+	apc anypoint.Client,
+) *Manager {
 	handlers := make(map[string]Handler, len(constructors))
 
 	for _, c := range constructors {
@@ -80,8 +86,8 @@ func New(log logrus.FieldLogger,
 }
 
 func (sm *Manager) RegisterNewSchema(
-	schemaConstructor constructor,
-	apc *anypoint.AnypointClient,
+	schemaConstructor SchemaConstructor,
+	apc anypoint.Client,
 ) {
 	h := schemaConstructor(apc)
 	sm.handlers[h.Name()] = h

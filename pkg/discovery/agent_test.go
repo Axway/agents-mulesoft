@@ -4,6 +4,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Axway/agents-mulesoft/pkg/subscription"
+
 	"github.com/Axway/agent-sdk/pkg/cache"
 
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
@@ -22,7 +24,8 @@ func TestCleanTags(t *testing.T) {
 func TestAgent(t *testing.T) {
 	cfg := newConfig()
 	mockClient := &anypoint.MockAnypointClient{}
-	a := NewAgent(cfg, mockClient)
+	mss := &mockSchema{}
+	a := NewAgent(cfg, mockClient, mss)
 	assert.NotNil(t, a)
 	assert.Equal(t, mockClient, a.client)
 	assert.NotNil(t, a.assetCache)
@@ -47,7 +50,7 @@ func TestAgent_Run(t *testing.T) {
 		stopCh: stopPub,
 		hitCh:  pubHit,
 	}
-	a := newAgent(mockClient, disc, pub, cache.New())
+	a := newAgent(mockClient, disc, pub)
 	err := a.CheckHealth()
 	assert.Nil(t, err)
 	go a.Run()
@@ -132,4 +135,13 @@ func (m mockPublisher) OnConfigChange(*config.MulesoftConfig) {
 
 func (m mockPublisher) Stop() {
 	m.stopCh <- true
+}
+
+type mockSchema struct{}
+
+func (m *mockSchema) GetSubscriptionSchemaName(_ subscription.PolicyDetail) string {
+	return ""
+}
+
+func (m *mockSchema) RegisterNewSchema(_ subscription.SchemaConstructor, _ anypoint.Client) {
 }

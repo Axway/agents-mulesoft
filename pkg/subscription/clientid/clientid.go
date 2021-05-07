@@ -12,7 +12,7 @@ import (
 )
 
 type clientId struct {
-	apc *anypoint.AnypointClient
+	apc anypoint.Client
 }
 
 const (
@@ -20,7 +20,7 @@ const (
 )
 
 func init() {
-	subscription.Register(func(apc *anypoint.AnypointClient) subscription.Handler {
+	subscription.Register(func(apc anypoint.Client) subscription.Handler {
 		return &clientId{apc: apc}
 	})
 }

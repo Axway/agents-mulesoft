@@ -34,7 +34,7 @@ type Agent struct {
 }
 
 // NewAgent creates a new agent
-func NewAgent(cfg *config.AgentConfig, client anypoint.Client, sm *subscription.Manager) (agent *Agent) {
+func NewAgent(cfg *config.AgentConfig, client anypoint.Client, sm subscription.SchemaHandler) (agent *Agent) {
 	buffer := 5
 	apiChan := make(chan *ServiceDetail, buffer)
 

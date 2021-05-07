@@ -73,11 +73,14 @@ func initConfig(centralConfig corecfg.CentralConfig) (interface{}, error) {
 }
 
 func initSubscriptionManager(apc *anypoint.AnypointClient) (*subscription.Manager, error) {
+	centralClient := coreAgent.GetCentralClient()
+	subManager := centralClient.GetSubscriptionManager()
 	sm := subscription.New(
 		logrus.StandardLogger(),
-		coreAgent.GetCentralClient(),
-		coreAgent.GetCentralClient(),
-		apc)
+		centralClient,
+		centralClient,
+		apc,
+	)
 
 	// register schemas
 	for _, schema := range sm.Schemas() {
@@ -88,12 +91,12 @@ func initSubscriptionManager(apc *anypoint.AnypointClient) (*subscription.Manage
 	}
 
 	// register validator and handlers
-	coreAgent.GetCentralClient().GetSubscriptionManager().RegisterValidator(sm.ValidateSubscription)
-	coreAgent.GetCentralClient().GetSubscriptionManager().RegisterProcessor(apic.SubscriptionApproved, sm.ProcessSubscribe)
-	coreAgent.GetCentralClient().GetSubscriptionManager().RegisterProcessor(apic.SubscriptionUnsubscribeInitiated, sm.ProcessUnsubscribe)
+	subManager.RegisterValidator(sm.ValidateSubscription)
+	subManager.RegisterProcessor(apic.SubscriptionApproved, sm.ProcessSubscribe)
+	subManager.RegisterProcessor(apic.SubscriptionUnsubscribeInitiated, sm.ProcessUnsubscribe)
 
 	// start polling for subscriptions
-	coreAgent.GetCentralClient().GetSubscriptionManager().Start()
+	subManager.Start()
 
 	return sm, nil
 }

@@ -38,7 +38,7 @@ type serviceHandler struct {
 	discoveryTags       []string
 	discoveryIgnoreTags []string
 	client              anypoint.Client
-	subscriptionManager *subscription.Manager
+	subscriptionManager subscription.SchemaHandler
 }
 
 func (s *serviceHandler) OnConfigChange(cfg *config.MulesoftConfig) {
@@ -218,9 +218,10 @@ func (s *serviceHandler) createSubscriptionSchemaForSLATier(
 	schema.AddProperty(anypoint.Description, "string", "", "", false, nil)
 	schema.AddProperty(anypoint.TierLabel, "string", "", "", true, names)
 
-	s.subscriptionManager.RegisterNewSchema(func(apic *anypoint.AnypointClient) subscription.Handler {
-		return slatier.New(apiID, s.client.(*anypoint.AnypointClient), schema)
-	}, s.client.(*anypoint.AnypointClient))
+	constructor := func(apic anypoint.Client) subscription.Handler {
+		return slatier.New(apiID, apic, schema)
+	}
+	s.subscriptionManager.RegisterNewSchema(constructor, s.client)
 
 	if err := agent.GetCentralClient().RegisterSubscriptionSchema(schema, true); err != nil {
 		return nil, fmt.Errorf("failed to register subscription schema %s: %w", schema.GetSubscriptionName(), err)

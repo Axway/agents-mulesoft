@@ -16,10 +16,10 @@ import (
 type slaTier struct {
 	name   string
 	schema apic.SubscriptionSchema
-	apc    *anypoint.AnypointClient
+	apc    anypoint.Client
 }
 
-func New(name string, apc *anypoint.AnypointClient, schema apic.SubscriptionSchema) *slaTier {
+func New(name string, apc anypoint.Client, schema apic.SubscriptionSchema) *slaTier {
 	return &slaTier{
 		apc:    apc,
 		name:   name,

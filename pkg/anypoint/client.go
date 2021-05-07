@@ -45,6 +45,7 @@ type Client interface {
 	CreateClientApplication(string, *AppRequestBody) (*Application, error)
 	CreateContract(int64, *Contract) (*Contract, error)
 	GetSLATiers(int642 int64) (*Tiers, error)
+	DeleteClientApplication(appId int64) error
 }
 
 type AnalyticsClient interface {
