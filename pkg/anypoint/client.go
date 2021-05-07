@@ -390,8 +390,8 @@ func (c *AnypointClient) CreateClientApplication(apiInstanceID string, app *AppR
 	return &application, nil
 }
 
-func (c *AnypointClient) DeleteClientApplication(apiInstanceID string) error {
-	url := fmt.Sprintf("%s/exchange/api/v2/organizations/%s/applications/%s", c.baseURL, c.auth.GetOrgID(), apiInstanceID)
+func (c *AnypointClient) DeleteClientApplication(appId int64) error {
+	url := fmt.Sprintf("%s/exchange/api/v2/organizations/%s/applications/%v", c.baseURL, c.auth.GetOrgID(), appId)
 
 	headers := map[string]string{
 		"Authorization": "Bearer " + c.auth.GetToken(),

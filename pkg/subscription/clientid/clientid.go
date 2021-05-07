@@ -69,18 +69,24 @@ func (c *clientId) doSubscribe(log logrus.FieldLogger, subs apic.Subscription) (
 	// Create a new client application on Mulesoft
 	apiId := subs.GetRemoteAPIID()
 
-	app := subs.GetPropertyValue(anypoint.AppName)
+	appName := subs.GetPropertyValue(anypoint.AppName)
 
 	d := subs.GetPropertyValue(anypoint.Description)
 
 	appl := &anypoint.AppRequestBody{
-		Name:        app,
+		Name:        appName,
 		Description: d,
 	}
 
 	application, err := c.apc.CreateClientApplication(apiId, appl)
 	if err != nil {
-		return "", "", fmt.Errorf("Error creating client application: %s", err)
+		return "", "", fmt.Errorf("Error creating client application %s", err.Error())
+	}
+
+	// Add App name and ID to cache, need it later during unsubscribing
+	err = cache.GetCache().Set(appName, application.Id)
+	if err != nil {
+		return "", "", err
 	}
 
 	log.WithField("Client application", application.Name).Debug("Created a client application on Mulesoft")
@@ -90,7 +96,10 @@ func (c *clientId) doSubscribe(log logrus.FieldLogger, subs apic.Subscription) (
 		return "", "", err
 	}
 
-	muleApi := api.(anypoint.API)
+	muleApi, ok := api.(anypoint.API)
+	if !ok {
+		return "", "", fmt.Errorf("Unable to perform type assertion on %#v", api)
+	}
 
 	// Need to fetch the exchange asset to get the version group
 	exchangeAsset, err := c.apc.GetExchangeAsset(muleApi.GroupID, muleApi.AssetID, muleApi.AssetVersion)
@@ -123,12 +132,23 @@ func (c *clientId) doSubscribe(log logrus.FieldLogger, subs apic.Subscription) (
 func (c *clientId) Unsubscribe(log logrus.FieldLogger, subs apic.Subscription) {
 	log.Info("Delete subscription for ", name)
 
-	app := subs.GetPropertyValue(anypoint.AppName)
+	appName := subs.GetPropertyValue(anypoint.AppName)
 
-	err := c.apc.DeleteClientApplication(app)
+	appID, err := cache.GetCache().Get(appName)
+	if err != nil {
+		log.WithError(err).Error("Error while retrieving item with key %s from cache", appName)
+		return
+	}
+
+	muleAppID, ok := appID.(int64)
+	if !ok {
+		log.WithError(err).Error("Error while performing type assertion on %#v", appID)
+	}
+
+	err = c.apc.DeleteClientApplication(muleAppID)
 	if err != nil {
 		log.WithError(err).Error("Failed to delete client application")
-		err1 := subs.UpdateState(apic.SubscriptionFailedToSubscribe, fmt.Sprintf("Failed to delete client application %s", app))
+		err1 := subs.UpdateState(apic.SubscriptionFailedToSubscribe, fmt.Sprintf("Failed to delete client application with ID %v", appID))
 		if err1 != nil {
 			log.WithError(err1).Error("Error updating the subscription state")
 		}

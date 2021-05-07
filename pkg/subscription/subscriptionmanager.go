@@ -106,12 +106,11 @@ func (dg *duplicateGuard) markActive(id string) bool {
 }
 
 // markInactive returns
-func (dg *duplicateGuard) markInactive(id string) bool {
+func (dg *duplicateGuard) markInactive(id string) {
 	dg.lock.Lock()
 	defer dg.lock.Unlock()
 
 	delete(dg.cache, id)
-	return false
 }
 
 func (sm *Manager) ValidateSubscription(subscription apic.Subscription) bool {
@@ -151,7 +150,7 @@ func (sm *Manager) GetSubscriptionSchemaName(pd PolicyDetail) string {
 
 func (sm *Manager) ProcessSubscribe(subscription apic.Subscription) {
 	defer sm.dg.markInactive(subscription.GetID())
-	sm.dg.markActive(subscription.GetID())
+
 	log := sm.log.
 		WithField("subscriptionID", subscription.GetID()).
 		WithField("catalogItemID", subscription.GetCatalogItemID()).
@@ -192,11 +191,6 @@ func (sm *Manager) ProcessUnsubscribe(subscription apic.Subscription) {
 		WithField("catalogItemID", subscription.GetCatalogItemID()).
 		WithField("remoteID", subscription.GetRemoteAPIID()).
 		WithField("consumerInstanceID", subscription.GetApicID())
-
-	if !sm.dg.markActive(subscription.GetID()) {
-		sm.log.Info("duplicate subscription event; already handling subscription")
-		return
-	}
 
 	isUnsubscribeInitiated, err := sm.checkSubscriptionState(subscription.GetID(), subscription.GetCatalogItemID(), string(apic.SubscriptionUnsubscribeInitiated))
 	if err != nil {
