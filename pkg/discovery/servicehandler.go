@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	agenterrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	"net/url"
 	"sort"
 	"strconv"
@@ -25,6 +26,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Axway/agent-sdk/pkg/cache"
+
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 	"github.com/Axway/agents-mulesoft/pkg/config"
@@ -227,7 +229,7 @@ func shouldDiscoverAPI(endpoint string, discoveryTags, ignoreTags, apiTags []str
 }
 
 // updateSpec Updates the spec endpoints based on the given type.
-func updateSpec(specType string, endpointURI string, authPolicy string, configuration map[string]interface{}, specContent []byte) ([]byte, error) {
+func updateSpec(specType, endpointURI, authPolicy string, configuration map[string]interface{}, specContent []byte) ([]byte, error) {
 	var err error
 
 	// Make a best effort to update the endpoints - required because the SDK is parsing from spec and not setting the
@@ -415,7 +417,7 @@ func removeOASpolicies(specContent []byte, specType string) ([]byte, error) {
 		return json.Marshal(oas3Spec)
 	}
 
-	return specContent, errors.New(anypoint.ErrSpecNotSupported)
+	return specContent, agenterrors.New(1161, anypoint.ErrSpecNotSupported)
 }
 
 // setOAS2policies adds the policy security definition in OAS2
@@ -490,7 +492,7 @@ func setOAS2policies(sc []byte, authPolicy string, configuration map[string]inte
 		return json.Marshal(oas2Spec)
 	}
 
-	return sc, errors.New(anypoint.ErrAuthNotSupported)
+	return sc, agenterrors.New(1162, anypoint.ErrAuthNotSupported)
 }
 
 // setOAS2policies adds the policy security definition in OAS3

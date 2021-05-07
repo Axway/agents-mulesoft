@@ -221,6 +221,7 @@ type AnalyticsEvent struct {
 	ViolatedPolicyName string    `json:"Violated Policy Name"`
 }
 
+//TODO move the errors to the SDK
 const (
 	ExternalOauth       = "external-oauth2-access-token-enforcement"
 	ClientID            = "client-id-enforcement"
@@ -296,18 +297,4 @@ type Limits struct {
 	Visible                  bool `json:"visible"`
 	TimePeriodInMilliseconds int  `json:"timePeriodInMilliseconds"`
 	MaximumRequests          int  `json:"maximumRequests"`
-}
-
-// errorString is a trivial implementation of error.
-type errorString struct {
-	s string
-}
-
-func (e *errorString) Error() string {
-	return e.s
-}
-
-// New returns an error that formats as the given text.
-func New(text string) error {
-	return &errorString{text}
 }
