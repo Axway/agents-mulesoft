@@ -15,6 +15,7 @@ type SchemaHandler interface {
 	RegisterNewSchema(schemaConstructor SchemaConstructor, apc anypoint.Client)
 }
 
+// SchemaConstructor -
 type SchemaConstructor func(client anypoint.Client) Handler
 
 var constructors []SchemaConstructor
