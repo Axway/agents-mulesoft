@@ -129,33 +129,25 @@ func (c *clientId) doSubscribe(log logrus.FieldLogger, subs apic.Subscription) (
 	return application.ClientID, application.ClientSecret, nil
 }
 
-func (c *clientId) Unsubscribe(log logrus.FieldLogger, subs apic.Subscription) {
+func (c *clientId) Unsubscribe(log logrus.FieldLogger, subs apic.Subscription) error {
 	log.Info("Delete subscription for ", name)
 
 	appName := subs.GetPropertyValue(anypoint.AppName)
 
 	appID, err := cache.GetCache().Get(appName)
 	if err != nil {
-		log.WithError(err).Error("Error while retrieving item with key %s from cache", appName)
-		return
+		return err
 	}
 
 	muleAppID, ok := appID.(int64)
 	if !ok {
-		log.WithError(err).Error("Error while performing type assertion on %#v", appID)
+		return fmt.Errorf("Error while performing type assertion on %#v", appID)
 	}
 
 	err = c.apc.DeleteClientApplication(muleAppID)
 	if err != nil {
 		log.WithError(err).Error("Failed to delete client application")
-		err1 := subs.UpdateState(apic.SubscriptionFailedToSubscribe, fmt.Sprintf("Failed to delete client application with ID %v", appID))
-		if err1 != nil {
-			log.WithError(err1).Error("Error updating the subscription state")
-		}
-		return
+		return subs.UpdateState(apic.SubscriptionFailedToSubscribe, fmt.Sprintf("Failed to delete client application with ID %v", appID))
 	}
-	err = subs.UpdateState(apic.SubscriptionUnsubscribed, "")
-	if err != nil {
-		log.WithError(err).Error("failed to update subscription state")
-	}
+	return subs.UpdateState(apic.SubscriptionUnsubscribed, "")
 }

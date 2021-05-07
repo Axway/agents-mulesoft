@@ -39,7 +39,7 @@ type Handler interface {
 	Name() string
 	IsApplicable(policyDetail PolicyDetail) bool
 	Subscribe(log logrus.FieldLogger, subs apic.Subscription) error
-	Unsubscribe(log logrus.FieldLogger, subs apic.Subscription)
+	Unsubscribe(log logrus.FieldLogger, subs apic.Subscription) error
 }
 
 type PolicyDetail struct {
@@ -188,7 +188,10 @@ func (sm *Manager) ProcessSubscribe(subscription apic.Subscription) {
 	}
 
 	if h, ok := sm.handlers[ci.Spec.Subscription.SubscriptionDefinition]; ok {
-		h.Subscribe(log.WithField("handler", h.Name()), subscription)
+		err = h.Subscribe(log.WithField("handler", h.Name()), subscription)
+		if err != nil {
+			log.WithError(err).Error("Failed to update subscription state")
+		}
 	} else {
 		log.Info("No known handler for type: ", ci.Spec.Subscription.SubscriptionDefinition)
 	}
@@ -223,7 +226,10 @@ func (sm *Manager) ProcessUnsubscribe(subscription apic.Subscription) {
 	}
 
 	if h, ok := sm.handlers[ci.Spec.Subscription.SubscriptionDefinition]; ok {
-		h.Unsubscribe(log.WithField("handler", h.Name()), subscription)
+		err = h.Unsubscribe(log.WithField("handler", h.Name()), subscription)
+		if err != nil {
+			log.WithError(err).Error("Failed to update subscription state")
+		}
 	} else {
 		log.Info("No known handler for type: ", ci.Spec.Subscription.SubscriptionDefinition)
 	}

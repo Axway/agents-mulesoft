@@ -377,6 +377,7 @@ func (c *AnypointClient) CreateClientApplication(apiInstanceID string, app *AppR
 		"apiInstanceID": apiInstanceID,
 	}
 
+	// TODO Mulesoft trial uses v1 for create app and v2 for delete app. Check this on enterprise account
 	url := fmt.Sprintf("%s/exchange/api/v1/organizations/%s/applications", c.baseURL, c.auth.GetOrgID())
 
 	buffer, err := json.Marshal(app)

@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/Axway/agents-mulesoft/pkg/subscription/slatier"
 
 	"github.com/Axway/agents-mulesoft/pkg/subscription"
@@ -19,8 +21,6 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/apic"
 	"sigs.k8s.io/yaml"
-
-	"github.com/sirupsen/logrus"
 
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/util/log"
