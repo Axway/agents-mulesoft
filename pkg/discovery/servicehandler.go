@@ -90,7 +90,7 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 	if err != nil {
 		return nil, err
 	}
-	authPolicy, isSlaBased := getAuthPolicy(policies)
+	authPolicy, configuration, isSlaBased := getAuthPolicy(policies)
 
 	apiID := strconv.FormatInt(api.ID, 10)
 
@@ -309,22 +309,22 @@ func getSpecType(file *anypoint.ExchangeFile, specContent []byte) (string, error
 }
 
 // getAuthPolicy gets the authentication policy type.
-func getAuthPolicy(policies anypoint.Policies) (string, bool) {
+func getAuthPolicy(policies anypoint.Policies) (string, map[string]interface{}, bool) {
 	for _, policy := range policies.Policies {
 		if policy.Template.AssetId == anypoint.ClientID {
-			return apic.Apikey, false
+			return apic.Apikey, policy.Configuration, false
 		}
 
 		if strings.Contains(policy.Template.AssetId, anypoint.SlaAuth) {
-			return apic.Apikey, true
+			return apic.Apikey, policy.Configuration, true
 		}
 
 		if policy.Template.AssetId == anypoint.ExternalOauth {
-			return apic.Oauth, false
+			return apic.Oauth, policy.Configuration, false
 		}
 	}
 
-	return apic.Passthrough, false
+	return apic.Passthrough, nil, false
 }
 
 func setOAS2Endpoint(endpointURL string, specContent []byte) ([]byte, error) {
