@@ -3,15 +3,14 @@ module github.com/Axway/agents-mulesoft
 go 1.13
 
 require (
-	github.com/Axway/agent-sdk v1.0.20210421
+	github.com/Axway/agent-sdk v1.0.20210506-0.20210507021851-4e6493c1a9cc
 	github.com/Shopify/sarama v1.26.4 // indirect
 	github.com/docker/docker v1.13.1 // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/eapache/go-resiliency v1.2.0 // indirect
 	github.com/elastic/beats/v7 v7.7.1
 	github.com/garyburd/redigo v1.6.0 // indirect
-	github.com/getkin/kin-openapi v0.53.0
-	github.com/go-openapi/spec v0.0.0-20160808142527-6aced65f8501
+	github.com/getkin/kin-openapi v0.61.0
 	github.com/googleapis/gnostic v0.3.1 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/imdario/mergo v0.3.9 // indirect

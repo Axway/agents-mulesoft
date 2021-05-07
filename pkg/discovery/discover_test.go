@@ -8,7 +8,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 
 	"github.com/Axway/agents-mulesoft/pkg/config"
@@ -54,7 +53,6 @@ func TestDiscovery_Loop(t *testing.T) {
 
 	disc := &discovery{
 		apiChan:           apiChan,
-		assetCache:        cache.New(),
 		client:            client,
 		discoveryPageSize: 50,
 		pollInterval:      0001 * time.Second,
@@ -106,7 +104,6 @@ func Test_discoverAPIs(t *testing.T) {
 			msh.On("ToServiceDetails").Return([]*ServiceDetail{sd})
 			disc := &discovery{
 				apiChan:           apiChan,
-				assetCache:        cache.New(),
 				client:            client,
 				discoveryPageSize: tc.pageSize,
 				pollInterval:      0001 * time.Second,

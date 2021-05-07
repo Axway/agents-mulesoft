@@ -12,7 +12,7 @@ import (
 
 var sd = &ServiceDetail{
 	APIName:           "Swagger Petstore - OpenAPI 3.0",
-	APISpec:           []byte("{\"openapi\":\"3.0.1\",\"servers\":[{\"url\":\"google.com\"}]}"),
+	APISpec:           []byte(`{"openapi":"3.0.1","servers":[{"url":"google.com"}],"paths":{},"info":{"title":"petstore3"}}`),
 	APIUpdateSeverity: "updateseverity",
 	AuthPolicy:        "pass-through",
 	Description:       "description",
@@ -50,10 +50,6 @@ func TestPublish(t *testing.T) {
 	assert.True(t, isDone)
 	pub.OnConfigChange(&config.MulesoftConfig{})
 	pub.Stop()
-}
-
-func TestPublishError(t *testing.T) {
-
 }
 
 func Test_buildServiceBody(t *testing.T) {

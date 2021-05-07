@@ -19,8 +19,8 @@ code.cloudfoundry.org/go-loggregator v7.4.0+incompatible/go.mod h1:KPBTRqj+y738N
 code.cloudfoundry.org/gofileutils v0.0.0-20170111115228-4d0c80011a0f/go.mod h1:sk5LnIjB/nIEU7yP5sDQExVm62wu0pBh3yrElngUisI=
 code.cloudfoundry.org/rfc5424 v0.0.0-20180905210152-236a6d29298a/go.mod h1:tkZo8GtzBjySJ7USvxm4E36lNQw1D3xM6oKHGqdaAJ4=
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
-github.com/Axway/agent-sdk v1.0.20210421 h1:sZBM0OPMlpRwkf1y6jRSEsEC3cFT5eds6hoE6usKvfE=
-github.com/Axway/agent-sdk v1.0.20210421/go.mod h1:ESIGxeiVC5Cza+MYgj5yGePQNjkT8diz4HxkQBCHwFk=
+github.com/Axway/agent-sdk v1.0.20210506-0.20210507021851-4e6493c1a9cc h1:r1eVcEZPGnvNVmgo9/1RC+FyDXk2BQURAmNRd8jL9LE=
+github.com/Axway/agent-sdk v1.0.20210506-0.20210507021851-4e6493c1a9cc/go.mod h1:Wf9j81100mlfE9UxLD/SJ50tjayKzqx40OsSkoUpC/0=
 github.com/Azure/azure-amqp-common-go/v3 v3.0.0/go.mod h1:SY08giD/XbhTz07tJdpw1SoxQXHPN30+DI3Z04SYqyg=
 github.com/Azure/azure-event-hubs-go/v3 v3.1.2/go.mod h1:hR40byNJjKkS74+3RhloPQ8sJ8zFQeJ920Uk3oYY0+k=
 github.com/Azure/azure-pipeline-go v0.1.8/go.mod h1:XA1kFWRVhSK+KNFiOhfv83Fv8L9achrP7OxIzeTn1Yg=
@@ -227,10 +227,8 @@ github.com/gabriel-vasile/mimetype v1.1.2/go.mod h1:6CDPel/o/3/s4+bp6kIbsWATq8pm
 github.com/garyburd/redigo v1.0.1-0.20160525165706-b8dc90050f24/go.mod h1:NR3MbYisc3/PwhQ00EMzDiPmrwpPxAn5GI05/YaO1SY=
 github.com/garyburd/redigo v1.6.0 h1:0VruCpn7yAIIu7pWVClQC8wxCJEcG3nyzpMSHKi1PQc=
 github.com/garyburd/redigo v1.6.0/go.mod h1:NR3MbYisc3/PwhQ00EMzDiPmrwpPxAn5GI05/YaO1SY=
-github.com/getkin/kin-openapi v0.9.0 h1:/vaUQkiOR+vfFO3oilZentZTfAhz7OzXPhLdNas4q4w=
-github.com/getkin/kin-openapi v0.9.0/go.mod h1:zZQMFkVgRHCdhgb6ihCTIo9dyDZFvX0k/xAKqw1FhPw=
-github.com/getkin/kin-openapi v0.53.0 h1:7WzP+MZRRe7YQz2Kc74Ley3dukJmXDvifVbElGmQfoA=
-github.com/getkin/kin-openapi v0.53.0/go.mod h1:7Yn5whZr5kJi6t+kShccXS8ae1APpYTW6yheSwk8Yi4=
+github.com/getkin/kin-openapi v0.61.0 h1:6awGqF5nG5zkVpMsAih1QH4VgzS8phTxECUWIFo7zko=
+github.com/getkin/kin-openapi v0.61.0/go.mod h1:7Yn5whZr5kJi6t+kShccXS8ae1APpYTW6yheSwk8Yi4=
 github.com/ghodss/yaml v0.0.0-20150909031657-73d445a93680/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
 github.com/ghodss/yaml v1.0.0 h1:wQHKEahhL6wmXdzwWG11gIVCkOv05bNOh+Rxn0yngAk=
 github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=

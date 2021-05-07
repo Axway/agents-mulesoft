@@ -80,7 +80,7 @@ func (c *clientId) doSubscribe(log logrus.FieldLogger, subs apic.Subscription) (
 
 	application, err := c.apc.CreateClientApplication(apiId, appl)
 	if err != nil {
-		return "", "", fmt.Errorf("Error creating client application", err)
+		return "", "", fmt.Errorf("Error creating client application: %s", err)
 	}
 
 	log.WithField("Client application", application.Name).Debug("Created a client application on Mulesoft")
@@ -112,7 +112,7 @@ func (c *clientId) doSubscribe(log logrus.FieldLogger, subs apic.Subscription) (
 
 	_, err = c.apc.CreateContract(application.Id, cnt)
 	if err != nil {
-		return "", "", fmt.Errorf("Error while creating a contract", err)
+		return "", "", fmt.Errorf("Error while creating a contract: %s", err)
 	}
 
 	log.WithField("Client application", application.Name).Debug("Created a new contract")

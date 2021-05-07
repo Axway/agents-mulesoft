@@ -96,3 +96,13 @@ func (m *MockAnypointClient) GetAnalyticsWindow() ([]AnalyticsEvent, error) {
 	result := args.Get(0)
 	return result.([]AnalyticsEvent), args.Error(1)
 }
+
+func (m *MockAnypointClient) CreateClientApplication(string, *AppRequestBody) (*Application, error) {
+	return nil, nil
+}
+func (m *MockAnypointClient) CreateContract(int64, *Contract) (*Contract, error) {
+	return nil, nil
+}
+func (m *MockAnypointClient) GetSLATiers(int642 int64) (*Tiers, error) {
+	return nil, nil
+}
