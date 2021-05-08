@@ -1,6 +1,7 @@
 package subscription
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
@@ -134,7 +135,6 @@ func (sm *Manager) ValidateSubscription(subscription apic.Subscription) bool {
 }
 
 func (sm *Manager) checkSubscriptionState(subscriptionID, catalogItemID, subscriptionState string) (bool, error) {
-
 	subs, err := sm.sg.GetSubscriptionsForCatalogItem([]string{subscriptionState}, catalogItemID)
 	if err != nil {
 		return false, err
@@ -160,6 +160,12 @@ func (sm *Manager) GetSubscriptionSchemaName(pd PolicyDetail) string {
 }
 
 func (sm *Manager) ProcessSubscribe(subscription apic.Subscription) {
+	if err := sm.processSubscribe(subscription); err != nil {
+		logrus.Error(err)
+	}
+}
+
+func (sm *Manager) processSubscribe(subscription apic.Subscription) error {
 	defer sm.dg.markInactive(subscription.GetID())
 
 	log := sm.log.
@@ -170,31 +176,30 @@ func (sm *Manager) ProcessSubscribe(subscription apic.Subscription) {
 
 	isApproved, err := sm.checkSubscriptionState(subscription.GetID(), subscription.GetCatalogItemID(), string(apic.SubscriptionApproved))
 	if err != nil {
-		log.WithError(err).Error("Failed to verify subscription state")
-		return
+		return fmt.Errorf("failed to verify subscription state")
 	}
 
 	if !isApproved {
 		log.Info("Subscription not in approved state. Nothing to do")
-		return
+		return nil
 	}
 
 	log.Info("Processing subscription")
 
 	ci, err := sm.cig.GetConsumerInstanceByID(subscription.GetApicID())
 	if err != nil {
-		log.WithError(err).Error("Failed to fetch consumer instance")
-		return
+		return fmt.Errorf("failed to fetch consumer instance")
 	}
 
 	if h, ok := sm.handlers[ci.Spec.Subscription.SubscriptionDefinition]; ok {
-		err = h.Subscribe(log.WithField("handler", h.Name()), subscription)
+		err := h.Subscribe(log.WithField("handler", h.Name()), subscription)
 		if err != nil {
-			log.WithError(err).Error("Failed to update subscription state")
+			return fmt.Errorf("Failed to update subscription state: %s", err)
 		}
 	} else {
 		log.Info("No known handler for type: ", ci.Spec.Subscription.SubscriptionDefinition)
 	}
+	return nil
 }
 
 func (sm *Manager) ProcessUnsubscribe(subscription apic.Subscription) {

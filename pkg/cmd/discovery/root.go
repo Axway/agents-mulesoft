@@ -84,7 +84,7 @@ func initSubscriptionManager(apc *anypoint.AnypointClient) (*subscription.Manage
 
 	// register schemas
 	for _, schema := range sm.Schemas() {
-		if err := coreAgent.GetCentralClient().RegisterSubscriptionSchema(schema, true); err != nil {
+		if err := centralClient.RegisterSubscriptionSchema(schema, true); err != nil {
 			return nil, fmt.Errorf("failed to register subscription schema %s: %w", schema.GetSubscriptionName(), err)
 		}
 		log.Infof("Schema registered: %s", schema.GetSubscriptionName())
