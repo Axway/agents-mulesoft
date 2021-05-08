@@ -133,7 +133,7 @@ func TestProcessSubscribe(t *testing.T) {
 			}
 			manager.RegisterNewSchema(sc, client)
 
-			err := manager.processSubscribe(tc.sub)
+			err := manager.processSubscribe(tc.sub, &logrus.Logger{})
 			assert.Nil(t, err)
 		})
 	}

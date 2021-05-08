@@ -2,8 +2,8 @@ package discovery
 
 import (
 	"github.com/Axway/agent-sdk/pkg/apic"
-	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agents-mulesoft/pkg/config"
+	"github.com/sirupsen/logrus"
 )
 
 type PublishAPI func(serviceBody apic.ServiceBody) error
@@ -30,7 +30,7 @@ func (p *publisher) Loop() {
 		case serviceDetail := <-p.apiChan:
 			p.publish(serviceDetail)
 		case <-p.stopPublish:
-			log.Debug("stopping publish listener")
+			logrus.Debug("stopping publish listener")
 			return
 		}
 	}
@@ -38,19 +38,24 @@ func (p *publisher) Loop() {
 
 // publish Publishes the API to Amplify Central.
 func (p *publisher) publish(serviceDetail *ServiceDetail) {
-	log.Infof("Publishing API '%s (%s)' to Amplify Central", serviceDetail.APIName, serviceDetail.ID)
+	log := logrus.WithFields(logrus.Fields{
+		"name":  serviceDetail.APIName,
+		"id":    serviceDetail.ID,
+		"stage": serviceDetail.Stage,
+	})
+	log.Infof("Publishing to Amplify Central")
 
 	serviceBody, err := BuildServiceBody(serviceDetail)
 	if err != nil {
-		log.Errorf("Error building service body for API '%s (%s)': %s", serviceDetail.APIName, serviceDetail.ID, err.Error())
+		log.WithError(err).Errorf("error building service body")
 		return
 	}
 	err = p.publishAPI(serviceBody)
 	if err != nil {
-		log.Errorf("Error publishing API '%s (%s)' to Amplify Central: %s", serviceDetail.APIName, serviceDetail.ID, err.Error())
+		log.WithError(err).Errorf("error publishing to Amplify Central: %s")
 		return
 	}
-	log.Infof("Published API '%s (%s)' to Amplify Central", serviceDetail.APIName, serviceDetail.ID)
+	log.Infof("Published API to Amplify Central")
 }
 
 // BuildServiceBody - creates the service definition

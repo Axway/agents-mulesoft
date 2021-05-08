@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Axway/agent-sdk/pkg/util/oas"
+
 	"github.com/sirupsen/logrus"
 
 	"github.com/Axway/agents-mulesoft/pkg/subscription/slatier"
@@ -90,14 +92,14 @@ func (s *serviceHandler) ToServiceDetails(asset *anypoint.Asset) []*ServiceDetai
 
 // getServiceDetail gets the ServiceDetail for the API asset.
 func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.API) (*ServiceDetail, error) {
-	log := logrus.WithFields(logrus.Fields{
+	logger := logrus.WithFields(logrus.Fields{
 		"assetName":       asset.AssetID,
 		"assetID":         asset.ID,
 		"apiID":           api.ID,
 		"apiAssetVersion": api.AssetVersion,
 	})
 	if !shouldDiscoverAPI(api.EndpointURI, s.discoveryTags, s.discoveryIgnoreTags, api.Tags) {
-		log.WithFields(logrus.Fields{
+		logger.WithFields(logrus.Fields{
 			"endpoint": api.EndpointURI,
 		}).Debug("skipping discovery for api")
 		return nil, nil
@@ -133,20 +135,20 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 		subSchName = schema.GetSubscriptionName()
 	}
 
-	//TODO can be refactored to not use authpolicy in checksum and use policy
+	// TODO can be refactored to not use authPolicy in checksum and use policy
 	isAlreadyPublished, checksum := isPublished(api, authPolicy)
 	if isAlreadyPublished {
 		// If true, then the api is published and there were no changes detected
-		log.WithFields(logrus.Fields{
+		logger.WithFields(logrus.Fields{
 			"policy": authPolicy,
 			"msg":    "api is already published",
 		})
 		return nil, nil
 	}
-	log.WithField("policy", authPolicy).Debugf("change detected in published asset")
+	logger.WithField("policy", authPolicy).Debugf("change detected in published asset")
 
 	// Potentially discoverable API, gather the details
-	log.Infof("Gathering details for %s(%d)", asset.AssetID, api.ID)
+
 	exchangeAsset, err := s.client.GetExchangeAsset(api.GroupID, api.AssetID, api.AssetVersion)
 	if err != nil {
 		return nil, err
@@ -156,7 +158,7 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 
 	if exchFile == nil {
 		// SDK needs a spec
-		log.Debugf("no supported specification file found")
+		logger.Debugf("no supported specification file found")
 		return nil, nil
 	}
 
@@ -263,22 +265,22 @@ func updateSpec(
 
 	switch specType {
 	case apic.Oas2:
-		oas2Swagger, err = apic.ParseOAS2(specContent)
+		oas2Swagger, err = oas.ParseOAS2(specContent)
 		if err != nil {
 			return nil, err
 		}
-		err := apic.SetHostDetails(oas2Swagger, endpointURI)
+		err := oas.SetOAS2HostDetails(oas2Swagger, endpointURI)
 		if err != nil {
 			logrus.Debug("failed to update the spec with the given endpoint: %s", endpointURI)
 		}
 		specContent, err = setOAS2policies(oas2Swagger, authPolicy, configuration)
 
 	case apic.Oas3:
-		oas3Swagger, err = apic.ParseOAS3(specContent)
+		oas3Swagger, err = oas.ParseOAS3(specContent)
 		if err != nil {
 			return nil, err
 		}
-		apic.SetServers([]string{endpointURI}, oas3Swagger)
+		oas.SetOAS3Servers([]string{endpointURI}, oas3Swagger)
 		specContent, err = setOAS3policies(oas3Swagger, authPolicy, configuration)
 
 	case apic.Wsdl:

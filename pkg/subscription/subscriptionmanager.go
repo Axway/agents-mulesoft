@@ -160,21 +160,24 @@ func (sm *Manager) GetSubscriptionSchemaName(pd PolicyDetail) string {
 }
 
 func (sm *Manager) ProcessSubscribe(subscription apic.Subscription) {
-	if err := sm.processSubscribe(subscription); err != nil {
-		logrus.Error(err)
-	}
-}
-
-func (sm *Manager) processSubscribe(subscription apic.Subscription) error {
-	defer sm.dg.markInactive(subscription.GetID())
-
 	log := sm.log.
+		WithField("subscriptionName", subscription.GetName()).
 		WithField("subscriptionID", subscription.GetID()).
 		WithField("catalogItemID", subscription.GetCatalogItemID()).
 		WithField("remoteID", subscription.GetRemoteAPIID()).
 		WithField("consumerInstanceID", subscription.GetApicID())
 
-	isApproved, err := sm.checkSubscriptionState(subscription.GetID(), subscription.GetCatalogItemID(), string(apic.SubscriptionApproved))
+	if err := sm.processSubscribe(subscription, log); err != nil {
+		log.WithError(err)
+	}
+}
+
+func (sm *Manager) processSubscribe(subscription apic.Subscription, log logrus.FieldLogger) error {
+	subID := subscription.GetID()
+
+	defer sm.dg.markInactive(subID)
+
+	isApproved, err := sm.checkSubscriptionState(subID, subscription.GetCatalogItemID(), string(apic.SubscriptionApproved))
 	if err != nil {
 		return fmt.Errorf("failed to verify subscription state")
 	}
@@ -203,15 +206,23 @@ func (sm *Manager) processSubscribe(subscription apic.Subscription) error {
 }
 
 func (sm *Manager) ProcessUnsubscribe(subscription apic.Subscription) {
-	defer sm.dg.markInactive(subscription.GetID())
+	subName := subscription.GetName()
+	subID := subscription.GetID()
+	catalogItemID := subscription.GetCatalogItemID()
+	apiID := subscription.GetRemoteAPIID()
+	consumerInstanceID := subscription.GetApicID()
+	defer sm.dg.markInactive(subID)
 
 	log := sm.log.
-		WithField("subscriptionID", subscription.GetID()).
-		WithField("catalogItemID", subscription.GetCatalogItemID()).
-		WithField("remoteID", subscription.GetRemoteAPIID()).
-		WithField("consumerInstanceID", subscription.GetApicID())
+		WithField("subscriptionName", subName).
+		WithField("subscriptionID", subID).
+		WithField("catalogItemID", catalogItemID).
+		WithField("remoteApiID", apiID).
+		WithField("consumerInstanceID", consumerInstanceID)
 
-	isUnsubscribeInitiated, err := sm.checkSubscriptionState(subscription.GetID(), subscription.GetCatalogItemID(), string(apic.SubscriptionUnsubscribeInitiated))
+	isUnsubscribeInitiated, err := sm.checkSubscriptionState(
+		subID, catalogItemID, string(apic.SubscriptionUnsubscribeInitiated),
+	)
 	if err != nil {
 		log.WithError(err).Error("Failed to verify subscription state")
 		return
@@ -224,7 +235,7 @@ func (sm *Manager) ProcessUnsubscribe(subscription apic.Subscription) {
 
 	log.Info("Removing subscription")
 
-	ci, err := sm.cig.GetConsumerInstanceByID(subscription.GetApicID())
+	ci, err := sm.cig.GetConsumerInstanceByID(consumerInstanceID)
 	if err != nil {
 		log.WithError(err).Error("Failed to fetch consumer instance")
 		return
