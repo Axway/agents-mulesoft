@@ -3,7 +3,8 @@ package discovery
 import (
 	"fmt"
 
-	coreAgent "github.com/Axway/agent-sdk/pkg/agent"
+	"github.com/Axway/agent-sdk/pkg/agent"
+
 	"github.com/Axway/agent-sdk/pkg/apic"
 	corecmd "github.com/Axway/agent-sdk/pkg/cmd"
 	"github.com/Axway/agent-sdk/pkg/cmd/service"
@@ -40,7 +41,7 @@ func init() {
 func run() error {
 	cfg := config.GetConfig()
 	client := anypoint.NewClient(cfg.MulesoftConfig)
-	sm, err := initSubscriptionManager(client)
+	sm, err := initSubscriptionManager(client, agent.GetCentralClient())
 	if err != nil {
 		return fmt.Errorf("Error while initing subscription manager %s", err)
 	}
@@ -72,8 +73,7 @@ func initConfig(centralConfig corecfg.CentralConfig) (interface{}, error) {
 	return conf, nil
 }
 
-func initSubscriptionManager(apc *anypoint.AnypointClient) (*subscription.Manager, error) {
-	centralClient := coreAgent.GetCentralClient()
+func initSubscriptionManager(apc anypoint.Client, centralClient apic.Client) (*subscription.Manager, error) {
 	subManager := centralClient.GetSubscriptionManager()
 	sm := subscription.New(
 		logrus.StandardLogger(),

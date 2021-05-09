@@ -7,6 +7,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/apic"
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
+	"github.com/Axway/agents-mulesoft/pkg/config"
 	"github.com/Axway/agents-mulesoft/pkg/subscription"
 	"github.com/sirupsen/logrus"
 )
@@ -25,7 +26,7 @@ func init() {
 	})
 }
 
-func (c *clientId) IsApplicable(pd subscription.PolicyDetail) bool {
+func (c *clientId) IsApplicable(pd config.PolicyDetail) bool {
 	return pd.Policy == apic.Apikey && pd.IsSlaBased == false
 }
 

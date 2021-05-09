@@ -28,7 +28,6 @@ func TestAgent(t *testing.T) {
 	a := NewAgent(cfg, mockClient, mss)
 	assert.NotNil(t, a)
 	assert.Equal(t, mockClient, a.client)
-	assert.NotNil(t, a.assetCache)
 	assert.NotNil(t, a.discovery)
 	assert.NotNil(t, a.publisher)
 	assert.NotNil(t, a.stopAgent)
@@ -80,7 +79,10 @@ func Test_validateAPI(t *testing.T) {
 		ID:    apiID,
 		Stage: stageName,
 	}
-	c.Set(formatCacheKey(apiID, stageName), sd)
+	err := c.Set(formatCacheKey(apiID, stageName), sd)
+	if err != nil {
+		t.Error(err)
+	}
 	validator := validateAPI(c)
 	ok := validator(apiID, stageName)
 	assert.True(t, ok)
@@ -139,7 +141,7 @@ func (m mockPublisher) Stop() {
 
 type mockSchema struct{}
 
-func (m *mockSchema) GetSubscriptionSchemaName(_ subscription.PolicyDetail) string {
+func (m *mockSchema) GetSubscriptionSchemaName(_ config.PolicyDetail) string {
 	return ""
 }
 

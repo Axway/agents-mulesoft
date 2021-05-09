@@ -1,9 +1,17 @@
 package discovery
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 	"time"
+
+	"github.com/Axway/agents-mulesoft/pkg/discovery/mocks"
+
+	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agents-mulesoft/pkg/subscription"
+	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/mock"
 
 	"github.com/Axway/agent-sdk/pkg/apic"
 
@@ -649,4 +657,82 @@ func Test_removeOASpolicies(t *testing.T) {
 			// }
 		})
 	}
+}
+
+type mockConsumerInstanceGetter struct {
+	mock.Mock
+}
+
+func (m *mockConsumerInstanceGetter) GetConsumerInstanceByID(string) (*v1alpha1.ConsumerInstance, error) {
+	args := m.Called()
+	ci := args.Get(0).(*v1alpha1.ConsumerInstance)
+	return ci, args.Error(1)
+}
+
+type mockSubscriptionGetter struct {
+	mock.Mock
+}
+
+func (m *mockSubscriptionGetter) GetSubscriptionsForCatalogItem([]string, string) ([]apic.CentralSubscription, error) {
+	args := m.Called()
+	cs := args.Get(0).([]apic.CentralSubscription)
+	return cs, args.Error(1)
+}
+
+func getSLATierInfo() (*anypoint.Tiers, *serviceHandler, *mocks.MockCentralClient) {
+	stage := "Sandbox"
+	mc := &anypoint.MockAnypointClient{}
+	tiers := anypoint.Tiers{
+		Total: 2,
+		Tiers: []anypoint.SLATier{{
+			ID:   123,
+			Name: "Gold",
+			Limits: []anypoint.Limits{{
+				TimePeriodInMilliseconds: 1000,
+				MaximumRequests:          10,
+			}},
+		}, {
+			ID:   456,
+			Name: "Silver",
+			Limits: []anypoint.Limits{{
+				TimePeriodInMilliseconds: 1000,
+				MaximumRequests:          1,
+			}},
+		}},
+	}
+
+	cig := &mockConsumerInstanceGetter{}
+	sg := &mockSubscriptionGetter{}
+
+	sm := subscription.New(logrus.StandardLogger(), cig, sg, mc)
+
+	sh := &serviceHandler{
+		stage:               stage,
+		discoveryTags:       []string{},
+		discoveryIgnoreTags: []string{},
+		client:              mc,
+		subscriptionManager: sm,
+	}
+
+	return &tiers, sh, &mocks.MockCentralClient{}
+}
+
+func TestCreateSubscriptionSchemaForSLATier(t *testing.T) {
+	tiers, sh, mcc := getSLATierInfo()
+
+	mcc.On("RegisterSubscriptionSchema").Return(nil)
+
+	_, err := sh.createSubscriptionSchemaForSLATier("1", tiers, mcc)
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func TestSLATierSchemaSubscriptionCreateFailure(t *testing.T) {
+	tiers, sh, mcc := getSLATierInfo()
+
+	mcc.On("RegisterSubscriptionSchema").Return(errors.New("Cannot register subscription schema"))
+	_, err := sh.createSubscriptionSchemaForSLATier("1", tiers, mcc)
+
+	assert.NotNil(t, err)
 }

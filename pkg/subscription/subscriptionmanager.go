@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/Axway/agents-mulesoft/pkg/config"
+
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 
 	"github.com/Axway/agent-sdk/pkg/apic"
@@ -12,7 +14,7 @@ import (
 )
 
 type SchemaHandler interface {
-	GetSubscriptionSchemaName(pd PolicyDetail) string
+	GetSubscriptionSchemaName(pd config.PolicyDetail) string
 	RegisterNewSchema(schemaConstructor SchemaConstructor, apc anypoint.Client)
 }
 
@@ -38,15 +40,9 @@ type SubscriptionsGetter interface {
 type Handler interface {
 	Schema() apic.SubscriptionSchema
 	Name() string
-	IsApplicable(policyDetail PolicyDetail) bool
+	IsApplicable(policyDetail config.PolicyDetail) bool
 	Subscribe(log logrus.FieldLogger, subs apic.Subscription) error
 	Unsubscribe(log logrus.FieldLogger, subs apic.Subscription) error
-}
-
-type PolicyDetail struct {
-	Policy     string
-	IsSlaBased bool
-	APIId      string
 }
 
 // Manager handles the subscription aspects
@@ -150,7 +146,7 @@ func (sm *Manager) checkSubscriptionState(subscriptionID, catalogItemID, subscri
 }
 
 // GetSubscriptionSchemaName returns the appropriate subscription schema name given a policy
-func (sm *Manager) GetSubscriptionSchemaName(pd PolicyDetail) string {
+func (sm *Manager) GetSubscriptionSchemaName(pd config.PolicyDetail) string {
 	for _, h := range sm.handlers {
 		if h.IsApplicable(pd) {
 			return h.Name()

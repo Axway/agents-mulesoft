@@ -3,6 +3,8 @@ package subscription
 import (
 	"testing"
 
+	"github.com/Axway/agents-mulesoft/pkg/subscription/mocks"
+
 	"github.com/stretchr/testify/mock"
 
 	"github.com/stretchr/testify/assert"
@@ -53,13 +55,15 @@ func TestManagerRegisterNewSchema(t *testing.T) {
 	assert.NotNil(t, manager)
 
 	sc1 := func(client anypoint.Client) Handler {
-		mh := &mockHandler{}
+		mh := &mocks.MockHandler{}
 		mh.On("Name").Return("first")
+		mh.On("Schema").Return("sofake schema")
 		return mh
 	}
 	sc2 := func(client anypoint.Client) Handler {
-		mh := &mockHandler{}
+		mh := &mocks.MockHandler{}
 		mh.On("Name").Return("second")
+		mh.On("Schema").Return("sofake schema")
 		return mh
 	}
 	manager.RegisterNewSchema(sc1, client)
@@ -127,7 +131,7 @@ func TestProcessSubscribe(t *testing.T) {
 			manager := New(logrus.StandardLogger(), cig, sg, client)
 
 			sc := func(client anypoint.Client) Handler {
-				mh := &mockHandler{}
+				mh := &mocks.MockHandler{}
 				mh.On("Name").Return("sofake")
 				return mh
 			}
@@ -157,31 +161,4 @@ func (m *mockSubscriptionGetter) GetSubscriptionsForCatalogItem(states []string,
 	args := m.Called()
 	cs := args.Get(0).([]apic.CentralSubscription)
 	return cs, args.Error(1)
-}
-
-type mockHandler struct {
-	mock.Mock
-}
-
-func (m *mockHandler) Schema() apic.SubscriptionSchema {
-	return nil
-}
-
-func (m *mockHandler) Name() string {
-	args := m.Called()
-	return args.String(0)
-}
-
-func (m *mockHandler) IsApplicable(policyDetail PolicyDetail) bool {
-	args := m.Called()
-	return args.Bool(0)
-}
-
-func (m *mockHandler) Subscribe(log logrus.FieldLogger, subs apic.Subscription) error {
-	args := m.Called()
-	return args.Error(0)
-}
-
-func (m *mockHandler) Unsubscribe(log logrus.FieldLogger, subs apic.Subscription) error {
-	return nil
 }

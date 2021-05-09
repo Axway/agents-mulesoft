@@ -47,12 +47,12 @@ func (p *publisher) publish(serviceDetail *ServiceDetail) {
 
 	serviceBody, err := BuildServiceBody(serviceDetail)
 	if err != nil {
-		log.WithError(err).Errorf("error building service body")
+		log.WithError(err).Error("error building service body")
 		return
 	}
 	err = p.publishAPI(serviceBody)
 	if err != nil {
-		log.WithError(err).Errorf("error publishing to Amplify Central: %s")
+		log.WithError(err).Error("error publishing to Amplify Central")
 		return
 	}
 	log.Infof("Published API to Amplify Central")

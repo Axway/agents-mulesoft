@@ -69,13 +69,13 @@ func (s *serviceHandler) ToServiceDetails(asset *anypoint.Asset) []*ServiceDetai
 		// TODO Implement deletion of items from cache
 		err := cache.GetCache().Set(key, api)
 		if err != nil {
-			log.WithFields(fields).Errorf("unable to set cache", err)
+			log.WithFields(fields).Errorf("unable to set cache %s", err)
 		}
 
 		// TODO Handle purging of cache
 		err = cache.GetCache().SetWithSecondaryKey(key, strconv.FormatInt(api.ID, 10), api)
 		if err != nil {
-			log.WithFields(fields).Errorf("unable to set cache with secondary key", err)
+			log.WithFields(fields).Errorf("unable to set cache with secondary key %s", err)
 		}
 
 		serviceDetail, err := s.getServiceDetail(asset, &api)
@@ -114,7 +114,7 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 
 	apiID := strconv.FormatInt(api.ID, 10)
 
-	subSchName := s.subscriptionManager.GetSubscriptionSchemaName(subscription.PolicyDetail{
+	subSchName := s.subscriptionManager.GetSubscriptionSchemaName(config.PolicyDetail{
 		Policy:     authPolicy,
 		IsSlaBased: isSlaBased,
 		APIId:      apiID,
@@ -127,7 +127,7 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 		if err1 != nil {
 			return nil, err1
 		}
-		schema, err1 := s.createSubscriptionSchemaForSLATier(apiID, tiers)
+		schema, err1 := s.createSubscriptionSchemaForSLATier(apiID, tiers, agent.GetCentralClient())
 		if err1 != nil {
 			return nil, err1
 		}
@@ -208,6 +208,7 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 func (s *serviceHandler) createSubscriptionSchemaForSLATier(
 	apiID string,
 	tiers *anypoint.Tiers,
+	centralClient apic.Client,
 ) (apic.SubscriptionSchema, error) {
 	schema := apic.NewSubscriptionSchema(apiID)
 
@@ -227,7 +228,7 @@ func (s *serviceHandler) createSubscriptionSchemaForSLATier(
 	}
 	s.subscriptionManager.RegisterNewSchema(constructor, s.client)
 
-	if err := agent.GetCentralClient().RegisterSubscriptionSchema(schema, true); err != nil {
+	if err := centralClient.RegisterSubscriptionSchema(schema, true); err != nil {
 		return nil, fmt.Errorf("failed to register subscription schema %s: %w", schema.GetSubscriptionName(), err)
 	}
 	log.Infof("Schema registered: %s", schema.GetSubscriptionName())
@@ -269,9 +270,9 @@ func updateSpec(
 		if err != nil {
 			return nil, err
 		}
-		err := oas.SetOAS2HostDetails(oas2Swagger, endpointURI)
+		err = oas.SetOAS2HostDetails(oas2Swagger, endpointURI)
 		if err != nil {
-			logrus.Debug("failed to update the spec with the given endpoint: %s", endpointURI)
+			logrus.Debugf("failed to update the spec with the given endpoint: %s", endpointURI)
 		}
 		specContent, err = setOAS2policies(oas2Swagger, authPolicy, configuration)
 

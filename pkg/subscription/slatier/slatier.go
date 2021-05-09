@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Axway/agents-mulesoft/pkg/subscription"
+	"github.com/Axway/agents-mulesoft/pkg/config"
 
 	"github.com/Axway/agent-sdk/pkg/apic"
 	"github.com/Axway/agent-sdk/pkg/cache"
@@ -35,7 +35,7 @@ func (s *slaTier) Schema() apic.SubscriptionSchema {
 	return s.schema
 }
 
-func (s *slaTier) IsApplicable(pd subscription.PolicyDetail) bool {
+func (s *slaTier) IsApplicable(pd config.PolicyDetail) bool {
 	if pd.IsSlaBased {
 		return pd.APIId == s.name && pd.Policy == apic.Apikey
 	}
