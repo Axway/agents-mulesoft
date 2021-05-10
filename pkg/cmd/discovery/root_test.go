@@ -30,7 +30,7 @@ func Test_initSubscriptionManager(t *testing.T) {
 	mc := &anypoint.MockAnypointClient{}
 	cc := &mocks.MockCentralClient{}
 
-	sc := func(client anypoint.Client) subscription.Handler {
+	sc := func(client anypoint.Client) subscription.SubscribeHandler {
 		mh := &subscriptionMocks.MockHandler{}
 		mh.On("Name").Return("sofake")
 		mh.On("Schema").Return("sofake schema")

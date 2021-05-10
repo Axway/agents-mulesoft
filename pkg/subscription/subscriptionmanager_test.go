@@ -55,13 +55,13 @@ func TestManagerRegisterNewSchema(t *testing.T) {
 	manager := New(logrus.StandardLogger(), cig, sg, client)
 	assert.NotNil(t, manager)
 
-	sc1 := func(client anypoint.Client) Handler {
+	sc1 := func(client anypoint.Client) SubscribeHandler {
 		mh := &mocks.MockHandler{}
 		mh.On("Name").Return("first")
 		mh.On("Schema").Return("sofake schema")
 		return mh
 	}
-	sc2 := func(client anypoint.Client) Handler {
+	sc2 := func(client anypoint.Client) SubscribeHandler {
 		mh := &mocks.MockHandler{}
 		mh.On("Name").Return("second")
 		mh.On("Schema").Return("sofake schema")
@@ -131,7 +131,7 @@ func TestProcessSubscribe(t *testing.T) {
 
 			manager := New(logrus.StandardLogger(), cig, sg, client)
 
-			sc := func(client anypoint.Client) Handler {
+			sc := func(client anypoint.Client) SubscribeHandler {
 				mh := &mocks.MockHandler{}
 				mh.On("Name").Return("sofake")
 				return mh

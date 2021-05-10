@@ -21,7 +21,7 @@ const (
 )
 
 func init() {
-	subscription.Register(func(apc anypoint.Client) subscription.Handler {
+	subscription.Register(func(apc anypoint.Client) subscription.SubscribeHandler {
 		return &clientId{apc: apc}
 	})
 }

@@ -19,7 +19,7 @@ type SchemaHandler interface {
 }
 
 // SchemaConstructor -
-type SchemaConstructor func(client anypoint.Client) Handler
+type SchemaConstructor func(client anypoint.Client) SubscribeHandler
 
 var constructors []SchemaConstructor
 
@@ -37,7 +37,7 @@ type SubscriptionsGetter interface {
 	GetSubscriptionsForCatalogItem(states []string, id string) ([]apic.CentralSubscription, error)
 }
 
-type Handler interface {
+type SubscribeHandler interface {
 	Schema() apic.SubscriptionSchema
 	Name() string
 	IsApplicable(policyDetail config.PolicyDetail) bool
@@ -48,7 +48,7 @@ type Handler interface {
 // Manager handles the subscription aspects
 type Manager struct {
 	log      logrus.FieldLogger
-	handlers map[string]Handler
+	handlers map[string]SubscribeHandler
 	cig      ConsumerInstanceGetter
 	sg       SubscriptionsGetter
 	dg       *duplicateGuard
@@ -64,7 +64,7 @@ func New(log logrus.FieldLogger,
 	sg SubscriptionsGetter,
 	apc anypoint.Client,
 ) *Manager {
-	handlers := make(map[string]Handler, len(constructors))
+	handlers := make(map[string]SubscribeHandler, len(constructors))
 
 	for _, c := range constructors {
 		h := c(apc)

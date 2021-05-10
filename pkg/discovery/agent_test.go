@@ -24,7 +24,7 @@ func TestCleanTags(t *testing.T) {
 func TestAgent(t *testing.T) {
 	cfg := newConfig()
 	mockClient := &anypoint.MockAnypointClient{}
-	mss := &mockSchema{}
+	mss := &mockSchemaHandler{}
 	a := NewAgent(cfg, mockClient, mss)
 	assert.NotNil(t, a)
 	assert.Equal(t, mockClient, a.client)
@@ -139,11 +139,11 @@ func (m mockPublisher) Stop() {
 	m.stopCh <- true
 }
 
-type mockSchema struct{}
+type mockSchemaHandler struct{}
 
-func (m *mockSchema) GetSubscriptionSchemaName(_ config.PolicyDetail) string {
+func (m *mockSchemaHandler) GetSubscriptionSchemaName(_ config.PolicyDetail) string {
 	return ""
 }
 
-func (m *mockSchema) RegisterNewSchema(_ subscription.SchemaConstructor, _ anypoint.Client) {
+func (m *mockSchemaHandler) RegisterNewSchema(_ subscription.SchemaConstructor, _ anypoint.Client) {
 }

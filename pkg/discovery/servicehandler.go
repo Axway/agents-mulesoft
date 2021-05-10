@@ -223,7 +223,7 @@ func (s *serviceHandler) createSubscriptionSchemaForSLATier(
 	schema.AddProperty(anypoint.Description, "string", "", "", false, nil)
 	schema.AddProperty(anypoint.TierLabel, "string", "", "", true, names)
 
-	constructor := func(apic anypoint.Client) subscription.Handler {
+	constructor := func(apic anypoint.Client) subscription.SubscribeHandler {
 		return slatier.New(apiID, apic, schema)
 	}
 	s.subscriptionManager.RegisterNewSchema(constructor, s.client)

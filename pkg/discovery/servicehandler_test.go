@@ -66,7 +66,7 @@ func TestServiceHandler(t *testing.T) {
 	mc.On("GetExchangeFileContent").Return([]byte(content), nil)
 	mc.On("GetExchangeAssetIcon").Return("", "", nil)
 
-	msh := &mockSchema{}
+	msh := &mockSchemaHandler{}
 	sh := &serviceHandler{
 		stage:               stage,
 		discoveryTags:       []string{"tag1"},
@@ -140,7 +140,7 @@ func TestServiceHandlerGetExchangeAssetError(t *testing.T) {
 		discoveryTags:       []string{},
 		discoveryIgnoreTags: []string{},
 		client:              mc,
-		subscriptionManager: &mockSchema{},
+		subscriptionManager: &mockSchemaHandler{},
 	}
 	sd, err := sh.getServiceDetail(&asset, &asset.APIs[0])
 
