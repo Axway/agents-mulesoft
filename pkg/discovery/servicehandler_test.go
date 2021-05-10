@@ -6,6 +6,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/getkin/kin-openapi/openapi2"
+	"github.com/getkin/kin-openapi/openapi3"
+
 	"github.com/Axway/agents-mulesoft/pkg/discovery/mocks"
 
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
@@ -62,11 +65,14 @@ func TestServiceHandler(t *testing.T) {
 	mc.On("GetExchangeAsset").Return(&exchangeAsset, nil)
 	mc.On("GetExchangeFileContent").Return([]byte(content), nil)
 	mc.On("GetExchangeAssetIcon").Return("", "", nil)
+
+	msh := &mockSchema{}
 	sh := &serviceHandler{
 		stage:               stage,
 		discoveryTags:       []string{"tag1"},
 		discoveryIgnoreTags: []string{"nah"},
 		client:              mc,
+		subscriptionManager: msh,
 	}
 	details := sh.ToServiceDetails(&asset)
 	assert.Equal(t, 1, len(details))
@@ -134,6 +140,7 @@ func TestServiceHandlerGetExchangeAssetError(t *testing.T) {
 		discoveryTags:       []string{},
 		discoveryIgnoreTags: []string{},
 		client:              mc,
+		subscriptionManager: &mockSchema{},
 	}
 	sd, err := sh.getServiceDetail(&asset, &asset.APIs[0])
 
@@ -455,7 +462,7 @@ func Test_updateSpec(t *testing.T) {
 			specType:        apic.Oas2,
 			endpoint:        "https://newhost.com/v1",
 			content:         []byte(`{"basePath": "/v2","host": "oldhost.com","schemes": ["http"],"swagger": "2.0","info": {"title": "petstore2"},"paths": {}}`),
-			expectedContent: []byte(`{"basePath":"/v1","host":"newhost.com","info":{"title":"petstore2","version":""},"schemes":["https"],"securityDefinitions":{"client-id-enforcement":{"description":"Provided as: client_id:\u003cINSERT_VALID_CLIENTID_HERE\u003e client_secret:\u003cINSERT_VALID_SECRET_HERE\u003e","in":"header","name":"Authorization","type":"apiKey"}},"swagger":"2.0"}`),
+			expectedContent: []byte(`{"basePath":"/v1","host":"newhost.com","info":{"title":"petstore2","version":""},"schemes":["https"],"securityDefinitions":{"client-id-enforcement":{"description":"Provided as: client_id:\u003cINSERT_VALID_CLIENTID_HERE\u003e \n\n client_secret:\u003cINSERT_VALID_SECRET_HERE\u003e\n\n","in":"header","name":"authorization","type":"apiKey"}},"swagger":"2.0"}`),
 			authPolicy:      apic.Apikey,
 		},
 		{
@@ -463,7 +470,7 @@ func Test_updateSpec(t *testing.T) {
 			specType:        apic.Oas2,
 			endpoint:        "https://newhost.com/v1",
 			content:         []byte(`{"basePath":"/v2","host":"oldhost.com","schemes":["http"],"swagger":"2.0","info":{"title":"petstore2"},"paths":{}}`),
-			expectedContent: []byte(`{"basePath":"/v1","host":"newhost.com","info":{"title":"petstore2","version":""},"schemes":["https"],"securityDefinitions":{"oauth":{"authorizationUrl":"dummy.io","flow":"implicit","type":"oauth2"}},"swagger":"2.0"}`),
+			expectedContent: []byte(`{"basePath":"/v1","host":"newhost.com","info":{"title":"petstore2","version":""},"schemes":["https"],"securityDefinitions":{"oauth2":{"description":"This API supports OAuth 2.0 for authenticating all API requests","flow":"accessCode","type":"oauth2"}},"swagger":"2.0"}`),
 			authPolicy:      apic.Oauth,
 		},
 		{
@@ -471,7 +478,7 @@ func Test_updateSpec(t *testing.T) {
 			specType:        apic.Oas3,
 			endpoint:        "https://abc.com",
 			content:         []byte(`{"openapi":"3.0.1","servers":[{"url":"google.com"}],"paths":{},"info":{"title":"petstore3"}}`),
-			expectedContent: []byte(`{"components":{"securitySchemes":{"Oauth":{"description":"This API uses OAuth 2 with the implicit grant flow","flows":{"implicit":{"authorizationUrl":"dummy.io","scopes":{}}},"type":"oauth2"}}},"info":{"title":"petstore3","version":""},"openapi":"3.0.1","paths":{},"servers":[{"url":"https://abc.com"}]}`),
+			expectedContent: []byte(`{"components":{"securitySchemes":{"oauth2":{"description":"This API supports OAuth 2.0 for authenticating all API requests","flows":{"authorizationCode":{"scopes":{}}},"type":"oauth2"}}},"info":{"title":"petstore3","version":""},"openapi":"3.0.1","paths":{},"servers":[{"url":"https://abc.com"}]}`),
 			authPolicy:      apic.Oauth,
 		},
 		{
@@ -479,7 +486,7 @@ func Test_updateSpec(t *testing.T) {
 			specType:        apic.Oas3,
 			endpoint:        "https://abc.com",
 			content:         []byte(`{"openapi":"3.0.1","servers":[{"url":"google.com"}],"paths":{},"info":{"title":"petstore3"}}`),
-			expectedContent: []byte(`{"components":{"securitySchemes":{"client-id-enforcement":{"description":"Provided as: client_id:\u003cINSERT_VALID_CLIENTID_HERE\u003e client_secret:\u003cINSERT_VALID_SECRET_HERE\u003e","in":"header","name":"Authorization","type":"apiKey"}}},"info":{"title":"petstore3","version":""},"openapi":"3.0.1","paths":{},"servers":[{"url":"https://abc.com"}]}`),
+			expectedContent: []byte(`{"components":{"securitySchemes":{"client-id-enforcement":{"description":"Provided as: client_id:\u003cINSERT_VALID_CLIENTID_HERE\u003e \n\n client_secret:\u003cINSERT_VALID_SECRET_HERE\u003e\n\n","in":"header","name":"authorization","type":"apiKey"}}},"info":{"title":"petstore3","version":""},"openapi":"3.0.1","paths":{},"servers":[{"url":"https://abc.com"}]}`),
 			authPolicy:      apic.Apikey,
 		},
 		{
@@ -500,161 +507,185 @@ func Test_updateSpec(t *testing.T) {
 }
 
 func Test_setOAS2policies(t *testing.T) {
-	t.Skip()
 	tests := []struct {
 		name            string
 		configuration   map[string]interface{}
-		content         []byte
+		content         *openapi2.T
 		expectedContent []byte
 		authPolicy      string
 	}{
 		{
-			name:            "should apply APIKey security policy with no configuration",
-			configuration:   nil,
-			content:         []byte(`{"basePath":"/v2","host":"oldhost.com","schemes":["http"],"swagger":"2.0"}`),
-			expectedContent: []byte(`{"schemes":["http"],"swagger":"2.0","host":"oldhost.com","basePath":"/v2","paths":null,"definitions":null,"securityDefinitions":{"client-id-enforcement":{"description":"Provided as: client_id:\u003cINSERT_VALID_CLIENTID_HERE\u003e \n\n client_secret:\u003cINSERT_VALID_SECRET_HERE\u003e\n\n","type":"apiKey","name":"authorization","in":"header"}}}`),
+			name:          "should apply APIKey security policy with no configuration",
+			configuration: nil,
+			content: &openapi2.T{
+				Swagger: "2.0",
+				Info: openapi3.Info{
+					Title: "petstore2",
+				},
+				Schemes:  []string{"http"},
+				Host:     "oldhost.com",
+				BasePath: "/v2",
+				Paths:    nil,
+			},
+			expectedContent: []byte(`{"basePath":"/v2","host":"oldhost.com","info":{"title":"petstore2","version":""},"schemes":["http"],"securityDefinitions":{"client-id-enforcement":{"description":"Provided as: client_id:\u003cINSERT_VALID_CLIENTID_HERE\u003e \n\n client_secret:\u003cINSERT_VALID_SECRET_HERE\u003e\n\n","in":"header","name":"authorization","type":"apiKey"}},"swagger":"2.0"}`),
 			authPolicy:      apic.Apikey,
 		},
 		{
-			name:            "should apply APIKey security policy with Custom configuration set as Basic Auth",
-			configuration:   map[string]interface{}{anypoint.CredOrigin: "httpBasicAuthenticationHeader"},
-			content:         []byte(`{"basePath":"/v2","host":"oldhost.com","schemes":["http"],"swagger":"2.0"}`),
-			expectedContent: []byte(`{"schemes":["http"],"swagger":"2.0","host":"oldhost.com","basePath":"/v2","paths":null,"definitions":null,"securityDefinitions":{"client-id-enforcement":{"description":"Provided as: client_id:\u003cINSERT_VALID_CLIENTID_HERE\u003e \n\n client_secret:\u003cINSERT_VALID_SECRET_HERE\u003e\n\nhttpBasicAuthenticationHeader","type":"apiKey","name":"authorization","in":"header"}}}`),
+			name:          "should apply APIKey security policy with Custom configuration set as Basic Auth",
+			configuration: map[string]interface{}{anypoint.CredOrigin: "httpBasicAuthenticationHeader"},
+			content: &openapi2.T{
+				Swagger: "2.0",
+				Info: openapi3.Info{
+					Title: "petstore2",
+				},
+				Schemes:  []string{"http"},
+				Host:     "oldhost.com",
+				BasePath: "/v2",
+				Paths:    nil,
+			},
+			expectedContent: []byte(`{"basePath":"/v2","host":"oldhost.com","info":{"title":"petstore2","version":""},"schemes":["http"],"securityDefinitions":{"client-id-enforcement":{"description":"Provided as: client_id:\u003cINSERT_VALID_CLIENTID_HERE\u003e \n\n client_secret:\u003cINSERT_VALID_SECRET_HERE\u003e\n\nhttpBasicAuthenticationHeader","in":"header","name":"authorization","type":"apiKey"}},"swagger":"2.0"}`),
 			authPolicy:      apic.Apikey,
 		},
-
 		{
-			name:            "should apply OAuth security policy with no scope",
-			configuration:   map[string]interface{}{anypoint.TokenUrl: "www.test.com"},
-			content:         []byte(`{"basePath":"/v2","host":"oldhost.com","schemes":["http"],"swagger":"2.0"}`),
-			expectedContent: []byte(`{"schemes":["http"],"swagger":"2.0","host":"oldhost.com","basePath":"/v2","paths":null,"definitions":null,"securityDefinitions":{"oauth2":{"description":"This API supports OAuth 2.0 for authenticating all API requests","type":"oauth2","flow":"accessCode","authorizationUrl":"www.test.com","tokenUrl":"www.test.com"}}}`),
+			name:          "should apply OAuth security policy with no scope",
+			configuration: map[string]interface{}{anypoint.TokenUrl: "www.test.com"},
+			content: &openapi2.T{
+				Swagger: "2.0",
+				Info: openapi3.Info{
+					Title: "petstore2",
+				},
+				Schemes:  []string{"http"},
+				Host:     "oldhost.com",
+				BasePath: "/v2",
+				Paths:    nil,
+			},
+			expectedContent: []byte(`{"basePath":"/v2","host":"oldhost.com","info":{"title":"petstore2","version":""},"schemes":["http"],"securityDefinitions":{"oauth2":{"authorizationUrl":"www.test.com","description":"This API supports OAuth 2.0 for authenticating all API requests","flow":"accessCode","tokenUrl":"www.test.com","type":"oauth2"}},"swagger":"2.0"}`),
 			authPolicy:      apic.Oauth,
 		},
 		{
-			name:            "should apply OAuth security policy with scopes",
-			configuration:   map[string]interface{}{anypoint.TokenUrl: "www.test.com", anypoint.Scopes: "read,write"},
-			content:         []byte(`{"basePath":"/v2","host":"oldhost.com","schemes":["http"],"swagger":"2.0"}`),
-			expectedContent: []byte(`{"schemes":["http"],"swagger":"2.0","host":"oldhost.com","basePath":"/v2","paths":null,"definitions":null,"securityDefinitions":{"oauth2":{"description":"This API supports OAuth 2.0 for authenticating all API requests","type":"oauth2","flow":"accessCode","authorizationUrl":"www.test.com","tokenUrl":"www.test.com","scopes":{"scopes":"read,write"}}}}`),
+			name:          "should apply OAuth security policy with scopes",
+			configuration: map[string]interface{}{anypoint.TokenUrl: "www.test.com", anypoint.Scopes: "read,write"},
+			content: &openapi2.T{
+				Swagger: "2.0",
+				Info: openapi3.Info{
+					Title: "petstore2",
+				},
+				Schemes:  []string{"http"},
+				Host:     "oldhost.com",
+				BasePath: "/v2",
+				Paths:    nil,
+			},
+			expectedContent: []byte(`{"basePath":"/v2","host":"oldhost.com","info":{"title":"petstore2","version":""},"schemes":["http"],"securityDefinitions":{"oauth2":{"authorizationUrl":"www.test.com","description":"This API supports OAuth 2.0 for authenticating all API requests","flow":"accessCode","scopes":{"scopes":"read,write"},"tokenUrl":"www.test.com","type":"oauth2"}},"swagger":"2.0"}`),
 			authPolicy:      apic.Oauth,
 		},
-		{
-			name:            "should return error when authPolicy type is not supported ",
-			configuration:   nil,
-			content:         []byte(`{"basePath":"/v2","host":"oldhost.com","schemes":["http"],"swagger":"2.0"}`),
-			expectedContent: []byte(`{"basePath":"/v2","host":"oldhost.com","schemes":["http"],"swagger":"2.0"}`),
-			authPolicy:      "JWTToken",
-		},
+		// {
+		// 	name:          "should return error when authPolicy type is not supported ",
+		// 	configuration: nil,
+		// 	content: &openapi2.T{
+		// 		Swagger: "2.0",
+		// 		Info: openapi3.Info{
+		// 			Title: "petstore2",
+		// 		},
+		// 		Schemes:  []string{"http"},
+		// 		Host:     "oldhost.com",
+		// 		BasePath: "/v2",
+		// 		Paths:    nil,
+		// 	},
+		// 	expectedContent: []byte(`{"basePath":"/v2","host":"oldhost.com","schemes":["http"],"swagger":"2.0"}`),
+		// 	authPolicy:      "JWTToken",
+		// },
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// content, err := setOAS2policies(tc.content, tc.authPolicy, tc.configuration)
-			// if tc.authPolicy != apic.Oauth && tc.authPolicy != apic.Apikey {
-			// 	assert.NotNil(t, err)
-			// } else {
-			// 	assert.Nil(t, err)
-			// 	assert.Equal(t, tc.expectedContent, content)
-			//
-			// }
+			content, err := setOAS2policies(tc.content, tc.authPolicy, tc.configuration)
+			if tc.authPolicy != apic.Oauth && tc.authPolicy != apic.Apikey {
+				assert.NotNil(t, err)
+			} else {
+				assert.Nil(t, err)
+				assert.Equal(t, tc.expectedContent, content)
+
+			}
 		})
 	}
 }
 
 func Test_setOAS3policies(t *testing.T) {
-	t.Skip()
 	tests := []struct {
 		name            string
 		configuration   map[string]interface{}
-		content         []byte
+		content         *openapi3.T
 		expectedContent []byte
 		authPolicy      string
 	}{
 		{
-			name:            "should apply APIKey security policy with no configuration",
-			configuration:   nil,
-			content:         []byte(`{"openapi":"3.0.1","servers":[{"url":"google.com"}]}`),
-			expectedContent: []byte(`{"openapi":"3.0.1","components":{"securitySchemes":{"client-id-enforcement":{"description":"Provided as: client_id:\u003cINSERT_VALID_CLIENTID_HERE\u003e \n\n client_secret:\u003cINSERT_VALID_SECRET_HERE\u003e\n\n","in":"header","name":"authorization","type":"apiKey"}}},"info":{"title":"","version":""},"paths":null,"servers":[{"url":"google.com"}]}`),
+			name:          "should apply APIKey security policy with no configuration",
+			configuration: nil,
+			content: &openapi3.T{
+				OpenAPI: "3.0.1",
+				Info: &openapi3.Info{
+					Title: "petstore3",
+				},
+				Servers: openapi3.Servers{{URL: "http://google.com"}},
+			},
+			expectedContent: []byte(`{"components":{"securitySchemes":{"client-id-enforcement":{"description":"Provided as: client_id:\u003cINSERT_VALID_CLIENTID_HERE\u003e \n\n client_secret:\u003cINSERT_VALID_SECRET_HERE\u003e\n\n","in":"header","name":"authorization","type":"apiKey"}}},"info":{"title":"petstore3","version":""},"openapi":"3.0.1","paths":null,"servers":[{"url":"http://google.com"}]}`),
 			authPolicy:      apic.Apikey,
 		},
 		{
-			name:            "should apply APIKey security policy with Custom configuration set as Basic Auth",
-			configuration:   map[string]interface{}{anypoint.CredOrigin: "httpBasicAuthenticationHeader"},
-			content:         []byte(`{"openapi":"3.0.1","servers":[{"url":"google.com"}]}`),
-			expectedContent: []byte(`{"openapi":"3.0.1","components":{"securitySchemes":{"client-id-enforcement":{"description":"Provided as: client_id:\u003cINSERT_VALID_CLIENTID_HERE\u003e \n\n client_secret:\u003cINSERT_VALID_SECRET_HERE\u003e\n\nhttpBasicAuthenticationHeader","in":"header","name":"authorization","type":"apiKey"}}},"info":{"title":"","version":""},"paths":null,"servers":[{"url":"google.com"}]}`),
+			name:          "should apply APIKey security policy with Custom configuration set as Basic Auth",
+			configuration: map[string]interface{}{anypoint.CredOrigin: "httpBasicAuthenticationHeader"},
+			content: &openapi3.T{
+				OpenAPI: "3.0.1",
+				Info: &openapi3.Info{
+					Title: "petstore3",
+				},
+				Servers: openapi3.Servers{{URL: "http://google.com"}},
+			},
+			expectedContent: []byte(`{"components":{"securitySchemes":{"client-id-enforcement":{"description":"Provided as: client_id:\u003cINSERT_VALID_CLIENTID_HERE\u003e \n\n client_secret:\u003cINSERT_VALID_SECRET_HERE\u003e\n\nhttpBasicAuthenticationHeader","in":"header","name":"authorization","type":"apiKey"}}},"info":{"title":"petstore3","version":""},"openapi":"3.0.1","paths":null,"servers":[{"url":"http://google.com"}]}`),
 			authPolicy:      apic.Apikey,
 		},
-
 		{
-			name:            "should apply OAuth security policy with no scope",
-			configuration:   map[string]interface{}{anypoint.TokenUrl: "www.test.com"},
-			content:         []byte(`{"openapi":"3.0.1","servers":[{"url":"google.com"}]}`),
-			expectedContent: []byte(`{"openapi":"3.0.1","components":{"securitySchemes":{"oauth2":{"description":"This API supports OAuth 2.0 for authenticating all API requests","flows":{"authorizationCode":{"authorizationUrl":"www.test.com","scopes":{},"tokenUrl":"www.test.com"}},"type":"oauth2"}}},"info":{"title":"","version":""},"paths":null,"servers":[{"url":"google.com"}]}`),
+			name:          "should apply OAuth security policy with no scope",
+			configuration: map[string]interface{}{anypoint.TokenUrl: "www.test.com"},
+			content: &openapi3.T{
+				OpenAPI: "3.0.1",
+				Info: &openapi3.Info{
+					Title: "petstore3",
+				},
+				Servers: openapi3.Servers{{URL: "http://google.com"}},
+			},
+			expectedContent: []byte(`{"components":{"securitySchemes":{"oauth2":{"description":"This API supports OAuth 2.0 for authenticating all API requests","flows":{"authorizationCode":{"authorizationUrl":"www.test.com","scopes":{},"tokenUrl":"www.test.com"}},"type":"oauth2"}}},"info":{"title":"petstore3","version":""},"openapi":"3.0.1","paths":null,"servers":[{"url":"http://google.com"}]}`),
 			authPolicy:      apic.Oauth,
 		},
 		{
-			name:            "should apply OAuth security policy with scopes",
-			configuration:   map[string]interface{}{anypoint.TokenUrl: "www.test.com", anypoint.Scopes: "read,write"},
-			content:         []byte(`{"openapi":"3.0.1","servers":[{"url":"google.com"}]}`),
-			expectedContent: []byte(`{"openapi":"3.0.1","components":{"securitySchemes":{"oauth2":{"description":"This API supports OAuth 2.0 for authenticating all API requests","flows":{"authorizationCode":{"authorizationUrl":"www.test.com","scopes":{"scopes":"read,write"},"tokenUrl":"www.test.com"}},"type":"oauth2"}}},"info":{"title":"","version":""},"paths":null,"servers":[{"url":"google.com"}]}`),
+			name:          "should apply OAuth security policy with scopes",
+			configuration: map[string]interface{}{anypoint.TokenUrl: "www.test.com", anypoint.Scopes: "read,write"},
+			content: &openapi3.T{
+				OpenAPI: "3.0.1",
+				Info: &openapi3.Info{
+					Title: "petstore3",
+				},
+				Servers: openapi3.Servers{{URL: "http://google.com"}},
+			},
+			expectedContent: []byte(`{"components":{"securitySchemes":{"oauth2":{"description":"This API supports OAuth 2.0 for authenticating all API requests","flows":{"authorizationCode":{"authorizationUrl":"www.test.com","scopes":{"scopes":"read,write"},"tokenUrl":"www.test.com"}},"type":"oauth2"}}},"info":{"title":"petstore3","version":""},"openapi":"3.0.1","paths":null,"servers":[{"url":"http://google.com"}]}`),
 			authPolicy:      apic.Oauth,
 		},
-		{
-			name:            "should return error when authPolicy type is not supported",
-			configuration:   nil,
-			content:         []byte(`{"openapi":"3.0.1","servers":[{"url":"google.com"}]}`),
-			expectedContent: []byte(`{"openapi":"3.0.1","servers":[{"url":"google.com"}]}`),
-			authPolicy:      "JWTToken",
-		},
+		// {
+		// 	name:            "should return error when authPolicy type is not supported",
+		// 	configuration:   nil,
+		// 	content:         []byte(`{"openapi":"3.0.1","servers":[{"url":"google.com"}]}`),
+		// 	expectedContent: []byte(`{"openapi":"3.0.1","servers":[{"url":"google.com"}]}`),
+		// 	authPolicy:      "JWTToken",
+		// },
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// content, err := setOAS3policies(tc.content, tc.authPolicy, tc.configuration)
-			// if tc.authPolicy != apic.Oauth && tc.authPolicy != apic.Apikey {
-			// 	assert.NotNil(t, err)
-			// } else {
-			// 	assert.Nil(t, err)
-			// 	assert.Equal(t, tc.expectedContent, content)
-			// }
-		})
-	}
-}
-
-func Test_removeOASpolicies(t *testing.T) {
-	t.Skip()
-	tests := []struct {
-		name            string
-		expectedContent []byte
-		content         []byte
-		specType        string
-	}{
-		{
-			name:            "should remove Oas2 security policies",
-			content:         []byte(`{"schemes":["http"],"swagger":"2.0","host":"oldhost.com","basePath":"/v2","paths":null,"definitions":null,"securityDefinitions":{"client-id-enforcement":{"description":"Provided as: client_id:\u003cINSERT_VALID_CLIENTID_HERE\u003e \n\n client_secret:\u003cINSERT_VALID_SECRET_HERE\u003e\n\n","type":"apiKey","name":"authorization","in":"header"}}}`),
-			expectedContent: []byte(`{"basePath":"/v2","definitions":null,"host":"oldhost.com","paths":null,"schemes":["http"],"swagger":"2.0"}`),
-			specType:        apic.Oas2,
-		},
-		{
-			name:            "should remove Oas3 security policies",
-			content:         []byte(`{"openapi":"3.0.1","components":{"securitySchemes":{"client-id-enforcement":{"description":"Provided as: client_id:\u003cINSERT_VALID_CLIENTID_HERE\u003e \n\n client_secret:\u003cINSERT_VALID_SECRET_HERE\u003e\n\nhttpBasicAuthenticationHeader","in":"header","name":"authorization","type":"apiKey"}}},"info":{"title":"","version":""},"paths":null,"servers":[{"url":"google.com"}]}`),
-			expectedContent: []byte(`{"openapi":"3.0.1","components":{},"info":{"title":"","version":""},"paths":null,"servers":[{"url":"google.com"}]}`),
-			specType:        apic.Oas3,
-		},
-
-		{
-			name:            "should return error when specType type is not supported ",
-			content:         []byte(`{"openapi":"3.0.1", "servers":[{"url":"google.com"}]}`),
-			expectedContent: []byte(`{"openapi":"3.0.1","components":{},"info":{"title":"","version":""},"paths":null,"servers":[{"url":"google.com"}]}`),
-			specType:        apic.Wsdl,
-		},
-	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			// content, err := removeOASpolicies(tc.content, tc.specType)
-			// if tc.specType != apic.Oas2 && tc.specType != apic.Oas3 {
-			// 	assert.NotNil(t, err)
-			// } else {
-			// 	assert.Nil(t, err)
-			// 	assert.Equal(t, tc.expectedContent, content)
-			// }
+			content, err := setOAS3policies(tc.content, tc.authPolicy, tc.configuration)
+			if tc.authPolicy != apic.Oauth && tc.authPolicy != apic.Apikey {
+				assert.NotNil(t, err)
+			} else {
+				assert.Nil(t, err)
+				assert.Equal(t, tc.expectedContent, content)
+			}
 		})
 	}
 }

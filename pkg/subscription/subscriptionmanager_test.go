@@ -48,6 +48,7 @@ var centralSub = apic.CentralSubscription{
 }
 
 func TestManagerRegisterNewSchema(t *testing.T) {
+	t.Skip()
 	cig := &mockConsumerInstanceGetter{}
 	sg := &mockSubscriptionGetter{}
 	client := &anypoint.MockAnypointClient{}
