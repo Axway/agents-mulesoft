@@ -23,22 +23,22 @@ func NewContractBase(client anypoint.Client, policy SubscriptionPolicy) *Contrac
 	}
 }
 
-func (cb *ContractBase) Subscribe(log logrus.FieldLogger, subs apic.Subscription) error {
-	clientID, clientSecret, err := cb.doSubscribe(log, subs)
+func (cb *ContractBase) Subscribe(log logrus.FieldLogger, sub apic.Subscription) error {
+	clientID, clientSecret, err := cb.doSubscribe(log, sub)
 
 	if err != nil {
 		log.WithError(err).Error("Failed to subscribe")
-		return subs.UpdateState(apic.SubscriptionFailedToSubscribe, err.Error())
+		return sub.UpdateState(apic.SubscriptionFailedToSubscribe, err.Error())
 	}
 
-	return subs.UpdateStateWithProperties(apic.SubscriptionActive, "", map[string]interface{}{
+	return sub.UpdateStateWithProperties(apic.SubscriptionActive, "", map[string]interface{}{
 		anypoint.ClientIDProp: clientID, anypoint.ClientSecretProp: clientSecret})
 }
 
-func (cb *ContractBase) Unsubscribe(log logrus.FieldLogger, subs apic.Subscription) error {
-	log.Info("Delete SLA Tier subscription for ", cb.Name())
+func (cb *ContractBase) Unsubscribe(log logrus.FieldLogger, sub apic.Subscription) error {
+	log.Infof("Delete SLA Tier subscription for %s", cb.Name())
 
-	appName := subs.GetPropertyValue(anypoint.AppName)
+	appName := sub.GetPropertyValue(anypoint.AppName)
 
 	appID, err := cache.GetCache().Get(appName)
 	if err != nil {
@@ -53,18 +53,18 @@ func (cb *ContractBase) Unsubscribe(log logrus.FieldLogger, subs apic.Subscripti
 	err = cb.client.DeleteClientApplication(muleAppID)
 	if err != nil {
 		log.WithError(err).Error("Failed to delete client application")
-		return subs.UpdateState(apic.SubscriptionFailedToSubscribe, fmt.Sprintf("Failed to delete client application with ID %v", appID))
+		return sub.UpdateState(apic.SubscriptionFailedToSubscribe, fmt.Sprintf("Failed to delete client application with ID %v", appID))
 
 	}
-	return subs.UpdateState(apic.SubscriptionUnsubscribed, "")
+	return sub.UpdateState(apic.SubscriptionUnsubscribed, "")
 }
 
-func (cb *ContractBase) doSubscribe(log logrus.FieldLogger, subs apic.Subscription) (string, string, error) {
+func (cb *ContractBase) doSubscribe(log logrus.FieldLogger, sub apic.Subscription) (string, string, error) {
 	// Create a new application and create a new contract
-	apiID := subs.GetRemoteAPIID()
-	tier := subs.GetPropertyValue(anypoint.TierLabel)
+	apiID := sub.GetRemoteAPIID()
+	tier := sub.GetPropertyValue(anypoint.TierLabel)
 
-	application, err := cb.createApp(apiID, subs)
+	application, err := cb.createApp(apiID, sub)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to create Mulesoft application: %s", err)
 	}
@@ -76,11 +76,7 @@ func (cb *ContractBase) doSubscribe(log logrus.FieldLogger, subs apic.Subscripti
 		return "", "", err
 	}
 
-	tId, err := parseTierID(tier)
-	if err != nil {
-		log.Debug("unable to parse tier ID")
-		tId = 0
-	}
+	tId := parseTierID(tier, log)
 
 	// Need to fetch the exchange asset to get the version group
 	exchangeAsset, err := cb.client.GetExchangeAsset(muleAPI.GroupID, muleAPI.AssetID, muleAPI.AssetVersion)
@@ -99,7 +95,7 @@ func (cb *ContractBase) doSubscribe(log logrus.FieldLogger, subs apic.Subscripti
 }
 
 func (cb *ContractBase) createContract(apiID string, appId, tId int64, muleApi *anypoint.API, exchangeAsset *anypoint.ExchangeAsset) (*anypoint.Contract, error) {
-	cnt := &anypoint.Contract{
+	contract := &anypoint.Contract{
 		APIID:           apiID,
 		EnvironmentID:   muleApi.EnvironmentID,
 		AcceptedTerms:   true,
@@ -111,12 +107,12 @@ func (cb *ContractBase) createContract(apiID string, appId, tId int64, muleApi *
 		RequestedTierID: tId,
 	}
 
-	return cb.client.CreateContract(appId, cnt)
+	return cb.client.CreateContract(appId, contract)
 }
 
-func (cb *ContractBase) createApp(apiID string, subs apic.Subscription) (*anypoint.Application, error) {
-	appName := subs.GetPropertyValue(anypoint.AppName)
-	description := subs.GetPropertyValue(anypoint.Description)
+func (cb *ContractBase) createApp(apiID string, sub apic.Subscription) (*anypoint.Application, error) {
+	appName := sub.GetPropertyValue(anypoint.AppName)
+	description := sub.GetPropertyValue(anypoint.Description)
 
 	appl := &anypoint.AppRequestBody{
 		Name:        appName,
@@ -135,9 +131,14 @@ func (cb *ContractBase) createApp(apiID string, subs apic.Subscription) (*anypoi
 	return application, nil
 }
 
-func parseTierID(tierValue string) (int64, error) {
+func parseTierID(tierValue string, logger logrus.FieldLogger) int64 {
 	tierID := strings.Split(tierValue, "-")[0]
-	return strconv.ParseInt(tierID, 10, 64)
+	i, err := strconv.ParseInt(tierID, 10, 64)
+	if err != nil {
+		logger.WithField("tierID", tierValue).Debug("cannot parse tier id")
+		return 0
+	}
+	return i
 }
 
 func getMuleAPI(apiID string) (*anypoint.API, error) {

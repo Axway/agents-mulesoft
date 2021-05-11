@@ -35,7 +35,7 @@ var mockSub = &apic.MockSubscription{
 		anypoint.TierLabel:   "666892-gold",
 	},
 	ReceivedValues:               map[string]interface{}{},
-	ReceivedAppName:              "app",
+	ReceivedAppName:              "",
 	ReceivedUpdatedEnum:          "",
 	UpdateStateErr:               nil,
 	UpdateEnumErr:                nil,
