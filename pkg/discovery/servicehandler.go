@@ -139,10 +139,7 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 	isAlreadyPublished, checksum := isPublished(api, authPolicy)
 	if isAlreadyPublished {
 		// If true, then the api is published and there were no changes detected
-		logger.WithFields(logrus.Fields{
-			"policy": authPolicy,
-			"msg":    "api is already published",
-		})
+		logger.WithFields(logrus.Fields{"policy": authPolicy, "msg": "api is already published"})
 		return nil, nil
 	}
 	logger.WithField("policy", authPolicy).Debugf("change detected in published asset")
@@ -210,7 +207,6 @@ func (s *serviceHandler) createSubscriptionSchemaForSLATier(
 	tiers *anypoint.Tiers,
 	centralClient apic.Client,
 ) (apic.SubscriptionSchema, error) {
-	schema := apic.NewSubscriptionSchema(apiID)
 
 	var names []string
 
@@ -219,18 +215,27 @@ func (s *serviceHandler) createSubscriptionSchemaForSLATier(
 		names = append(names, t)
 	}
 
+	// Create a subscription schema to represent SLA Tiers.
+	schema := apic.NewSubscriptionSchema(apiID)
 	schema.AddProperty(anypoint.AppName, "string", "Name of the new app", "", true, nil)
 	schema.AddProperty(anypoint.Description, "string", "", "", false, nil)
 	schema.AddProperty(anypoint.TierLabel, "string", "", "", true, names)
 
-	s.subscriptionManager.RegisterNewSchema(slatier.NewSLATierContract(apiID, schema), s.client)
+	// Register the schema with the mule subscription manager
+	s.subscriptionManager.RegisterNewSchema(slatier.NewSLATierContract(apiID, schema, s.client))
 
+	// Register the schema with the agent-sdk subscription manager
 	if err := centralClient.RegisterSubscriptionSchema(schema, true); err != nil {
 		return nil, fmt.Errorf("failed to register subscription schema %s: %w", schema.GetSubscriptionName(), err)
 	}
+
 	log.Infof("Schema registered: %s", schema.GetSubscriptionName())
 
 	return schema, nil
+}
+
+func (s *serviceHandler) registerSchema() {
+
 }
 
 // shouldDiscoverAPI determines if the API should be pushed to Central or not

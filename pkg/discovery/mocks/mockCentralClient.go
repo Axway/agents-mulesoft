@@ -25,7 +25,9 @@ func (m *MockCentralClient) RegisterSubscriptionSchema(apic.SubscriptionSchema, 
 func (m *MockCentralClient) UpdateSubscriptionSchema(apic.SubscriptionSchema) error {
 	return nil
 }
-func (m *MockCentralClient) GetSubscriptionManager() apic.SubscriptionManager { return nil }
+func (m *MockCentralClient) GetSubscriptionManager() apic.SubscriptionManager {
+	return &apic.MockSubscriptionManager{}
+}
 func (m *MockCentralClient) GetCatalogItemIDForConsumerInstance(string) (string, error) {
 	return "", nil
 }

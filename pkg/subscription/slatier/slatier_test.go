@@ -13,22 +13,22 @@ import (
 func TestSlaTier(t *testing.T) {
 	name := "slatier"
 	schema := apic.NewSubscriptionSchema(name)
+	client := &anypoint.MockAnypointClient{}
 	schema.AddProperty(anypoint.AppName, "string", "Name of the new app", "", true, nil)
-	slaFunc := NewSLATierContract(name, schema)
-	slaPolicy := slaFunc(&anypoint.MockAnypointClient{})
-	assert.Equal(t, name, slaPolicy.Name())
-	assert.Equal(t, schema, slaPolicy.Schema())
+	contract := NewSLATierContract(name, schema, client)
+	assert.Equal(t, name, contract.Name())
+	assert.Equal(t, schema, contract.Schema())
 	pd := config.PolicyDetail{
 		Policy:     apic.Apikey,
 		IsSlaBased: true,
 		APIId:      name,
 	}
-	assert.True(t, slaPolicy.IsApplicable(pd))
+	assert.True(t, contract.IsApplicable(pd))
 
 	pd = config.PolicyDetail{
 		Policy:     apic.Apikey,
 		IsSlaBased: false,
 		APIId:      name,
 	}
-	assert.False(t, slaPolicy.IsApplicable(pd))
+	assert.False(t, contract.IsApplicable(pd))
 }

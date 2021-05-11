@@ -123,7 +123,15 @@ func (m *MockAnypointClient) CreateContract(id int64, contract *Contract) (*Cont
 }
 
 func (m *MockAnypointClient) GetSLATiers(int642 int64) (*Tiers, error) {
-	return nil, nil
+	return &Tiers{
+		Total: 1,
+		Tiers: []SLATier{
+			{
+				ID:   654272,
+				Name: "Gold",
+			},
+		},
+	}, nil
 }
 
 func (m *MockAnypointClient) DeleteClientApplication(appId int64) error {

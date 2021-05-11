@@ -6,8 +6,6 @@ import (
 
 	"github.com/Axway/agents-mulesoft/pkg/config"
 
-	"github.com/Axway/agents-mulesoft/pkg/anypoint"
-
 	"github.com/Axway/agent-sdk/pkg/apic"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/sirupsen/logrus"
@@ -15,16 +13,7 @@ import (
 
 type SchemaHandler interface {
 	GetSubscriptionSchemaName(pd config.PolicyDetail) string
-	RegisterNewSchema(schemaConstructor SchemaConstructor, apc anypoint.Client)
-}
-
-// SchemaConstructor -
-type SchemaConstructor func(client anypoint.Client) Contract
-
-var constructors []SchemaConstructor
-
-func Register(constructor SchemaConstructor) {
-	constructors = append(constructors, constructor)
+	RegisterNewSchema(schema StateManager)
 }
 
 // ConsumerInstanceGetter gets a consumer instance by id.
@@ -32,15 +21,16 @@ type ConsumerInstanceGetter interface {
 	GetConsumerInstanceByID(id string) (*v1alpha1.ConsumerInstance, error)
 }
 
-// SubscriptionPolicy the policy displayed to a user during the subscription process.
-type SubscriptionPolicy interface {
+// SubSchema the policy attached required to create a subscription.
+type SubSchema interface {
 	Schema() apic.SubscriptionSchema
 	Name() string
 	IsApplicable(policyDetail config.PolicyDetail) bool
 }
 
-type Contract interface {
-	SubscriptionPolicy
+// StateManager handles subscription state changes.
+type StateManager interface {
+	SubSchema
 	Subscribe(log logrus.FieldLogger, subs apic.Subscription) error
 	Unsubscribe(log logrus.FieldLogger, subs apic.Subscription) error
 }
@@ -48,7 +38,7 @@ type Contract interface {
 // Manager handles the subscription aspects
 type Manager struct {
 	log      logrus.FieldLogger
-	handlers map[string]Contract
+	handlers map[string]StateManager
 	cig      ConsumerInstanceGetter
 	dg       *duplicateGuard
 }
@@ -58,18 +48,11 @@ type duplicateGuard struct {
 	lock  *sync.Mutex
 }
 
-func New(log logrus.FieldLogger,
-	cig ConsumerInstanceGetter,
-	apc anypoint.Client,
-) *Manager {
-	handlers := make(map[string]Contract, len(constructors))
+// New creates a SubscriptionManager
+func New(log logrus.FieldLogger, cig ConsumerInstanceGetter, schemas ...StateManager) *Manager {
+	handlers := make(map[string]StateManager, len(schemas))
 
-	for _, c := range constructors {
-		h := c(apc)
-		handlers[h.Name()] = h
-	}
-
-	return &Manager{
+	manager := &Manager{
 		log:      log,
 		handlers: handlers,
 		cig:      cig,
@@ -78,14 +61,17 @@ func New(log logrus.FieldLogger,
 			lock:  &sync.Mutex{},
 		},
 	}
+
+	for _, schema := range schemas {
+		manager.RegisterNewSchema(schema)
+	}
+
+	return manager
 }
 
-func (sm *Manager) RegisterNewSchema(
-	schemaConstructor SchemaConstructor,
-	apc anypoint.Client,
-) {
-	h := schemaConstructor(apc)
-	sm.handlers[h.Name()] = h
+// RegisterNewSchema registers a schema to represent a Mulesoft policy that can be subscribed to in the Catalog.
+func (sm *Manager) RegisterNewSchema(schema StateManager) {
+	sm.handlers[schema.Name()] = schema
 }
 
 func (sm *Manager) Schemas() []apic.SubscriptionSchema {

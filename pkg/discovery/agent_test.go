@@ -144,6 +144,5 @@ type mockSchemaHandler struct{}
 func (m *mockSchemaHandler) GetSubscriptionSchemaName(_ config.PolicyDetail) string {
 	return ""
 }
-
-func (m *mockSchemaHandler) RegisterNewSchema(_ subscription.SchemaConstructor, _ anypoint.Client) {
+func (m *mockSchemaHandler) RegisterNewSchema(schema subscription.StateManager) {
 }

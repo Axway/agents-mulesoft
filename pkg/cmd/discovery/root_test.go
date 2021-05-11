@@ -1,12 +1,11 @@
 package discovery
 
 import (
-	"errors"
+	"fmt"
 	"testing"
+	"time"
 
-	subscriptionMocks "github.com/Axway/agents-mulesoft/pkg/subscription/mocks"
-
-	"github.com/Axway/agents-mulesoft/pkg/subscription"
+	"github.com/Axway/agent-sdk/pkg/agent"
 
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 	"github.com/Axway/agents-mulesoft/pkg/discovery/mocks"
@@ -24,23 +23,31 @@ func Test_initConfig(t *testing.T) {
 	assert.True(t, ok)
 	assert.IsType(t, &config.AgentConfig{}, cfg)
 	assert.Equal(t, cfg.CentralConfig.GetDataPlaneName(), mulesoft)
+
+	cfg.MulesoftConfig.Username = "username"
+	cfg.MulesoftConfig.Password = "123"
+	cfg.MulesoftConfig.Environment = "env1"
+	cfg.MulesoftConfig.PollInterval = 5 * time.Second
+	err = cfg.MulesoftConfig.ValidateCfg()
+	assert.Nil(t, err)
 }
 
 func Test_initSubscriptionManager(t *testing.T) {
+	// should register with no error
 	mc := &anypoint.MockAnypointClient{}
 	cc := &mocks.MockCentralClient{}
 
-	sc := func(client anypoint.Client) subscription.Contract {
-		mh := &subscriptionMocks.MockContract{}
-		mh.On("Name").Return("sofake")
-		mh.On("Schema").Return("sofake schema")
-		return mh
-	}
+	agent.InitializeForTest(cc)
 
-	subscription.Register(sc)
+	cc.On("RegisterSubscriptionSchema").Return(nil)
+	manager, err := initSubscriptionManager(mc, cc)
+	assert.NotNil(t, manager)
+	assert.Equal(t, 1, len(manager.Schemas()))
+	assert.Nil(t, err)
 
-	cc.On("RegisterSubscriptionSchema").Return(errors.New("Cannot register subscription schema"))
-
-	_, err := initSubscriptionManager(mc, cc)
+	cc = &mocks.MockCentralClient{}
+	// should throw an error when registering
+	cc.On("RegisterSubscriptionSchema").Return(fmt.Errorf("failed"))
+	_, err = initSubscriptionManager(mc, cc)
 	assert.NotNil(t, err)
 }

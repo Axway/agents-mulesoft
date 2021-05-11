@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/Axway/agents-mulesoft/pkg/config"
+
 	"github.com/Axway/agents-mulesoft/pkg/subscription/mocks"
 
 	"github.com/stretchr/testify/mock"
@@ -45,27 +47,22 @@ var mockSub = &apic.MockSubscription{
 }
 
 func TestManagerRegisterNewSchema(t *testing.T) {
-	t.Skip()
 	cig := &mockConsumerInstanceGetter{}
-	client := &anypoint.MockAnypointClient{}
 
-	manager := New(logrus.StandardLogger(), cig, client)
+	manager := New(logrus.StandardLogger(), cig)
 	assert.NotNil(t, manager)
 
-	sc1 := func(client anypoint.Client) Contract {
-		mh := &mocks.MockContract{}
-		mh.On("Name").Return("first")
-		mh.On("Schema").Return("sofake schema")
-		return mh
-	}
-	sc2 := func(client anypoint.Client) Contract {
-		mh := &mocks.MockContract{}
-		mh.On("Name").Return("second")
-		mh.On("Schema").Return("sofake schema")
-		return mh
-	}
-	manager.RegisterNewSchema(sc1, client)
-	manager.RegisterNewSchema(sc2, client)
+	mh1 := &mocks.MockContract{}
+	mh1.On("Name").Return("first")
+	mh1.On("Schema").Return("sofake schema")
+
+	mh2 := &mocks.MockContract{}
+	mh2.On("Name").Return("second")
+	mh2.On("Schema").Return("sofake schema")
+
+	manager.RegisterNewSchema(mh1)
+	manager.RegisterNewSchema(mh2)
+
 	assert.Equal(t, 2, len(manager.handlers))
 	assert.Contains(t, manager.handlers, "first")
 	assert.Contains(t, manager.handlers, "second")
@@ -161,20 +158,17 @@ func Test_processForState(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			client := &anypoint.MockAnypointClient{}
 
 			cig := &mockConsumerInstanceGetter{}
 			cig.On("GetConsumerInstanceByID").Return(tc.cigReturns.consumer, tc.cigReturns.err)
 
-			manager := New(logrus.StandardLogger(), cig, client)
+			manager := New(logrus.StandardLogger(), cig)
 
-			sc := func(client anypoint.Client) Contract {
-				mh := &mocks.MockContract{}
-				mh.On("Name").Return("sofake")
-				mh.On("Subscribe").Return(tc.subHandlerReturns)
-				return mh
-			}
-			manager.RegisterNewSchema(sc, client)
+			mh := &mocks.MockContract{}
+			mh.On("Name").Return("sofake")
+			mh.On("Subscribe").Return(tc.subHandlerReturns)
+
+			manager.RegisterNewSchema(mh)
 
 			err := manager.processForState(tc.sub, &logrus.Logger{}, tc.state)
 			if tc.err != nil {
@@ -197,15 +191,29 @@ func Test_setLogFields(t *testing.T) {
 }
 
 func TestValidateSubscription(t *testing.T) {
-	client := &anypoint.MockAnypointClient{}
-
 	cig := &mockConsumerInstanceGetter{}
+	schemaName := "first"
+	mc := &mocks.MockContract{}
+	mc.On("Name").Return("first")
+	mc.On("Schema").Return("sofake")
+	mc.On("IsApplicable").Return(true)
 
-	manager := New(logrus.StandardLogger(), cig, client)
+	manager := New(logrus.StandardLogger(), cig, mc)
 	isTrue := manager.ValidateSubscription(mockSub)
 	assert.True(t, isTrue)
+
+	assert.Equal(t, 1, len(manager.Schemas()))
+
 	isFalse := manager.ValidateSubscription(mockSub)
 	assert.False(t, isFalse)
+
+	name := manager.GetSubscriptionSchemaName(config.PolicyDetail{
+		Policy:     anypoint.ClientID,
+		IsSlaBased: false,
+		APIId:      "1",
+	})
+
+	assert.Equal(t, schemaName, name)
 }
 
 type mockConsumerInstanceGetter struct {

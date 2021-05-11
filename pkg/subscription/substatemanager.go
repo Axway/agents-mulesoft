@@ -11,20 +11,22 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type ContractBase struct {
-	SubscriptionPolicy
+// SubStateManager handles the updates to the state of a subscription for a given schema/policy type.
+type SubStateManager struct {
+	SubSchema
 	client anypoint.Client
 }
 
-func NewContractBase(client anypoint.Client, policy SubscriptionPolicy) *ContractBase {
-	return &ContractBase{
-		SubscriptionPolicy: policy,
-		client:             client,
+// NewSubStateManager creates a new
+func NewSubStateManager(client anypoint.Client, policy SubSchema) *SubStateManager {
+	return &SubStateManager{
+		SubSchema: policy,
+		client:    client,
 	}
 }
 
-func (cb *ContractBase) Subscribe(log logrus.FieldLogger, sub apic.Subscription) error {
-	clientID, clientSecret, err := cb.doSubscribe(log, sub)
+func (ssm *SubStateManager) Subscribe(log logrus.FieldLogger, sub apic.Subscription) error {
+	clientID, clientSecret, err := ssm.doSubscribe(log, sub)
 
 	if err != nil {
 		log.WithError(err).Error("Failed to subscribe")
@@ -35,8 +37,8 @@ func (cb *ContractBase) Subscribe(log logrus.FieldLogger, sub apic.Subscription)
 		anypoint.ClientIDProp: clientID, anypoint.ClientSecretProp: clientSecret})
 }
 
-func (cb *ContractBase) Unsubscribe(log logrus.FieldLogger, sub apic.Subscription) error {
-	log.Infof("Delete SLA Tier subscription for %s", cb.Name())
+func (ssm *SubStateManager) Unsubscribe(log logrus.FieldLogger, sub apic.Subscription) error {
+	log.Infof("Delete SLA Tier subscription for %s", ssm.Name())
 
 	appName := sub.GetPropertyValue(anypoint.AppName)
 
@@ -50,7 +52,7 @@ func (cb *ContractBase) Unsubscribe(log logrus.FieldLogger, sub apic.Subscriptio
 		return fmt.Errorf("Error while performing type assertion on %#v", appID)
 	}
 
-	err = cb.client.DeleteClientApplication(muleAppID)
+	err = ssm.client.DeleteClientApplication(muleAppID)
 	if err != nil {
 		log.WithError(err).Error("Failed to delete client application")
 		return sub.UpdateState(apic.SubscriptionFailedToSubscribe, fmt.Sprintf("Failed to delete client application with ID %v", appID))
@@ -59,12 +61,12 @@ func (cb *ContractBase) Unsubscribe(log logrus.FieldLogger, sub apic.Subscriptio
 	return sub.UpdateState(apic.SubscriptionUnsubscribed, "")
 }
 
-func (cb *ContractBase) doSubscribe(log logrus.FieldLogger, sub apic.Subscription) (string, string, error) {
+func (ssm *SubStateManager) doSubscribe(log logrus.FieldLogger, sub apic.Subscription) (string, string, error) {
 	// Create a new application and create a new contract
 	apiID := sub.GetRemoteAPIID()
 	tier := sub.GetPropertyValue(anypoint.TierLabel)
 
-	application, err := cb.createApp(apiID, sub)
+	application, err := ssm.createApp(apiID, sub)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to create Mulesoft application: %s", err)
 	}
@@ -79,12 +81,12 @@ func (cb *ContractBase) doSubscribe(log logrus.FieldLogger, sub apic.Subscriptio
 	tId := parseTierID(tier, log)
 
 	// Need to fetch the exchange asset to get the version group
-	exchangeAsset, err := cb.client.GetExchangeAsset(muleAPI.GroupID, muleAPI.AssetID, muleAPI.AssetVersion)
+	exchangeAsset, err := ssm.client.GetExchangeAsset(muleAPI.GroupID, muleAPI.AssetID, muleAPI.AssetVersion)
 	if err != nil {
 		return "", "", err
 	}
 
-	_, err = cb.createContract(apiID, application.ID, tId, muleAPI, exchangeAsset)
+	_, err = ssm.createContract(apiID, application.ID, tId, muleAPI, exchangeAsset)
 	if err != nil {
 		return "", "", fmt.Errorf("Error while creating a contract %s", err)
 	}
@@ -94,7 +96,7 @@ func (cb *ContractBase) doSubscribe(log logrus.FieldLogger, sub apic.Subscriptio
 	return application.ClientID, application.ClientSecret, nil
 }
 
-func (cb *ContractBase) createContract(apiID string, appId, tId int64, muleApi *anypoint.API, exchangeAsset *anypoint.ExchangeAsset) (*anypoint.Contract, error) {
+func (ssm *SubStateManager) createContract(apiID string, appId, tId int64, muleApi *anypoint.API, exchangeAsset *anypoint.ExchangeAsset) (*anypoint.Contract, error) {
 	contract := &anypoint.Contract{
 		APIID:           apiID,
 		EnvironmentID:   muleApi.EnvironmentID,
@@ -107,10 +109,10 @@ func (cb *ContractBase) createContract(apiID string, appId, tId int64, muleApi *
 		RequestedTierID: tId,
 	}
 
-	return cb.client.CreateContract(appId, contract)
+	return ssm.client.CreateContract(appId, contract)
 }
 
-func (cb *ContractBase) createApp(apiID string, sub apic.Subscription) (*anypoint.Application, error) {
+func (ssm *SubStateManager) createApp(apiID string, sub apic.Subscription) (*anypoint.Application, error) {
 	appName := sub.GetPropertyValue(anypoint.AppName)
 	description := sub.GetPropertyValue(anypoint.Description)
 
@@ -119,7 +121,7 @@ func (cb *ContractBase) createApp(apiID string, sub apic.Subscription) (*anypoin
 		Description: description,
 	}
 
-	application, err := cb.client.CreateClientApplication(apiID, appl)
+	application, err := ssm.client.CreateClientApplication(apiID, appl)
 	if err != nil {
 		return nil, fmt.Errorf("Error creating client app: %s", err)
 	}

@@ -6,6 +6,10 @@ import (
 	"testing"
 	"time"
 
+	corecfg "github.com/Axway/agent-sdk/pkg/config"
+
+	"github.com/Axway/agent-sdk/pkg/agent"
+
 	"github.com/getkin/kin-openapi/openapi2"
 	"github.com/getkin/kin-openapi/openapi3"
 
@@ -88,6 +92,44 @@ func TestServiceHandler(t *testing.T) {
 	assert.Equal(t, asset.APIs[0].AssetVersion, item.Version)
 	assert.Equal(t, asset.APIs[0].Tags, item.Tags)
 	assert.NotEmpty(t, item.ServiceAttributes["checksum"])
+}
+
+func TestServiceHandlerSLAPolicy(t *testing.T) {
+	cc := &mocks.MockCentralClient{}
+	cc.On("RegisterSubscriptionSchema").Return(nil)
+	agent.Initialize(&corecfg.CentralConfiguration{
+		UpdateFromAPIServer: false,
+	})
+	agent.InitializeForTest(cc)
+	stage := "Sandbox"
+	content := `{"openapi":"3.0.1","servers":[{"url":"https://abc.com"}], "paths":{}, "info":{"title":"petstore3"}}`
+	policies := anypoint.Policies{Policies: []anypoint.Policy{
+		{
+			Template: anypoint.Template{
+				AssetID: anypoint.SlaAuth,
+			},
+		},
+	}}
+	mc := &anypoint.MockAnypointClient{}
+	mc.On("GetPolicies").Return(policies, nil)
+	mc.On("GetExchangeAsset").Return(&exchangeAsset, nil)
+	mc.On("GetExchangeFileContent").Return([]byte(content), nil)
+	mc.On("GetExchangeAssetIcon").Return("", "", nil)
+
+	msh := &mockSchemaHandler{}
+	sh := &serviceHandler{
+		stage:               stage,
+		discoveryTags:       []string{"tag1"},
+		discoveryIgnoreTags: []string{"nah"},
+		client:              mc,
+		subscriptionManager: msh,
+	}
+
+	details := sh.ToServiceDetails(&asset)
+
+	assert.Equal(t, 1, len(details))
+	assert.Equal(t, fmt.Sprint(apiID), details[0].SubscriptionName)
+
 }
 
 func TestServiceHandlerDidNotDiscoverAPI(t *testing.T) {
@@ -736,7 +778,7 @@ func getSLATierInfo() (*anypoint.Tiers, *serviceHandler, *mocks.MockCentralClien
 
 	cig := &mockConsumerInstanceGetter{}
 
-	sm := subscription.New(logrus.StandardLogger(), cig, mc)
+	sm := subscription.New(logrus.StandardLogger(), cig)
 
 	sh := &serviceHandler{
 		stage:               stage,

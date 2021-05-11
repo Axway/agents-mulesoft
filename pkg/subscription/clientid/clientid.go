@@ -14,15 +14,9 @@ type clientID struct {
 	schema apic.SubscriptionSchema
 }
 
-func init() {
-	subscription.Register(func(client anypoint.Client) subscription.Contract {
-		return subscription.NewContractBase(client, NewClientIDContract(client))
-	})
-}
-
 // NewClientIDContract creates a new subscribable contract for the client-id policy
-func NewClientIDContract(client anypoint.Client) subscription.Contract {
-	return subscription.NewContractBase(client, newClientID())
+func NewClientIDContract(client anypoint.Client) subscription.StateManager {
+	return subscription.NewSubStateManager(client, newClientID())
 }
 
 // newClientID Creates a newClientID *clientID

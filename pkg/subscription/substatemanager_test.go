@@ -167,7 +167,7 @@ func Test_doSubscribeErrors(t *testing.T) {
 
 			cache.GetCache().SetWithSecondaryKey(fmt.Sprintf("%s-sandbox", mockSub.RemoteAPIID), tc.secondaryKey, muleAPI)
 
-			base := NewContractBase(client, mockContract)
+			base := NewSubStateManager(client, mockContract)
 			cID, scrt, err := base.doSubscribe(logrus.StandardLogger(), mockSub)
 			if tc.hasError == true {
 				assert.NotNil(t, err)
@@ -202,7 +202,7 @@ func Test_doSubscribeSuccess(t *testing.T) {
 	client.On("GetExchangeAsset").Return(asset, nil)
 	client.On("CreateContract").Return(&anypoint.Contract{}, nil)
 
-	base := NewContractBase(client, mockContract)
+	base := NewSubStateManager(client, mockContract)
 	cID, scrt, err := base.doSubscribe(logrus.StandardLogger(), mockSub)
 
 	assert.Nil(t, err)
@@ -212,7 +212,7 @@ func Test_doSubscribeSuccess(t *testing.T) {
 	// should subscribe with no tier id
 	mockSub.PropertyVals[anypoint.TierLabel] = ""
 	client = &anypoint.MockAnypointClient{}
-	base = NewContractBase(client, mockContract)
+	base = NewSubStateManager(client, mockContract)
 	client.On("CreateClientApplication").Return(app, nil)
 	client.On("GetExchangeAsset").Return(asset, nil)
 	client.On("CreateContract").Return(&anypoint.Contract{}, nil)
@@ -230,7 +230,7 @@ func Test_createContract(t *testing.T) {
 	}
 	mockContract := &mocks.MockContract{}
 
-	base := NewContractBase(client, mockContract)
+	base := NewSubStateManager(client, mockContract)
 
 	asset := &anypoint.ExchangeAsset{
 		VersionGroup: "v1",
@@ -277,7 +277,7 @@ func Test_createApp(t *testing.T) {
 	}
 	mockContract := &mocks.MockContract{}
 
-	base := NewContractBase(client, mockContract)
+	base := NewSubStateManager(client, mockContract)
 
 	apiID := "fake-api-id"
 
@@ -315,7 +315,7 @@ func TestSubscribe(t *testing.T) {
 	client.On("GetExchangeAsset").Return(&anypoint.ExchangeAsset{}, nil)
 	client.On("CreateContract").Return(&anypoint.Contract{}, nil)
 
-	base := NewContractBase(client, mockContract)
+	base := NewSubStateManager(client, mockContract)
 	err := base.Subscribe(logrus.StandardLogger(), mockSub)
 
 	assert.Equal(t, apic.SubscriptionActive, mockSub.State)
@@ -324,7 +324,7 @@ func TestSubscribe(t *testing.T) {
 
 	client = &anypoint.MockAnypointClient{}
 	client.On("CreateClientApplication").Return(&anypoint.Application{}, fmt.Errorf("err"))
-	base = NewContractBase(client, mockContract)
+	base = NewSubStateManager(client, mockContract)
 
 	err = base.Subscribe(logrus.StandardLogger(), mockSub)
 	assert.Nil(t, err)
@@ -343,14 +343,14 @@ func TestUnsubscribe(t *testing.T) {
 
 	client.On("DeleteClientApplication").Return(nil)
 
-	base := NewContractBase(client, mockContract)
+	base := NewSubStateManager(client, mockContract)
 	err := base.Unsubscribe(logrus.StandardLogger(), mockSub)
 	assert.Nil(t, err)
 	assert.Equal(t, apic.SubscriptionUnsubscribed, mockSub.State)
 
 	client = &anypoint.MockAnypointClient{}
 	client.On("DeleteClientApplication").Return(fmt.Errorf("hi"))
-	base = NewContractBase(client, mockContract)
+	base = NewSubStateManager(client, mockContract)
 	err = base.Unsubscribe(logrus.StandardLogger(), mockSub)
 	assert.Nil(t, err)
 	assert.Equal(t, apic.SubscriptionFailedToSubscribe, mockSub.State)

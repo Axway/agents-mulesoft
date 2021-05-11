@@ -16,6 +16,7 @@ import (
 )
 
 const assetID = "petstore-3"
+const apiID = 16810512
 
 var asset = anypoint.Asset{
 	APIs: []anypoint.API{
@@ -24,7 +25,7 @@ var asset = anypoint.Asset{
 			AssetVersion:  "1.0.0",
 			EndpointURI:   "https://petstore3.us-e2.cloudhub.io",
 			EnvironmentID: "e9a405ae-2789-4889-a267-548a1f7aa6f4",
-			ID:            16810512,
+			ID:            apiID,
 			Tags:          []string{"tag1"},
 		},
 	},
@@ -33,7 +34,7 @@ var asset = anypoint.Asset{
 	AutodiscoveryAPIName: "groupId:d3ada710-fc7b-4fc7-b8b9-4ccfc0f872e4:assetId:petstore-3",
 	ExchangeAssetName:    "petstore-3",
 	GroupID:              "d3ada710-fc7b-4fc7-b8b9-4ccfc0f872e4",
-	ID:                   16810512,
+	ID:                   apiID,
 	MasterOrganizationID: "d3ada710-fc7b-4fc7-b8b9-4ccfc0f872e4",
 	Name:                 "groupId:d3ada710-fc7b-4fc7-b8b9-4ccfc0f872e4:assetId:petstore-3",
 	OrganizationID:       "d3ada710-fc7b-4fc7-b8b9-4ccfc0f872e4",

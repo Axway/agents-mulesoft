@@ -23,10 +23,8 @@ func newSlaTier(name string, schema apic.SubscriptionSchema) *slaTier {
 }
 
 // NewSLATierContract creates a new subscribable contract for the sla-tier policy
-func NewSLATierContract(name string, schema apic.SubscriptionSchema) subscription.SchemaConstructor {
-	return func(client anypoint.Client) subscription.Contract {
-		return subscription.NewContractBase(client, newSlaTier(name, schema))
-	}
+func NewSLATierContract(name string, schema apic.SubscriptionSchema, client anypoint.Client) *subscription.SubStateManager {
+	return subscription.NewSubStateManager(client, newSlaTier(name, schema))
 }
 
 func (s *slaTier) Name() string {
