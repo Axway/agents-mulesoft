@@ -59,3 +59,11 @@ func (m *MockCentralClient) ExecuteAPI(string, string, map[string]string, []byte
 	return nil, nil
 }
 func (m *MockCentralClient) OnConfigChange(config.CentralConfig) {}
+
+func (m *MockCentralClient) DeleteServiceByAPIID(string) error {
+	return nil
+}
+
+func (m *MockCentralClient) GetConsumerInstancesByExternalAPIID(string) ([]*v1alpha1.ConsumerInstance, error) {
+	return nil, nil
+}
