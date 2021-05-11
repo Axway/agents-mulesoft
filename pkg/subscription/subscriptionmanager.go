@@ -19,7 +19,7 @@ type SchemaHandler interface {
 }
 
 // SchemaConstructor -
-type SchemaConstructor func(client anypoint.Client) SubscribeHandler
+type SchemaConstructor func(client anypoint.Client) Contract
 
 var constructors []SchemaConstructor
 
@@ -32,15 +32,15 @@ type ConsumerInstanceGetter interface {
 	GetConsumerInstanceByID(id string) (*v1alpha1.ConsumerInstance, error)
 }
 
-// SubscriptionsGetter gets the all the subscriptions in any of the states for the catalog item with id
-type SubscriptionsGetter interface {
-	GetSubscriptionsForCatalogItem(states []string, id string) ([]apic.CentralSubscription, error)
-}
-
-type SubscribeHandler interface {
+// SubscriptionPolicy the policy displayed to a user during the subscription process.
+type SubscriptionPolicy interface {
 	Schema() apic.SubscriptionSchema
 	Name() string
 	IsApplicable(policyDetail config.PolicyDetail) bool
+}
+
+type Contract interface {
+	SubscriptionPolicy
 	Subscribe(log logrus.FieldLogger, subs apic.Subscription) error
 	Unsubscribe(log logrus.FieldLogger, subs apic.Subscription) error
 }
@@ -48,9 +48,8 @@ type SubscribeHandler interface {
 // Manager handles the subscription aspects
 type Manager struct {
 	log      logrus.FieldLogger
-	handlers map[string]SubscribeHandler
+	handlers map[string]Contract
 	cig      ConsumerInstanceGetter
-	sg       SubscriptionsGetter
 	dg       *duplicateGuard
 }
 
@@ -61,10 +60,9 @@ type duplicateGuard struct {
 
 func New(log logrus.FieldLogger,
 	cig ConsumerInstanceGetter,
-	sg SubscriptionsGetter,
 	apc anypoint.Client,
 ) *Manager {
-	handlers := make(map[string]SubscribeHandler, len(constructors))
+	handlers := make(map[string]Contract, len(constructors))
 
 	for _, c := range constructors {
 		h := c(apc)
@@ -75,7 +73,6 @@ func New(log logrus.FieldLogger,
 		log:      log,
 		handlers: handlers,
 		cig:      cig,
-		sg:       sg,
 		dg: &duplicateGuard{
 			cache: map[string]interface{}{},
 			lock:  &sync.Mutex{},
@@ -126,23 +123,7 @@ func (sm *Manager) ValidateSubscription(subscription apic.Subscription) bool {
 		sm.log.Info("duplicate subscription event; already handling subscription")
 		return false
 	}
-
 	return true
-}
-
-func (sm *Manager) checkSubscriptionState(subscriptionID, catalogItemID, subscriptionState string) (bool, error) {
-	subs, err := sm.sg.GetSubscriptionsForCatalogItem([]string{subscriptionState}, catalogItemID)
-	if err != nil {
-		return false, err
-	}
-
-	for _, sub := range subs {
-		if sub.GetID() == subscriptionID {
-			return true, nil
-		}
-	}
-
-	return false, nil
 }
 
 // GetSubscriptionSchemaName returns the appropriate subscription schema name given a policy
@@ -155,94 +136,57 @@ func (sm *Manager) GetSubscriptionSchemaName(pd config.PolicyDetail) string {
 	return ""
 }
 
+// ProcessUnsubscribe moves a subscription from Approved to Active.
 func (sm *Manager) ProcessSubscribe(subscription apic.Subscription) {
-	log := sm.log.
-		WithField("subscriptionName", subscription.GetName()).
-		WithField("subscriptionID", subscription.GetID()).
-		WithField("catalogItemID", subscription.GetCatalogItemID()).
-		WithField("remoteID", subscription.GetRemoteAPIID()).
-		WithField("consumerInstanceID", subscription.GetApicID())
-
-	if err := sm.processSubscribe(subscription, log); err != nil {
-		log.WithError(err)
+	log := sm.log.WithFields(logFields(subscription))
+	if err := sm.processForState(subscription, log, apic.SubscriptionApproved); err != nil {
+		log.WithError(err).Error("failed to update subscription state")
 	}
 }
 
-func (sm *Manager) processSubscribe(subscription apic.Subscription, log logrus.FieldLogger) error {
+// processForState processes a subscription state change based on the current state.
+func (sm *Manager) processForState(subscription apic.Subscription, log logrus.FieldLogger, state apic.SubscriptionState) error {
 	subID := subscription.GetID()
+	consumerInstanceID := subscription.GetApicID()
 
 	defer sm.dg.markInactive(subID)
 
-	isApproved, err := sm.checkSubscriptionState(subID, subscription.GetCatalogItemID(), string(apic.SubscriptionApproved))
-	if err != nil {
-		return fmt.Errorf("failed to verify subscription state")
-	}
-
-	if !isApproved {
-		log.Info("Subscription not in approved state. Nothing to do")
-		return nil
-	}
-
-	log.Info("Processing subscription")
-
-	ci, err := sm.cig.GetConsumerInstanceByID(subscription.GetApicID())
+	ci, err := sm.cig.GetConsumerInstanceByID(consumerInstanceID)
 	if err != nil {
 		return fmt.Errorf("failed to fetch consumer instance")
 	}
 
-	if h, ok := sm.handlers[ci.Spec.Subscription.SubscriptionDefinition]; ok {
-		err := h.Subscribe(log.WithField("handler", h.Name()), subscription)
-		if err != nil {
-			return fmt.Errorf("Failed to update subscription state: %s", err)
+	log.Info("processing subscription state change")
+
+	def := ci.Spec.Subscription.SubscriptionDefinition
+	if h, ok := sm.handlers[def]; ok {
+		switch state {
+		case apic.SubscriptionApproved:
+			return h.Subscribe(log.WithField("handler", h.Name()), subscription)
+		case apic.SubscriptionUnsubscribeInitiated:
+			return h.Unsubscribe(log.WithField("handler", h.Name()), subscription)
 		}
-	} else {
-		log.Info("No known handler for type: ", ci.Spec.Subscription.SubscriptionDefinition)
 	}
+
+	log.Infof("No known handler for type: %s", def)
 	return nil
 }
 
+// ProcessUnsubscribe moves a subscription from Unsubscribe Initiated to Unsubscribed.
 func (sm *Manager) ProcessUnsubscribe(subscription apic.Subscription) {
-	subName := subscription.GetName()
-	subID := subscription.GetID()
-	catalogItemID := subscription.GetCatalogItemID()
-	apiID := subscription.GetRemoteAPIID()
-	consumerInstanceID := subscription.GetApicID()
-	defer sm.dg.markInactive(subID)
-
-	log := sm.log.
-		WithField("subscriptionName", subName).
-		WithField("subscriptionID", subID).
-		WithField("catalogItemID", catalogItemID).
-		WithField("remoteApiID", apiID).
-		WithField("consumerInstanceID", consumerInstanceID)
-
-	isUnsubscribeInitiated, err := sm.checkSubscriptionState(
-		subID, catalogItemID, string(apic.SubscriptionUnsubscribeInitiated),
-	)
-	if err != nil {
-		log.WithError(err).Error("Failed to verify subscription state")
-		return
+	log := sm.log.WithFields(logFields(subscription))
+	if err := sm.processForState(subscription, log, apic.SubscriptionUnsubscribeInitiated); err != nil {
+		log.WithError(err).Error("failed to update subscription state")
 	}
+}
 
-	if !isUnsubscribeInitiated {
-		log.Info("Subscription not in unsubscribe initiated state. Nothing to do")
-		return
-	}
-
-	log.Info("Removing subscription")
-
-	ci, err := sm.cig.GetConsumerInstanceByID(consumerInstanceID)
-	if err != nil {
-		log.WithError(err).Error("Failed to fetch consumer instance")
-		return
-	}
-
-	if h, ok := sm.handlers[ci.Spec.Subscription.SubscriptionDefinition]; ok {
-		err = h.Unsubscribe(log.WithField("handler", h.Name()), subscription)
-		if err != nil {
-			log.WithError(err).Error("Failed to update subscription state")
-		}
-	} else {
-		log.Info("No known handler for type: ", ci.Spec.Subscription.SubscriptionDefinition)
+func logFields(sub apic.Subscription) logrus.Fields {
+	return logrus.Fields{
+		"subscriptionName":   sub.GetName(),
+		"subscriptionID":     sub.GetID(),
+		"catalogItemID":      sub.GetCatalogItemID(),
+		"remoteID":           sub.GetRemoteAPIID(),
+		"consumerInstanceID": sub.GetApicID(),
+		"currentState":       sub.GetState(),
 	}
 }

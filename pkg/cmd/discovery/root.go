@@ -75,12 +75,7 @@ func initConfig(centralConfig corecfg.CentralConfig) (interface{}, error) {
 
 func initSubscriptionManager(apc anypoint.Client, centralClient apic.Client) (*subscription.Manager, error) {
 	subManager := centralClient.GetSubscriptionManager()
-	sm := subscription.New(
-		logrus.StandardLogger(),
-		centralClient,
-		centralClient,
-		apc,
-	)
+	sm := subscription.New(logrus.StandardLogger(), centralClient, apc)
 
 	// register schemas
 	for _, schema := range sm.Schemas() {

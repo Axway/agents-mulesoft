@@ -98,11 +98,15 @@ func (m *MockAnypointClient) GetAnalyticsWindow() ([]AnalyticsEvent, error) {
 }
 
 func (m *MockAnypointClient) CreateClientApplication(string, *AppRequestBody) (*Application, error) {
-	return nil, nil
+	args := m.Called()
+	result := args.Get(0)
+	return result.(*Application), args.Error(1)
 }
 
 func (m *MockAnypointClient) CreateContract(int64, *Contract) (*Contract, error) {
-	return nil, nil
+	args := m.Called()
+	result := args.Get(0)
+	return result.(*Contract), args.Error(1)
 }
 
 func (m *MockAnypointClient) GetSLATiers(int642 int64) (*Tiers, error) {

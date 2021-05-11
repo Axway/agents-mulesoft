@@ -3,7 +3,7 @@ module github.com/Axway/agents-mulesoft
 go 1.13
 
 require (
-	github.com/Axway/agent-sdk v1.0.20210506-0.20210508193015-84b423578987
+	github.com/Axway/agent-sdk v1.0.20210506-0.20210511001437-e34435ab263a
 	github.com/Shopify/sarama v1.26.4 // indirect
 	github.com/docker/docker v1.13.1 // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect

@@ -103,7 +103,7 @@ func (a *Agent) CheckHealth() error {
 
 // Run the agent loop
 func (a *Agent) Run() {
-	validator := validateAPI(a.assetCache)
+	validator := validateAPI()
 	coreAgent.RegisterAPIValidator(validator)
 	coreAgent.OnConfigChange(a.onConfigChange)
 
@@ -129,9 +129,9 @@ func (a *Agent) Stop() {
 }
 
 // validateAPI checks that the API still exists on the data plane. If it doesn't the agent
-// performs cleanup on the API Central environment. The asset cache is populated by the
+// performs cleanup on the API Central environment. The cache is populated by the
 // discovery loop.
-func validateAPI(assetCache cache.Cache) func(apiID, stageName string) bool {
+func validateAPI() func(apiID, stageName string) bool {
 	return func(apiID, stageName string) bool {
 		asset, err := cache.GetCache().Get(formatCacheKey(apiID, stageName))
 		if err != nil {

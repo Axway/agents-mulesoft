@@ -223,10 +223,7 @@ func (s *serviceHandler) createSubscriptionSchemaForSLATier(
 	schema.AddProperty(anypoint.Description, "string", "", "", false, nil)
 	schema.AddProperty(anypoint.TierLabel, "string", "", "", true, names)
 
-	constructor := func(apic anypoint.Client) subscription.SubscribeHandler {
-		return slatier.New(apiID, apic, schema)
-	}
-	s.subscriptionManager.RegisterNewSchema(constructor, s.client)
+	s.subscriptionManager.RegisterNewSchema(slatier.NewSLATierContract(apiID, schema), s.client)
 
 	if err := centralClient.RegisterSubscriptionSchema(schema, true); err != nil {
 		return nil, fmt.Errorf("failed to register subscription schema %s: %w", schema.GetSubscriptionName(), err)

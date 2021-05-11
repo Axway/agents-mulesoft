@@ -83,7 +83,7 @@ func Test_validateAPI(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	validator := validateAPI(c)
+	validator := validateAPI()
 	ok := validator(apiID, stageName)
 	assert.True(t, ok)
 }

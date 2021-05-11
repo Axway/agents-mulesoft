@@ -7,30 +7,30 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-type MockHandler struct {
+type MockContract struct {
 	mock.Mock
 }
 
-func (m *MockHandler) Schema() apic.SubscriptionSchema {
+func (m *MockContract) Schema() apic.SubscriptionSchema {
 	args := m.Called()
 	return apic.NewSubscriptionSchema(args.String(0))
 }
 
-func (m *MockHandler) Name() string {
+func (m *MockContract) Name() string {
 	args := m.Called()
 	return args.String(0)
 }
 
-func (m *MockHandler) IsApplicable(config.PolicyDetail) bool {
+func (m *MockContract) IsApplicable(config.PolicyDetail) bool {
 	args := m.Called()
 	return args.Bool(0)
 }
 
-func (m *MockHandler) Subscribe(logrus.FieldLogger, apic.Subscription) error {
+func (m *MockContract) Subscribe(logrus.FieldLogger, apic.Subscription) error {
 	args := m.Called()
 	return args.Error(0)
 }
 
-func (m *MockHandler) Unsubscribe(logrus.FieldLogger, apic.Subscription) error {
+func (m *MockContract) Unsubscribe(logrus.FieldLogger, apic.Subscription) error {
 	return nil
 }

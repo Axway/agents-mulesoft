@@ -74,7 +74,9 @@ func TestServiceHandler(t *testing.T) {
 		client:              mc,
 		subscriptionManager: msh,
 	}
+
 	details := sh.ToServiceDetails(&asset)
+
 	assert.Equal(t, 1, len(details))
 	item := details[0]
 	assert.Equal(t, asset.APIs[0].AssetID, item.APIName)
@@ -733,9 +735,8 @@ func getSLATierInfo() (*anypoint.Tiers, *serviceHandler, *mocks.MockCentralClien
 	}
 
 	cig := &mockConsumerInstanceGetter{}
-	sg := &mockSubscriptionGetter{}
 
-	sm := subscription.New(logrus.StandardLogger(), cig, sg, mc)
+	sm := subscription.New(logrus.StandardLogger(), cig, mc)
 
 	sh := &serviceHandler{
 		stage:               stage,
