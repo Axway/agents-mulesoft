@@ -53,9 +53,6 @@ func newMockAgent(processorChannel chan bool) (*Agent, error) {
 	processor := &mockProcessor{
 		channel: processorChannel,
 	}
-	emitter, err := NewMuleEventEmitter(agentConfig, eventChannel, client)
-	if err != nil {
-		return nil, err
-	}
+	emitter := NewMuleEventEmitter(agentConfig, eventChannel, client)
 	return newAgent(processor, emitter, eventChannel)
 }

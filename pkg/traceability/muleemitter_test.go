@@ -4,6 +4,8 @@ import (
 	"testing"
 	"time"
 
+	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
+
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agents-mulesoft/pkg/config"
 	"github.com/stretchr/testify/assert"
@@ -18,15 +20,22 @@ func Test_MuleEventEmitter(t *testing.T) {
 	}
 
 	eventCh := make(chan string)
-	emitter, err := NewMuleEventEmitter(ac, eventCh, &mockAnalyticsClient{})
+	emitter := NewMuleEventEmitter(ac, eventCh, &mockAnalyticsClient{})
 
 	assert.NotNil(t, emitter)
-	assert.Nil(t, err)
 
-	emitter.Start()
+	go emitter.Start()
 
 	e := <-eventCh
 	assert.NotEmpty(t, e)
+}
 
-	emitter.Stop()
+func mockHealthCheck(string) *hc.Status {
+	return &hc.Status{
+		Result: hc.OK,
+	}
+}
+
+func mockRegisterHealthCheck(name, endpoint string, check hc.CheckStatus) (string, error) {
+	return "", nil
 }

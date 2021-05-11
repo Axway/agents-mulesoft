@@ -13,13 +13,19 @@ mulesoft_traceability_agent:
       timeout: 10s
       url: https://login.axway.com/auth
 
-mulesoft:
-  environment: Sandbox
-  cachePath: "/tmp"
-  pollInterval: 20s
-  auth:
-    username: <USERNAME>
-    password: <PASSWORD>
+  log:
+    level: debug
+    format: json
+    output: stdout
+    path: logs
+
+  mulesoft:
+    environment: Sandbox
+    cachePath: "/tmp"
+    pollInterval: 20s
+    auth:
+      username: <USERNAME>
+      password: <PASSWORD>
 
 output.traceability:
   enabled: true
@@ -42,15 +48,12 @@ output.traceability:
   pipelining: 0
   proxy_url: ${TRACEABILITY_PROXYURL:""}
 
-log:
-  level: debug
-  format: json
-  output: stdout
-  path: logs
-
 logging:
   metrics:
     enabled: false
-  to_stderr: true
-  level: ${LOG_LEVEL:debug}
-
+  files:
+    permissions: 0600
+    name: ${LOG_FILE_NAME:traceability_agent.log}
+    dir: ${LOG_FILE_PATH:logs}
+    keepfiles: ${LOG_FILE_KEEPFILES:7}
+    rotateeverybytes: ${LOG_FILE_ROTATEEVERYBYTES:10485760}

@@ -22,7 +22,8 @@ import (
 )
 
 const (
-	CacheKeyTimeStamp = "LAST_RUN"
+	CacheKeyTimeStamp   = "LAST_RUN"
+	HealthCheckEndpoint = "mulesoft"
 )
 
 // Page describes the page query parameter
@@ -88,7 +89,7 @@ func NewClient(mulesoftConfig *config.MulesoftConfig, options ...ClientOptions) 
 	}
 	client.OnConfigChange(mulesoftConfig)
 
-	hc.RegisterHealthcheck("Mulesoft Anypoint Exchange", "mulesoft", client.healthcheck)
+	hc.RegisterHealthcheck("Mulesoft Anypoint Exchange", HealthCheckEndpoint, client.healthcheck)
 	// TODO: handle error
 
 	return client
