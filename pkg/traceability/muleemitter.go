@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/elastic/beats/v7/libbeat/logp"
 
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
@@ -54,7 +56,14 @@ func (me *MuleEventEmitter) pollForEvents() {
 			case <-me.done:
 				return
 			case <-ticker.C:
+				oldTime := time.Now()
 				events, err := me.client.GetAnalyticsWindow()
+				currentTime := time.Now()
+				duration := currentTime.Sub(oldTime)
+				logrus.WithFields(logrus.Fields{
+					"duration": duration * time.Millisecond,
+					"count":    len(events),
+				}).Debug("retrieved events from anypoint")
 				if err != nil {
 					logp.Warn("Client Failure: %s", err.Error())
 				}

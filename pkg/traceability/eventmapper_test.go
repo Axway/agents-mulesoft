@@ -111,7 +111,7 @@ func Test_buildHeaders(t *testing.T) {
 func Test_APIServiceNameAndTransactionProxyNameAreEqual(t *testing.T) {
 	sd := &discovery.ServiceDetail{
 		APIName:           "petstore-3",
-		APISpec:           []byte("{\"openapi\":\"3.0.1\",\"servers\":[{\"url\":\"google.com\"}]}"),
+		APISpec:           []byte(`{"openapi":"3.0.1","servers":[{"url":"google.com"}],"paths":{},"info":{"title":"petstore3"}}`),
 		APIUpdateSeverity: "",
 		AuthPolicy:        "pass-through",
 		Description:       "petstore api",

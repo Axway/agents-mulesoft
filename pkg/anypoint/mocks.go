@@ -41,6 +41,8 @@ func (mc *MockClientBase) Send(request api.Request) (*api.Response, error) {
 
 type MockAnypointClient struct {
 	mock.Mock
+	CreateContractAssertArgs          bool
+	CreateClientApplicationAssertArgs bool
 }
 
 func (m *MockAnypointClient) OnConfigChange(*config.MulesoftConfig) {
@@ -95,4 +97,44 @@ func (m *MockAnypointClient) GetAnalyticsWindow() ([]AnalyticsEvent, error) {
 	args := m.Called()
 	result := args.Get(0)
 	return result.([]AnalyticsEvent), args.Error(1)
+}
+
+func (m *MockAnypointClient) CreateClientApplication(id string, body *AppRequestBody) (*Application, error) {
+	var args mock.Arguments
+
+	if m.CreateContractAssertArgs {
+		args = m.Called(id, body)
+	} else {
+		args = m.Called()
+	}
+	result := args.Get(0)
+	return result.(*Application), args.Error(1)
+}
+
+func (m *MockAnypointClient) CreateContract(id int64, contract *Contract) (*Contract, error) {
+	var args mock.Arguments
+	if m.CreateContractAssertArgs {
+		args = m.Called(id, contract)
+	} else {
+		args = m.Called()
+	}
+	result := args.Get(0)
+	return result.(*Contract), args.Error(1)
+}
+
+func (m *MockAnypointClient) GetSLATiers(int642 int64) (*Tiers, error) {
+	return &Tiers{
+		Total: 1,
+		Tiers: []SLATier{
+			{
+				ID:   654272,
+				Name: "Gold",
+			},
+		},
+	}, nil
+}
+
+func (m *MockAnypointClient) DeleteClientApplication(appId int64) error {
+	args := m.Called()
+	return args.Error(0)
 }
