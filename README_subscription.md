@@ -9,12 +9,12 @@ The subscription mechanism provided by the Discovery Agent can be used to create
 
 # Example
 
-##Subscribe
-1. Say you have an API on Mulesoft's side that has been configured with Rate Limiting - SLA based Policy along with SLA Tiers configured with auto-approval. Mulesoft Discovery agent picks this up and creates a few resources on Amplify, and one of them is the Catalog item.
+## Subscribe
+1. Say you have an API on Mulesoft that has been configured with Rate Limiting - SLA based Policy along with SLA Tiers that are configured with auto-approval. Mulesoft Discovery agent picks this up and creates a few resources on Amplify, and one of them is the Catalog item.
 
 <img src="./img/CatalogItem.png" width="600">
 
-2. Clicking on the catalog item takes you to the detail page where you click the Subscribe button on the top-right corner 
+2. Clicking on the catalog item takes you to its detail page where you click the Subscribe button on the top-right corner 
 
 <img src="./img/CatalogItemDetail.png" width="600">
 
@@ -40,13 +40,13 @@ The subscription mechanism provided by the Discovery Agent can be used to create
 curl -v http://<Mulesoft_Proxy_URL>/store/inventory -H "client_id:<Value_from_subscription>" -H "client_secret:<Value_from_subscription>"
 ```
 
-##Unsubscribe
+## Unsubscribe
 
 1. Click on the Unsubscribe option that appears after clicking on the subscription's cog icon
 
 <img src="./img/InitiateUnsubscribe.png" width="600">
 
-2. Wait until the request unsubscribe is processed
+2. Wait until the request to unsubscribe is processed
 
 <img src="./img/UnsubscribingState.png" width="600">
 
