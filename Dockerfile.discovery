@@ -1,0 +1,52 @@
+# Build image
+
+FROM phx-docker-beano.swf-artifactory.lab.phx.axway.int/beano-alpine-base:latest as builder
+ENV APP_HOME /go/src/github.com/Axway/agents-mulesoft
+ENV APP_USER axway
+
+RUN mkdir -p $APP_HOME
+WORKDIR $APP_HOME
+
+#ENV GOPATH /go
+
+# Copy necessary files
+COPY . . 
+
+RUN make download
+RUN make verify
+RUN make build-discovery
+
+
+# Create non-root user
+RUN addgroup -g 2500 $APP_USER && adduser -u 2500 -D -G $APP_USER $APP_USER
+RUN chown -R $APP_USER:$APP_USER $APP_HOME
+
+USER $APP_USER
+#ENV GOFLAGS "-mod=vendor"
+
+# hadolint ignore=DL3007
+FROM phx-docker-beano.swf-artifactory.lab.phx.axway.int/beano-alpine-release:latest
+ENV APP_HOME /go/src/github.com/Axway/agents-mulesoft
+ENV APP_USER axway
+
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+COPY --from=builder /etc/passwd /etc/passwdbi   
+COPY --from=builder $APP_HOME/build/mulesoft_discovery_agent.yml /mulesoft_discovery_agent.yml
+COPY --from=builder $APP_HOME/bin/discovery /discovery
+
+RUN addgroup -g 2500 $APP_USER && adduser -u 2500 -D -G $APP_USER $APP_USER
+
+# suggested remediation line
+# hadolint ignore=SC2015
+RUN mkdir /keys && \
+  chown -R $APP_USER /keys
+
+RUN find / -perm /6000 -type f -exec chmod a-s {} \; || true
+
+USER $APP_USER
+
+VOLUME ["/keys"]
+
+HEALTHCHECK --retries=1 CMD curl --fail http://localhost:${STATUS_PORT:-8989}/status || exit 1
+
+ENTRYPOINT ["/discovery"]
