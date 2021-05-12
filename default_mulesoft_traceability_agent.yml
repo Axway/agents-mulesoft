@@ -29,12 +29,12 @@ mulesoft_traceability_agent:
     path: logs
 
   mulesoft:
-    environment: Sandbox
-    cachePath: "/tmp"
-    pollInterval: 20s
+    environment: "${MULESOFT_ENVIRONMENT:Sandbox}"
+    cachePath: "${MULESOFT_CACHEPATH:/tmp}"
+    pollInterval: "${MULESOFT_POLLINTERVAL:20s}"
     auth:
-      username: <USERNAME>
-      password: <PASSWORD>
+      username: "${MULESOFT_USERNAME}"
+      password: "${MULESOFT_PASSWORD}"
 
 output.traceability:
   enabled: true
