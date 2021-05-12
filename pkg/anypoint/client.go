@@ -110,7 +110,7 @@ func (c *AnypointClient) OnConfigChange(mulesoftConfig *config.MulesoftConfig) {
 	var err error
 	c.auth, err = NewAuth(c)
 	if err != nil {
-		logrus.Fatalf("Failed to authenticate: %s", err.Error())
+		logrus.Fatalf("Failed to authenticate with Mulesoft: %s", err.Error())
 	}
 
 	c.environment, err = c.GetEnvironmentByName(mulesoftConfig.Environment)

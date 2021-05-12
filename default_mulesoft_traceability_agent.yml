@@ -21,23 +21,25 @@ apic_traceability_agent:
       publicKey: "${CENTRAL_AUTH_PUBLICKEY:/keys/public_key.pem}"
       realm: "${CENTRAL_AUTH_REALM:Broker}"
       url: "${CENTRAL_AUTH_URL:https://login.axway.com/auth}"
-    log:
-      format: ${LOG_FORMAT:json}
-      level: ${LOG_LEVEL:info}
-      output: ${LOG_OUTPUT:stdout}
-    mulesoft:
-      environment: "${MULESOFT_ENVIRONMENT}"
-      cachePath: "${MULESOFT_CACHEPATH:/tmp}"
-      pollInterval: ${MULESOFT_POLLINTERVAL:20s}
-      auth:
-        username: "${MULESOFT_AUTH_USERNAME}"
-        password: "${MULESOFT_AUTH_PASSWORD}"
     ssl:
       cipherSuites: ${CENTRAL_SSL_CIPHERSUITES:["ECDHE-ECDSA-AES-256-GCM-SHA384", "ECDHE-RSA-AES-256-GCM-SHA384", "ECDHE-ECDSA-CHACHA20-POLY1305", "ECDHE-RSA-CHACHA20-POLY1305", "ECDHE-ECDSA-AES-128-GCM-SHA256", "ECDHE-RSA-AES-128-GCM-SHA256", "ECDHE-ECDSA-AES-128-CBC-SHA256", "ECDHE-RSA-AES-128-CBC-SHA256"]}
       insecureSkipVerify: ${CENTRAL_SSL_INSECURESKIPVERIFY:false}
       maxVersion: ${CENTRAL_SSL_MAXVERSION:"TLS1.3"}
       minVersion: ${CENTRAL_SSL_MINVERSION:"TLS1.2"}
       nextProtos: ${CENTRAL_SSL_NEXTPROTOS:[]}
+      # End Central Config
+
+  log:
+    format: ${LOG_FORMAT:json}
+    level: ${LOG_LEVEL:info}
+    output: ${LOG_OUTPUT:stdout}
+  mulesoft:
+    environment: "${MULESOFT_ENVIRONMENT}"
+    cachePath: "${MULESOFT_CACHEPATH:/tmp}"
+    pollInterval: ${MULESOFT_POLLINTERVAL:20s}
+    auth:
+      username: "${MULESOFT_AUTH_USERNAME}"
+      password: "${MULESOFT_AUTH_PASSWORD}"
 
 # Condor Ingestion service
 output.traceability:
