@@ -2,6 +2,11 @@ package traceability
 
 import (
 	"testing"
+	"time"
+
+	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
+
+	corecfg "github.com/Axway/agent-sdk/pkg/config"
 
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 	"github.com/Axway/agents-mulesoft/pkg/config"
@@ -13,26 +18,78 @@ import (
 
 func TestAgent_Run(t *testing.T) {
 	processorChannel := make(chan bool)
-	agent, err := newMockAgent(processorChannel)
+	eventChannel := make(chan string)
+
+	processor := &mockProcessor{
+		channel: processorChannel,
+	}
+
+	client := &mockAnalyticsClient{
+		events: []anypoint.AnalyticsEvent{event},
+		err:    nil,
+	}
+	emitter := NewMuleEventEmitter(agentConfig, eventChannel, client)
+	traceAgent, err := newAgent(processor, emitter, eventChannel)
+
 	assert.Nil(t, err)
-	assert.NotNil(t, agent)
-	client := publisher.NewChanClientWith(make(chan beat.Event))
-	pub := publisher.PublisherWithClient(client)
+	assert.NotNil(t, traceAgent)
+
+	pubClient := publisher.NewChanClientWith(make(chan beat.Event))
+
+	pub := publisher.PublisherWithClient(pubClient)
 	b := &beat.Beat{
 		Publisher: pub,
 	}
 
-	go agent.Run(b)
+	cfg := &config.AgentConfig{
+		CentralConfig: corecfg.NewCentralConfig(corecfg.TraceabilityAgent),
+		MulesoftConfig: &config.MulesoftConfig{
+			PollInterval: 2 * time.Second,
+		},
+	}
+
+	config.SetConfig(cfg)
+	traceAgent.onConfigChange()
+	assert.Equal(t, cfg.MulesoftConfig.PollInterval, emitter.pollInterval)
+
+	go traceAgent.Run(b)
 
 	done := <-processorChannel
 	assert.True(t, done)
-	agent.Stop()
+	traceAgent.Stop()
 }
 
-type mockAnalyticsClient struct{}
+func Test_newAgentError(t *testing.T) {
+	// should return an error when the health check fails
+	processorChannel := make(chan bool)
+	eventChannel := make(chan string)
+
+	processor := &mockProcessor{
+		channel: processorChannel,
+	}
+
+	client := &mockAnalyticsClient{
+		events: []anypoint.AnalyticsEvent{event},
+		err:    nil,
+	}
+	emitter := NewMuleEventEmitter(agentConfig, eventChannel, client)
+	hc.RegisterHealthcheck("fake", "fake", func(name string) *hc.Status {
+		return &hc.Status{
+			Result: hc.FAIL,
+		}
+	})
+	_, err := newAgent(processor, emitter, eventChannel)
+	assert.NotNil(t, err)
+
+}
+
+type mockAnalyticsClient struct {
+	events []anypoint.AnalyticsEvent
+	err    error
+}
 
 func (m mockAnalyticsClient) GetAnalyticsWindow() ([]anypoint.AnalyticsEvent, error) {
-	return []anypoint.AnalyticsEvent{event}, nil
+	return m.events, m.err
 }
 
 func (m mockAnalyticsClient) OnConfigChange(_ *config.MulesoftConfig) {
@@ -45,14 +102,4 @@ type mockProcessor struct {
 func (m mockProcessor) ProcessRaw(_ []byte) []beat.Event {
 	m.channel <- true
 	return []beat.Event{}
-}
-
-func newMockAgent(processorChannel chan bool) (*Agent, error) {
-	eventChannel := make(chan string)
-	client := &mockAnalyticsClient{}
-	processor := &mockProcessor{
-		channel: processorChannel,
-	}
-	emitter := NewMuleEventEmitter(agentConfig, eventChannel, client)
-	return newAgent(processor, emitter, eventChannel)
 }

@@ -188,6 +188,7 @@ func setupConfig() {
 	}
 	agentConfig.CentralConfig.SetEnvironmentID(EnvID)
 	agentConfig.CentralConfig.SetTeamID(TeamID)
+	config.SetConfig(agentConfig)
 	agent.Initialize(agentConfig.CentralConfig)
 }
 

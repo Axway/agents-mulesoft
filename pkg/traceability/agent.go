@@ -13,7 +13,6 @@ import (
 	"github.com/Axway/agents-mulesoft/pkg/config"
 	"github.com/elastic/beats/v7/libbeat/beat"
 	"github.com/elastic/beats/v7/libbeat/common"
-	"github.com/sirupsen/logrus"
 )
 
 // Agent - mulesoft Beater configuration. Implements the beat.Beater interface.
@@ -37,7 +36,7 @@ func NewBeater(_ *beat.Beat, _ *common.Config) (beat.Beater, error) {
 	client := anypoint.NewClient(agentConfig.MulesoftConfig)
 	emitter := NewMuleEventEmitter(agentConfig, eventChannel, client)
 
-	emitterJob, err := NewMuleEventEmitterJob(emitter, pollInterval, hc.RegisterHealthcheck)
+	emitterJob, err := NewMuleEventEmitterJob(emitter, pollInterval, traceabilityHealthCheck)
 	if err != nil {
 		return nil, err
 	}
@@ -84,9 +83,10 @@ func (a *Agent) Run(b *beat.Beat) error {
 	for {
 		select {
 		case <-a.doneCh:
+			a.client.Close()
+			return nil
 		case <-gracefulStop:
 			a.client.Close()
-			logrus.Info("Received graceful shutdown signal")
 			return nil
 		case event := <-a.eventChannel:
 			eventsToPublish := a.eventProcessor.ProcessRaw([]byte(event))
@@ -103,5 +103,5 @@ func (a *Agent) onConfigChange() {
 
 // Stop stops the agent.
 func (a *Agent) Stop() {
-	close(a.doneCh)
+	a.doneCh <- struct{}{}
 }

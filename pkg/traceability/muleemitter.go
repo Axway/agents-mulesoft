@@ -66,13 +66,13 @@ func (me *MuleEventEmitter) Start() error {
 		"duration": fmt.Sprintf("%d ms", duration.Milliseconds()), "count": len(events)}).Debug("retrieved events from anypoint")
 	if err != nil {
 		logrus.WithError(err).Error("failed to get analytics data")
-		return nil
+		return err
 	}
 
 	for _, event := range events {
 		j, err := json.Marshal(event)
 		if err != nil {
-			log.Warnf("failed to marshal events: %s", err.Error())
+			log.Warnf("failed to marshal event: %s", err.Error())
 		}
 		me.eventChannel <- string(j)
 	}
@@ -81,15 +81,16 @@ func (me *MuleEventEmitter) Start() error {
 
 // OnConfigChange -
 func (me *MuleEventEmitter) OnConfigChange(gatewayCfg *config.AgentConfig) {
+	me.pollInterval = gatewayCfg.MulesoftConfig.PollInterval
 	me.client.OnConfigChange(gatewayCfg.MulesoftConfig)
 }
 
 func NewMuleEventEmitterJob(
 	emitter Emitter,
 	pollInterval time.Duration,
-	registerHealthCheck hc.RegisterHealth,
+	healthCheck hc.CheckStatus,
 ) (*MuleEventEmitterJob, error) {
-	_, err := registerHealthCheck("Data Ingestion Endpoint", healthCheckEndpoint, traceabilityHealthCheck)
+	_, err := hc.RegisterHealthcheck("Data Ingestion Endpoint", healthCheckEndpoint, healthCheck)
 	if err != nil {
 		return nil, err
 	}
@@ -122,6 +123,7 @@ func (m *MuleEventEmitterJob) Status() error {
 		// If the job fails 3 times return an error
 		return fmt.Errorf("failed to start the Traceability agent %d times in a row", max)
 	}
+	m.consecutiveErrors++
 	return nil
 }
 
