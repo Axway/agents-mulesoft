@@ -115,7 +115,6 @@ func (a *Agent) Run() {
 
 	select {
 	case <-gracefulStop:
-		log.Info("Received request to kill agent")
 		a.Stop()
 		return
 	}

@@ -83,11 +83,9 @@ func (a *Agent) Run(b *beat.Beat) error {
 	for {
 		select {
 		case <-a.doneCh:
-			a.client.Close()
-			return nil
+			return a.client.Close()
 		case <-gracefulStop:
-			a.client.Close()
-			return nil
+			return a.client.Close()
 		case event := <-a.eventChannel:
 			eventsToPublish := a.eventProcessor.ProcessRaw([]byte(event))
 			a.client.PublishAll(eventsToPublish)

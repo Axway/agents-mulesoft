@@ -34,7 +34,7 @@ type MuleEventEmitter struct {
 	jobID             string
 }
 
-// MuleEventEmitterJob wraps an Emitter in the Job interface so that it can be executed by the sdk.
+// MuleEventEmitterJob wraps an Emitter and implements the Job interface so that it can be executed by the sdk.
 type MuleEventEmitterJob struct {
 	Emitter
 	consecutiveErrors int
@@ -85,6 +85,7 @@ func (me *MuleEventEmitter) OnConfigChange(gatewayCfg *config.AgentConfig) {
 	me.client.OnConfigChange(gatewayCfg.MulesoftConfig)
 }
 
+// NewMuleEventEmitterJob creates a struct that implements the Emitter and Job interfaces.
 func NewMuleEventEmitterJob(
 	emitter Emitter,
 	pollInterval time.Duration,
