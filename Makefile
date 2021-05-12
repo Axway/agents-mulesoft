@@ -7,6 +7,9 @@ GO_PKG_LIST := $(shell go list ./... | grep -v /vendor/ | grep -v *mock*.go)
 download:
 	@go mod tidy && go mod download
 
+verify:
+	@go mod verify
+
 all: clean build
 
 clean:

@@ -1,0 +1,52 @@
+version: "3.9"
+services:
+  discovery:
+    image: mulesoft-discovery
+    ports:
+      - "8089:8089"
+    volumes:
+      - /Users/rnatarajan/Amplify/agents/agents-mulesoft:/keys
+    environment:
+      CENTRAL_ORGANIZATIONID: "xxxxxxxx"
+      CENTRAL_AUTH_PUBLICKEY: /keys/dosa-public.pem
+      CENTRAL_AUTH_PRIVATEKEY: /keys/dosa-key.pem
+      #CENTRAL_AUTH_KEYPASSWORD:
+      CENTRAL_ENVIRONMENT: muletest
+      CENTRAL_AUTH_CLIENTID: DOSA_e1bde291e5e04bfdb07bb7d15890ae67
+      LOG_LEVEL: debug
+      #LOG_FORMAT: json
+      LOG_OUTPUT: stdout
+      LOG_PATH: logs
+      MULESOFT_ANYPOINTEXCHANGEURL: https://anypoint.mulesoft.com
+      MULESOFT_ENVIRONMENT: Sandbox
+      MULESOFT_POLLINTERVAL: 20s
+      MULESOFT_AUTH_USERNAME: apiwheel
+      MULESOFT_AUTH_PASSWORD: "password"
+  traceability:
+    image: mulesoft-traceability
+    ports:
+      - "8189:8189"
+    volumes:
+      - /Users/rnatarajan/Amplify/agents/agents-mulesoft:/keys
+      - /Users/rnatarajan/Amplify/agents/agents-mulesoft/data:/data
+    environment:
+      CENTRAL_ORGANIZATIONID: "xxxxxxxx"
+      CENTRAL_AUTH_PUBLICKEY: /keys/dosa-public.pem
+      CENTRAL_AUTH_PRIVATEKEY: /keys/dosa-key.pem
+      #CENTRAL_AUTH_KEYPASSWORD:
+      CENTRAL_ENVIRONMENT: muletest
+      CENTRAL_AUTH_CLIENTID: DOSA_e1bde291e5e04bfdb07bb7d15890ae67
+      LOG_LEVEL: debug
+      #LOG_FORMAT: json
+      LOG_OUTPUT: stdout
+      LOG_PATH: logs
+      MULESOFT_ANYPOINTEXCHANGEURL: https://anypoint.mulesoft.com
+      MULESOFT_ENVIRONMENT: Sandbox
+      MULESOFTPOLLINTERVAL: 20s
+      MULESOFT_AUTH_USERNAME: apiwheel
+      MULESOFT_AUTH_PASSWORD: "password"
+      MULESOFT_CACHEPATH: "/tmp"
+      TRACEABILITY_HOST: "ingestion-lumberjack.datasearch.axway.com:453"
+      TRACEABILITY_PROTOCOL: tcp
+      TRACEABILITY_COMPRESSIONLEVEL: 3
+      TRACEABILITY_WORKER: 1

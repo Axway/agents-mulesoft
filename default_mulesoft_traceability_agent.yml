@@ -1,25 +1,40 @@
 mulesoft_traceability_agent:
   central:
-    organizationID: "<Amplify_ORG_ID>"
-    environment: <Amplify_CENTRAL_ENVIRONMENT_NAME>
-    url: https://apicentral.axway.com
-    platformURL: https://platform.axway.com
-    pollInterval: 5s
+    url: "${CENTRAL_URL:https://apicentral.axway.com}"
+    organizationID: "${CENTRAL_ORGANIZATIONID}"
+    team: ${CENTRAL_TEAM:""}
+    deployment: "${CENTRAL_DEPLOYMENT:prod}"
+    environment: "${CENTRAL_ENVIRONMENT}"
+    agentName: ${CENTRAL_AGENTNAME:""}
+    platformURL: "${CENTRAL_PLATFORMURL:https://platform.axway.com}"
+    platformEnvironmentId: ${CENTRAL_PLATFORMENVIRONMENTID:""}
+    lighthouseURL: ${CENTRAL_LIGHTHOUSEURL:"https://lighthouse.admin.axway.com"}
+    publishUsage: ${CENTRAL_PUBLISHUSAGE:true}
+    publishTraffic: ${CENTRAL_PUBLISHTRAFFIC:true}
+    eventAggregationInterval: ${CENTRAL_EVENTAGGREGATIONINTERVAL:5m}
+    reportActivityFrequency: ${CENTRAL_REPORTACTIVITYFREQUENCY:5m}
+    pollInterval: 10s
     auth:
-      clientID: <Amplify_CENTRAL_DOSA_CLIENT_ID>
-      privateKey: <Amplify_CENTRAL_DOSA_PRIVATE_KEY_PATH>
-      publicKey: <Amplify_CENTRAL_DOSA_PUBLIC_KEY_PATH>
-      realm: Broker
-      timeout: 10s
-      url: https://login.axway.com/auth
+      url: "${CENTRAL_AUTH_URL:https://login.axway.com/auth}"
+      realm: "${CENTRAL_AUTH_REALM:Broker}"
+      clientId: "${CENTRAL_AUTH_CLIENTID}"
+      privateKey: "${CENTRAL_AUTH_PRIVATEKEY:/keys/private_key.pem}"
+      publicKey: "${CENTRAL_AUTH_PUBLICKEY:/keys/public_key.pem}"
+      keyPassword: ${CENTRAL_AUTH_KEYPASSWORD:""}
 
-mulesoft:
-  environment: Sandbox
-  cachePath: "/tmp"
-  pollInterval: 20s
-  auth:
-    username: <USERNAME>
-    password: <PASSWORD>
+  log:
+    level: debug
+    format: json
+    output: stdout
+    path: logs
+
+  mulesoft:
+    environment: Sandbox
+    cachePath: "/tmp"
+    pollInterval: 20s
+    auth:
+      username: <USERNAME>
+      password: <PASSWORD>
 
 output.traceability:
   enabled: true
@@ -42,15 +57,12 @@ output.traceability:
   pipelining: 0
   proxy_url: ${TRACEABILITY_PROXYURL:""}
 
-log:
-  level: debug
-  format: json
-  output: stdout
-  path: logs
-
 logging:
   metrics:
     enabled: false
-  to_stderr: true
-  level: ${LOG_LEVEL:debug}
-
+  files:
+    permissions: 0600
+    name: ${LOG_FILE_NAME:traceability_agent.log}
+    dir: ${LOG_FILE_PATH:logs}
+    keepfiles: ${LOG_FILE_KEEPFILES:7}
+    rotateeverybytes: ${LOG_FILE_ROTATEEVERYBYTES:10485760}
