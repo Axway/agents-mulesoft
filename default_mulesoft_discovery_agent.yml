@@ -26,8 +26,8 @@ mulesoft:
   environment: Sandbox
   pollInterval: 20s
   auth:
-    username: <USERNAME>
-    password: <PASSWORD>
+    username: apiwheel
+    password: "Athira17"
     # The following property is used to filter the APIs that have a particular tag in their configuration.
     # Comma-separated list of tags. Only APIs that have one or more of these tags are considered for discovery.
     # Default value: empty. Meaning that no matching is performed.

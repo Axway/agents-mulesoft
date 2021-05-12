@@ -23,3 +23,4 @@ bin/
 
 mulesoft_traceability_agent.yml
 mulesoft_discovery_agent.yml
+node_modules
