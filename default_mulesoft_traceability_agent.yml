@@ -52,18 +52,18 @@ output.traceability:
   worker: ${TRACEABILITY_WORKER:2}
   hosts:
     - ${TRACEABILITY_HOST:"ingestion-lumberjack.datasearch.axway.com:453"}
-    redaction:
-      path:
-        show: ${TRACEABILITY_REDACTION_PATH_SHOW:[]}
-      queryArgument:
-        show: ${TRACEABILITY_REDACTION_QUERYARGUMENT_SHOW:[]}
-        sanitize: ${TRACEABILITY_REDACTION_QUERYARGUMENT_SANITIZE:[]}
-      requestHeader:
-        show: ${TRACEABILITY_REDACTION_REQUESTHEADER_SHOW:[]}
-        sanitize: ${TRACEABILITY_REDACTION_REQUESTHEADER_SANITIZE:[]}
-      responseHeader:
-        show: ${TRACEABILITY_REDACTION_RESPONSEHEADER_SHOW:[]}
-        sanitize: ${TRACEABILITY_REDACTION_RESPONSEHEADER_SANITIZE:[]}
+  redaction:
+    path:
+      show: ${TRACEABILITY_REDACTION_PATH_SHOW:[]}
+    queryArgument:
+      show: ${TRACEABILITY_REDACTION_QUERYARGUMENT_SHOW:[]}
+      sanitize: ${TRACEABILITY_REDACTION_QUERYARGUMENT_SANITIZE:[]}
+    requestHeader:
+      show: ${TRACEABILITY_REDACTION_REQUESTHEADER_SHOW:[]}
+      sanitize: ${TRACEABILITY_REDACTION_REQUESTHEADER_SANITIZE:[]}
+    responseHeader:
+      show: ${TRACEABILITY_REDACTION_RESPONSEHEADER_SHOW:[]}
+      sanitize: ${TRACEABILITY_REDACTION_RESPONSEHEADER_SANITIZE:[]}
   ssl:
     enabled: ${TRACEABILITY_ENABLE_SSL:true}
     verification_mode: none
