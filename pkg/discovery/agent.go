@@ -7,6 +7,8 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/Axway/agents-mulesoft/pkg/subscription"
+
 	coreAgent "github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	utilErrors "github.com/Axway/agent-sdk/pkg/util/errors"
@@ -32,9 +34,8 @@ type Agent struct {
 }
 
 // NewAgent creates a new agent
-func NewAgent(cfg *config.AgentConfig, client anypoint.Client) (agent *Agent) {
+func NewAgent(cfg *config.AgentConfig, client anypoint.Client, sm subscription.SchemaHandler) (agent *Agent) {
 	buffer := 5
-	assetCache := cache.New()
 	apiChan := make(chan *ServiceDetail, buffer)
 
 	pub := &publisher{
@@ -44,17 +45,15 @@ func NewAgent(cfg *config.AgentConfig, client anypoint.Client) (agent *Agent) {
 	}
 
 	svcHandler := &serviceHandler{
-		assetCache:          assetCache,
-		freshCache:          cache.New(),
 		stage:               cfg.MulesoftConfig.Environment,
 		discoveryTags:       cleanTags(cfg.MulesoftConfig.DiscoveryTags),
 		discoveryIgnoreTags: cleanTags(cfg.MulesoftConfig.DiscoveryIgnoreTags),
 		client:              client,
+		subscriptionManager: sm,
 	}
 
 	disc := &discovery{
 		apiChan:           apiChan,
-		assetCache:        assetCache,
 		client:            client,
 		discoveryPageSize: 50,
 		pollInterval:      cfg.MulesoftConfig.PollInterval,
@@ -62,21 +61,19 @@ func NewAgent(cfg *config.AgentConfig, client anypoint.Client) (agent *Agent) {
 		serviceHandler:    svcHandler,
 	}
 
-	return newAgent(client, disc, pub, assetCache)
+	return newAgent(client, disc, pub)
 }
 
 func newAgent(
 	client anypoint.Client,
 	discovery Repeater,
 	publisher Repeater,
-	assetCache cache.Cache,
 ) *Agent {
 	return &Agent{
-		client:     client,
-		assetCache: assetCache,
-		discovery:  discovery,
-		publisher:  publisher,
-		stopAgent:  make(chan bool),
+		client:    client,
+		discovery: discovery,
+		publisher: publisher,
+		stopAgent: make(chan bool),
 	}
 }
 
@@ -106,7 +103,7 @@ func (a *Agent) CheckHealth() error {
 
 // Run the agent loop
 func (a *Agent) Run() {
-	validator := validateAPI(a.assetCache)
+	validator := validateAPI()
 	coreAgent.RegisterAPIValidator(validator)
 	coreAgent.OnConfigChange(a.onConfigChange)
 
@@ -132,11 +129,11 @@ func (a *Agent) Stop() {
 }
 
 // validateAPI checks that the API still exists on the data plane. If it doesn't the agent
-// performs cleanup on the API Central environment. The asset cache is populated by the
+// performs cleanup on the API Central environment. The cache is populated by the
 // discovery loop.
-func validateAPI(assetCache cache.Cache) func(apiID, stageName string) bool {
+func validateAPI() func(apiID, stageName string) bool {
 	return func(apiID, stageName string) bool {
-		asset, err := assetCache.Get(formatCacheKey(apiID, stageName))
+		asset, err := cache.GetCache().Get(formatCacheKey(apiID, stageName))
 		if err != nil {
 			log.Warnf("Unable to validate API: %s", err.Error())
 			// If we can't validate it exists then assume it does until known otherwise.

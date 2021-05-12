@@ -4,6 +4,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Axway/agents-mulesoft/pkg/subscription"
+
 	"github.com/Axway/agent-sdk/pkg/cache"
 
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
@@ -22,10 +24,10 @@ func TestCleanTags(t *testing.T) {
 func TestAgent(t *testing.T) {
 	cfg := newConfig()
 	mockClient := &anypoint.MockAnypointClient{}
-	a := NewAgent(cfg, mockClient)
+	mss := &mockSchemaHandler{}
+	a := NewAgent(cfg, mockClient, mss)
 	assert.NotNil(t, a)
 	assert.Equal(t, mockClient, a.client)
-	assert.NotNil(t, a.assetCache)
 	assert.NotNil(t, a.discovery)
 	assert.NotNil(t, a.publisher)
 	assert.NotNil(t, a.stopAgent)
@@ -47,7 +49,7 @@ func TestAgent_Run(t *testing.T) {
 		stopCh: stopPub,
 		hitCh:  pubHit,
 	}
-	a := newAgent(mockClient, disc, pub, cache.New())
+	a := newAgent(mockClient, disc, pub)
 	err := a.CheckHealth()
 	assert.Nil(t, err)
 	go a.Run()
@@ -77,8 +79,11 @@ func Test_validateAPI(t *testing.T) {
 		ID:    apiID,
 		Stage: stageName,
 	}
-	c.Set(formatCacheKey(apiID, stageName), sd)
-	validator := validateAPI(c)
+	err := c.Set(formatCacheKey(apiID, stageName), sd)
+	if err != nil {
+		t.Error(err)
+	}
+	validator := validateAPI()
 	ok := validator(apiID, stageName)
 	assert.True(t, ok)
 }
@@ -132,4 +137,12 @@ func (m mockPublisher) OnConfigChange(*config.MulesoftConfig) {
 
 func (m mockPublisher) Stop() {
 	m.stopCh <- true
+}
+
+type mockSchemaHandler struct{}
+
+func (m *mockSchemaHandler) GetSubscriptionSchemaName(_ config.PolicyDetail) string {
+	return ""
+}
+func (m *mockSchemaHandler) RegisterNewSchema(schema subscription.StateManager) {
 }

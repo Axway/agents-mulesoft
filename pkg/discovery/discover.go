@@ -7,7 +7,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 )
@@ -15,7 +14,6 @@ import (
 // discovery implements the Repeater interface. Polls mulesoft for APIs.
 type discovery struct {
 	apiChan           chan *ServiceDetail
-	assetCache        cache.Cache
 	client            anypoint.ListAssetClient
 	discoveryPageSize int
 	pollInterval      time.Duration
@@ -81,8 +79,4 @@ func (d *discovery) discoverAPIs() {
 			offset += pageSize
 		}
 	}
-
-	// Replacing asset cache rather than updating it
-	freshAssetCache := cache.New()
-	d.assetCache = freshAssetCache
 }

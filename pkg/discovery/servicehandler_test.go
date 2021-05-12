@@ -1,16 +1,29 @@
 package discovery
 
 import (
+	"errors"
 	"fmt"
-	"net/url"
 	"testing"
 	"time"
+
+	corecfg "github.com/Axway/agent-sdk/pkg/config"
+
+	"github.com/Axway/agent-sdk/pkg/agent"
+
+	"github.com/getkin/kin-openapi/openapi2"
+	"github.com/getkin/kin-openapi/openapi3"
+
+	"github.com/Axway/agents-mulesoft/pkg/discovery/mocks"
+
+	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agents-mulesoft/pkg/subscription"
+	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/mock"
 
 	"github.com/Axway/agent-sdk/pkg/apic"
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 )
 
@@ -43,11 +56,11 @@ var exchangeAsset = anypoint.ExchangeAsset{
 
 func TestServiceHandler(t *testing.T) {
 	stage := "Sandbox"
-	content := `{"openapi":"3.0.1","servers":[{"url":"https://abc.com"}]}`
+	content := `{"openapi":"3.0.1","servers":[{"url":"https://abc.com"}], "paths":{}, "info":{"title":"petstore3"}}`
 	policies := anypoint.Policies{Policies: []anypoint.Policy{
 		{
 			Template: anypoint.Template{
-				AssetId: anypoint.ClientID,
+				AssetID: anypoint.ClientID,
 			},
 		},
 	}}
@@ -56,15 +69,18 @@ func TestServiceHandler(t *testing.T) {
 	mc.On("GetExchangeAsset").Return(&exchangeAsset, nil)
 	mc.On("GetExchangeFileContent").Return([]byte(content), nil)
 	mc.On("GetExchangeAssetIcon").Return("", "", nil)
+
+	msh := &mockSchemaHandler{}
 	sh := &serviceHandler{
-		assetCache:          cache.New(),
-		freshCache:          cache.New(),
 		stage:               stage,
 		discoveryTags:       []string{"tag1"},
 		discoveryIgnoreTags: []string{"nah"},
 		client:              mc,
+		subscriptionManager: msh,
 	}
+
 	details := sh.ToServiceDetails(&asset)
+
 	assert.Equal(t, 1, len(details))
 	item := details[0]
 	assert.Equal(t, asset.APIs[0].AssetID, item.APIName)
@@ -78,20 +94,56 @@ func TestServiceHandler(t *testing.T) {
 	assert.NotEmpty(t, item.ServiceAttributes["checksum"])
 }
 
+func TestServiceHandlerSLAPolicy(t *testing.T) {
+	cc := &mocks.MockCentralClient{}
+	cc.On("RegisterSubscriptionSchema").Return(nil)
+	agent.Initialize(&corecfg.CentralConfiguration{
+		UpdateFromAPIServer: false,
+	})
+	agent.InitializeForTest(cc)
+	stage := "Sandbox"
+	content := `{"openapi":"3.0.1","servers":[{"url":"https://abc.com"}], "paths":{}, "info":{"title":"petstore3"}}`
+	policies := anypoint.Policies{Policies: []anypoint.Policy{
+		{
+			Template: anypoint.Template{
+				AssetID: anypoint.SlaAuth,
+			},
+		},
+	}}
+	mc := &anypoint.MockAnypointClient{}
+	mc.On("GetPolicies").Return(policies, nil)
+	mc.On("GetExchangeAsset").Return(&exchangeAsset, nil)
+	mc.On("GetExchangeFileContent").Return([]byte(content), nil)
+	mc.On("GetExchangeAssetIcon").Return("", "", nil)
+
+	msh := &mockSchemaHandler{}
+	sh := &serviceHandler{
+		stage:               stage,
+		discoveryTags:       []string{"tag1"},
+		discoveryIgnoreTags: []string{"nah"},
+		client:              mc,
+		subscriptionManager: msh,
+	}
+
+	details := sh.ToServiceDetails(&asset)
+
+	assert.Equal(t, 1, len(details))
+	assert.Equal(t, fmt.Sprint(apiID), details[0].SubscriptionName)
+
+}
+
 func TestServiceHandlerDidNotDiscoverAPI(t *testing.T) {
 	stage := "Sandbox"
 	policies := anypoint.Policies{Policies: []anypoint.Policy{
 		{
 			Template: anypoint.Template{
-				AssetId: anypoint.ClientID,
+				AssetID: anypoint.ClientID,
 			},
 		},
 	}}
 	mc := &anypoint.MockAnypointClient{}
 	mc.On("GetPolicies").Return(policies, nil)
 	sh := &serviceHandler{
-		assetCache:          cache.New(),
-		freshCache:          cache.New(),
 		stage:               stage,
 		discoveryTags:       []string{"nothing"},
 		discoveryIgnoreTags: []string{"nah"},
@@ -109,8 +161,6 @@ func TestServiceHandlerGetPolicyError(t *testing.T) {
 	expectedErr := fmt.Errorf("failed to get policies")
 	mc.On("GetPolicies").Return(policies, expectedErr)
 	sh := &serviceHandler{
-		assetCache:          cache.New(),
-		freshCache:          cache.New(),
 		stage:               stage,
 		discoveryTags:       []string{},
 		discoveryIgnoreTags: []string{},
@@ -130,12 +180,11 @@ func TestServiceHandlerGetExchangeAssetError(t *testing.T) {
 	mc.On("GetPolicies").Return(policies, nil)
 	mc.On("GetExchangeAsset").Return(&anypoint.ExchangeAsset{}, expectedErr)
 	sh := &serviceHandler{
-		assetCache:          cache.New(),
-		freshCache:          cache.New(),
 		stage:               stage,
 		discoveryTags:       []string{},
 		discoveryIgnoreTags: []string{},
 		client:              mc,
+		subscriptionManager: &mockSchemaHandler{},
 	}
 	sd, err := sh.getServiceDetail(&asset, &asset.APIs[0])
 
@@ -276,89 +325,6 @@ func TestGetExchangeAssetSpecFile(t *testing.T) {
 	}
 }
 
-func TestSetOAS2Endpoint(t *testing.T) {
-	tests := []struct {
-		name        string
-		endPointURL string
-		specContent []byte
-		result      []byte
-		err         error
-	}{
-		{
-			name:        "Should return error if Endpoint URL is not valid",
-			endPointURL: "postgres://user:abc{def=ghi@sdf.com:5432",
-			specContent: []byte(`{"basePath":"google.com","host":"","schemes":[""],"swagger":"2.0"}`),
-			result:      []byte(`{"basePath":"google.com","host":"","schemes":[""],"swagger":"2.0"}`),
-			err: &url.Error{
-				Op:  "parse",
-				URL: "postgres://user:abc{def=ghi@sdf.com:5432",
-				Err: fmt.Errorf("net/url: invalid userinfo"),
-			},
-		},
-		{
-			name:        "Should return error if the spec content is not a valid JSON",
-			endPointURL: "http://google.com",
-			specContent: []byte("google.com"),
-			result:      []byte("google.com"),
-			err:         fmt.Errorf("invalid character 'g' looking for beginning of value"),
-		},
-		{
-			name:        "Should return spec that has OAS2 endpoint set",
-			endPointURL: "http://google.com",
-			specContent: []byte(`{"basePath":"google.com","host":"","schemes":[""],"swagger":"2.0"}`),
-			result:      []byte(`{"basePath":"/","host":"google.com","schemes":["http"],"swagger":"2.0"}`),
-			err:         nil,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			spec, err := setOAS2Endpoint(tc.endPointURL, tc.specContent)
-
-			if err != nil {
-				assert.Equal(t, tc.err.Error(), err.Error())
-			}
-
-			assert.Equal(t, tc.result, spec)
-		})
-	}
-}
-
-func TestSetOAS3Endpoint(t *testing.T) {
-	tests := []struct {
-		name        string
-		url         string
-		specContent []byte
-		result      []byte
-		err         error
-	}{
-		{
-			name:        "Should return error if the spec content is not a valid JSON",
-			url:         "google.com",
-			specContent: []byte("google.com"),
-			result:      []byte("google.com"),
-			err:         fmt.Errorf("invalid character 'g' looking for beginning of value"),
-		},
-		{
-			name:        "Should return spec that has OAS3 endpoint set",
-			url:         "google.com",
-			specContent: []byte(`{"openapi": "3.0.1"}`),
-			result:      []byte(`{"openapi":"3.0.1","servers":[{"url":"google.com"}]}`),
-			err:         nil,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			spec, err := setOAS3Endpoint(tc.url, tc.specContent)
-			if err != nil {
-				assert.Equal(t, tc.err.Error(), err.Error())
-			}
-			assert.Equal(t, tc.result, spec)
-		})
-	}
-}
-
 func Test_checksum(t *testing.T) {
 	s1 := checksum(&asset, apic.Passthrough)
 	s2 := checksum(&asset, anypoint.ClientID)
@@ -379,7 +345,7 @@ func Test_getAuthPolicy(t *testing.T) {
 				Policies: []anypoint.Policy{
 					{
 						Template: anypoint.Template{
-							AssetId: anypoint.ClientID,
+							AssetID: anypoint.ClientID,
 						},
 					},
 				},
@@ -392,7 +358,7 @@ func Test_getAuthPolicy(t *testing.T) {
 				Policies: []anypoint.Policy{
 					{
 						Template: anypoint.Template{
-							AssetId: anypoint.ExternalOauth,
+							AssetID: anypoint.ExternalOauth,
 						},
 					},
 				},
@@ -405,12 +371,12 @@ func Test_getAuthPolicy(t *testing.T) {
 				Policies: []anypoint.Policy{
 					{
 						Template: anypoint.Template{
-							AssetId: "fake",
+							AssetID: "fake",
 						},
 					},
 					{
 						Template: anypoint.Template{
-							AssetId: anypoint.ClientID,
+							AssetID: anypoint.ClientID,
 						},
 					},
 				},
@@ -424,7 +390,7 @@ func Test_getAuthPolicy(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			policy := getAuthPolicy(tc.policies)
+			policy, _, _ := getAuthPolicy(tc.policies)
 			assert.Equal(t, policy, tc.expected)
 		})
 	}
@@ -526,7 +492,7 @@ openapi: 3.0.1
 	}
 }
 
-func Test_updateSpecEndpoints(t *testing.T) {
+func Test_updateSpec(t *testing.T) {
 	tests := []struct {
 		name            string
 		specType        string
@@ -538,33 +504,33 @@ func Test_updateSpecEndpoints(t *testing.T) {
 		{
 			name:            "should update an OAS 2 spec with APIKey security",
 			specType:        apic.Oas2,
-			endpoint:        "https://abc.com/v1",
-			content:         []byte(`{"basePath":"/v2","host":"oldhost.com","schemes":["http"],"swagger":"2.0"}`),
-			expectedContent: []byte(`{"schemes":["https"],"swagger":"2.0","host":"abc.com","basePath":"/v1","paths":null,"definitions":null,"securityDefinitions":{"client-id-enforcement":{"description":"Provided as: client_id:\u003cINSERT_VALID_CLIENTID_HERE\u003e client_secret:\u003cINSERT_VALID_SECRET_HERE\u003e","type":"apiKey","name":"Authorization","in":"header"}}}`),
+			endpoint:        "https://newhost.com/v1",
+			content:         []byte(`{"basePath": "/v2","host": "oldhost.com","schemes": ["http"],"swagger": "2.0","info": {"title": "petstore2"},"paths": {}}`),
+			expectedContent: []byte(`{"basePath":"/v1","host":"newhost.com","info":{"title":"petstore2","version":""},"schemes":["https"],"securityDefinitions":{"client-id-enforcement":{"description":"Provided as: client_id:\u003cINSERT_VALID_CLIENTID_HERE\u003e \n\n client_secret:\u003cINSERT_VALID_SECRET_HERE\u003e\n\n","in":"header","name":"authorization","type":"apiKey"}},"swagger":"2.0"}`),
 			authPolicy:      apic.Apikey,
 		},
 		{
 			name:            "should update an OAS 2 spec with OAuth security",
 			specType:        apic.Oas2,
-			endpoint:        "https://abc.com/v1",
-			content:         []byte(`{"basePath":"/v2","host":"oldhost.com","schemes":["http"],"swagger":"2.0"}`),
-			expectedContent: []byte(`{"schemes":["https"],"swagger":"2.0","host":"abc.com","basePath":"/v1","paths":null,"definitions":null,"securityDefinitions":{"oauth":{"type":"oauth2","flow":"implicit","authorizationUrl":"dummy.io"}}}`),
+			endpoint:        "https://newhost.com/v1",
+			content:         []byte(`{"basePath":"/v2","host":"oldhost.com","schemes":["http"],"swagger":"2.0","info":{"title":"petstore2"},"paths":{}}`),
+			expectedContent: []byte(`{"basePath":"/v1","host":"newhost.com","info":{"title":"petstore2","version":""},"schemes":["https"],"securityDefinitions":{"oauth2":{"description":"This API supports OAuth 2.0 for authenticating all API requests","flow":"accessCode","type":"oauth2"}},"swagger":"2.0"}`),
 			authPolicy:      apic.Oauth,
 		},
 		{
 			name:            "should update an OAS 3 spec with OAuth security",
 			specType:        apic.Oas3,
 			endpoint:        "https://abc.com",
-			content:         []byte(`{"openapi":"3.0.1","servers":[{"url":"google.com"}]}`),
-			expectedContent: []byte(`{"openapi":"3.0.1","components":{"securitySchemes":{"Oauth":{"description":"This API uses OAuth 2 with the implicit grant flow","flows":{"implicit":{"authorizationUrl":"dummy.io","scopes":{}}},"type":"oauth2"}}},"info":{"title":"","version":""},"paths":null,"servers":[{"url":"https://abc.com"}]}`),
+			content:         []byte(`{"openapi":"3.0.1","servers":[{"url":"google.com"}],"paths":{},"info":{"title":"petstore3"}}`),
+			expectedContent: []byte(`{"components":{"securitySchemes":{"oauth2":{"description":"This API supports OAuth 2.0 for authenticating all API requests","flows":{"authorizationCode":{"scopes":{}}},"type":"oauth2"}}},"info":{"title":"petstore3","version":""},"openapi":"3.0.1","paths":{},"servers":[{"url":"https://abc.com"}]}`),
 			authPolicy:      apic.Oauth,
 		},
 		{
 			name:            "should update an OAS 3 spec with APIKey security",
 			specType:        apic.Oas3,
 			endpoint:        "https://abc.com",
-			content:         []byte(`{"openapi":"3.0.1","servers":[{"url":"google.com"}]}`),
-			expectedContent: []byte(`{"openapi":"3.0.1","components":{"securitySchemes":{"client-id-enforcement":{"description":"Provided as: client_id:\u003cINSERT_VALID_CLIENTID_HERE\u003e client_secret:\u003cINSERT_VALID_SECRET_HERE\u003e","in":"header","name":"Authorization","type":"apiKey"}}},"info":{"title":"","version":""},"paths":null,"servers":[{"url":"https://abc.com"}]}`),
+			content:         []byte(`{"openapi":"3.0.1","servers":[{"url":"google.com"}],"paths":{},"info":{"title":"petstore3"}}`),
+			expectedContent: []byte(`{"components":{"securitySchemes":{"client-id-enforcement":{"description":"Provided as: client_id:\u003cINSERT_VALID_CLIENTID_HERE\u003e \n\n client_secret:\u003cINSERT_VALID_SECRET_HERE\u003e\n\n","in":"header","name":"authorization","type":"apiKey"}}},"info":{"title":"petstore3","version":""},"openapi":"3.0.1","paths":{},"servers":[{"url":"https://abc.com"}]}`),
 			authPolicy:      apic.Apikey,
 		},
 		{
@@ -577,7 +543,7 @@ func Test_updateSpecEndpoints(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			content, err := updateSpec(tc.specType, tc.endpoint, tc.authPolicy, tc.content)
+			content, err := updateSpec(tc.specType, tc.endpoint, tc.authPolicy, nil, tc.content)
 			assert.Nil(t, err)
 			assert.Equal(t, tc.expectedContent, content)
 		})
@@ -585,5 +551,262 @@ func Test_updateSpecEndpoints(t *testing.T) {
 }
 
 func Test_setOAS2policies(t *testing.T) {
+	tests := []struct {
+		name            string
+		configuration   map[string]interface{}
+		content         *openapi2.T
+		expectedContent []byte
+		authPolicy      string
+	}{
+		{
+			name:          "should apply APIKey security policy with no configuration",
+			configuration: nil,
+			content: &openapi2.T{
+				Swagger: "2.0",
+				Info: openapi3.Info{
+					Title: "petstore2",
+				},
+				Schemes:  []string{"http"},
+				Host:     "oldhost.com",
+				BasePath: "/v2",
+				Paths:    nil,
+			},
+			expectedContent: []byte(`{"basePath":"/v2","host":"oldhost.com","info":{"title":"petstore2","version":""},"schemes":["http"],"securityDefinitions":{"client-id-enforcement":{"description":"Provided as: client_id:\u003cINSERT_VALID_CLIENTID_HERE\u003e \n\n client_secret:\u003cINSERT_VALID_SECRET_HERE\u003e\n\n","in":"header","name":"authorization","type":"apiKey"}},"swagger":"2.0"}`),
+			authPolicy:      apic.Apikey,
+		},
+		{
+			name:          "should apply APIKey security policy with Custom configuration set as Basic Auth",
+			configuration: map[string]interface{}{anypoint.CredOrigin: "httpBasicAuthenticationHeader"},
+			content: &openapi2.T{
+				Swagger: "2.0",
+				Info: openapi3.Info{
+					Title: "petstore2",
+				},
+				Schemes:  []string{"http"},
+				Host:     "oldhost.com",
+				BasePath: "/v2",
+				Paths:    nil,
+			},
+			expectedContent: []byte(`{"basePath":"/v2","host":"oldhost.com","info":{"title":"petstore2","version":""},"schemes":["http"],"securityDefinitions":{"client-id-enforcement":{"description":"Provided as: client_id:\u003cINSERT_VALID_CLIENTID_HERE\u003e \n\n client_secret:\u003cINSERT_VALID_SECRET_HERE\u003e\n\nhttpBasicAuthenticationHeader","in":"header","name":"authorization","type":"apiKey"}},"swagger":"2.0"}`),
+			authPolicy:      apic.Apikey,
+		},
+		{
+			name:          "should apply OAuth security policy with no scope",
+			configuration: map[string]interface{}{anypoint.TokenUrl: "www.test.com"},
+			content: &openapi2.T{
+				Swagger: "2.0",
+				Info: openapi3.Info{
+					Title: "petstore2",
+				},
+				Schemes:  []string{"http"},
+				Host:     "oldhost.com",
+				BasePath: "/v2",
+				Paths:    nil,
+			},
+			expectedContent: []byte(`{"basePath":"/v2","host":"oldhost.com","info":{"title":"petstore2","version":""},"schemes":["http"],"securityDefinitions":{"oauth2":{"authorizationUrl":"www.test.com","description":"This API supports OAuth 2.0 for authenticating all API requests","flow":"accessCode","tokenUrl":"www.test.com","type":"oauth2"}},"swagger":"2.0"}`),
+			authPolicy:      apic.Oauth,
+		},
+		{
+			name:          "should apply OAuth security policy with scopes",
+			configuration: map[string]interface{}{anypoint.TokenUrl: "www.test.com", anypoint.Scopes: "read,write"},
+			content: &openapi2.T{
+				Swagger: "2.0",
+				Info: openapi3.Info{
+					Title: "petstore2",
+				},
+				Schemes:  []string{"http"},
+				Host:     "oldhost.com",
+				BasePath: "/v2",
+				Paths:    nil,
+			},
+			expectedContent: []byte(`{"basePath":"/v2","host":"oldhost.com","info":{"title":"petstore2","version":""},"schemes":["http"],"securityDefinitions":{"oauth2":{"authorizationUrl":"www.test.com","description":"This API supports OAuth 2.0 for authenticating all API requests","flow":"accessCode","scopes":{"scopes":"read,write"},"tokenUrl":"www.test.com","type":"oauth2"}},"swagger":"2.0"}`),
+			authPolicy:      apic.Oauth,
+		},
+		// {
+		// 	name:          "should return error when authPolicy type is not supported ",
+		// 	configuration: nil,
+		// 	content: &openapi2.T{
+		// 		Swagger: "2.0",
+		// 		Info: openapi3.Info{
+		// 			Title: "petstore2",
+		// 		},
+		// 		Schemes:  []string{"http"},
+		// 		Host:     "oldhost.com",
+		// 		BasePath: "/v2",
+		// 		Paths:    nil,
+		// 	},
+		// 	expectedContent: []byte(`{"basePath":"/v2","host":"oldhost.com","schemes":["http"],"swagger":"2.0"}`),
+		// 	authPolicy:      "JWTToken",
+		// },
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			content, err := setOAS2policies(tc.content, tc.authPolicy, tc.configuration)
+			if tc.authPolicy != apic.Oauth && tc.authPolicy != apic.Apikey {
+				assert.NotNil(t, err)
+			} else {
+				assert.Nil(t, err)
+				assert.Equal(t, tc.expectedContent, content)
 
+			}
+		})
+	}
+}
+
+func Test_setOAS3policies(t *testing.T) {
+	tests := []struct {
+		name            string
+		configuration   map[string]interface{}
+		content         *openapi3.T
+		expectedContent []byte
+		authPolicy      string
+	}{
+		{
+			name:          "should apply APIKey security policy with no configuration",
+			configuration: nil,
+			content: &openapi3.T{
+				OpenAPI: "3.0.1",
+				Info: &openapi3.Info{
+					Title: "petstore3",
+				},
+				Servers: openapi3.Servers{{URL: "http://google.com"}},
+			},
+			expectedContent: []byte(`{"components":{"securitySchemes":{"client-id-enforcement":{"description":"Provided as: client_id:\u003cINSERT_VALID_CLIENTID_HERE\u003e \n\n client_secret:\u003cINSERT_VALID_SECRET_HERE\u003e\n\n","in":"header","name":"authorization","type":"apiKey"}}},"info":{"title":"petstore3","version":""},"openapi":"3.0.1","paths":null,"servers":[{"url":"http://google.com"}]}`),
+			authPolicy:      apic.Apikey,
+		},
+		{
+			name:          "should apply APIKey security policy with Custom configuration set as Basic Auth",
+			configuration: map[string]interface{}{anypoint.CredOrigin: "httpBasicAuthenticationHeader"},
+			content: &openapi3.T{
+				OpenAPI: "3.0.1",
+				Info: &openapi3.Info{
+					Title: "petstore3",
+				},
+				Servers: openapi3.Servers{{URL: "http://google.com"}},
+			},
+			expectedContent: []byte(`{"components":{"securitySchemes":{"client-id-enforcement":{"description":"Provided as: client_id:\u003cINSERT_VALID_CLIENTID_HERE\u003e \n\n client_secret:\u003cINSERT_VALID_SECRET_HERE\u003e\n\nhttpBasicAuthenticationHeader","in":"header","name":"authorization","type":"apiKey"}}},"info":{"title":"petstore3","version":""},"openapi":"3.0.1","paths":null,"servers":[{"url":"http://google.com"}]}`),
+			authPolicy:      apic.Apikey,
+		},
+		{
+			name:          "should apply OAuth security policy with no scope",
+			configuration: map[string]interface{}{anypoint.TokenUrl: "www.test.com"},
+			content: &openapi3.T{
+				OpenAPI: "3.0.1",
+				Info: &openapi3.Info{
+					Title: "petstore3",
+				},
+				Servers: openapi3.Servers{{URL: "http://google.com"}},
+			},
+			expectedContent: []byte(`{"components":{"securitySchemes":{"oauth2":{"description":"This API supports OAuth 2.0 for authenticating all API requests","flows":{"authorizationCode":{"authorizationUrl":"www.test.com","scopes":{},"tokenUrl":"www.test.com"}},"type":"oauth2"}}},"info":{"title":"petstore3","version":""},"openapi":"3.0.1","paths":null,"servers":[{"url":"http://google.com"}]}`),
+			authPolicy:      apic.Oauth,
+		},
+		{
+			name:          "should apply OAuth security policy with scopes",
+			configuration: map[string]interface{}{anypoint.TokenUrl: "www.test.com", anypoint.Scopes: "read,write"},
+			content: &openapi3.T{
+				OpenAPI: "3.0.1",
+				Info: &openapi3.Info{
+					Title: "petstore3",
+				},
+				Servers: openapi3.Servers{{URL: "http://google.com"}},
+			},
+			expectedContent: []byte(`{"components":{"securitySchemes":{"oauth2":{"description":"This API supports OAuth 2.0 for authenticating all API requests","flows":{"authorizationCode":{"authorizationUrl":"www.test.com","scopes":{"scopes":"read,write"},"tokenUrl":"www.test.com"}},"type":"oauth2"}}},"info":{"title":"petstore3","version":""},"openapi":"3.0.1","paths":null,"servers":[{"url":"http://google.com"}]}`),
+			authPolicy:      apic.Oauth,
+		},
+		// {
+		// 	name:            "should return error when authPolicy type is not supported",
+		// 	configuration:   nil,
+		// 	content:         []byte(`{"openapi":"3.0.1","servers":[{"url":"google.com"}]}`),
+		// 	expectedContent: []byte(`{"openapi":"3.0.1","servers":[{"url":"google.com"}]}`),
+		// 	authPolicy:      "JWTToken",
+		// },
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			content, err := setOAS3policies(tc.content, tc.authPolicy, tc.configuration)
+			if tc.authPolicy != apic.Oauth && tc.authPolicy != apic.Apikey {
+				assert.NotNil(t, err)
+			} else {
+				assert.Nil(t, err)
+				assert.Equal(t, tc.expectedContent, content)
+			}
+		})
+	}
+}
+
+type mockConsumerInstanceGetter struct {
+	mock.Mock
+}
+
+func (m *mockConsumerInstanceGetter) GetConsumerInstanceByID(string) (*v1alpha1.ConsumerInstance, error) {
+	args := m.Called()
+	ci := args.Get(0).(*v1alpha1.ConsumerInstance)
+	return ci, args.Error(1)
+}
+
+type mockSubscriptionGetter struct {
+	mock.Mock
+}
+
+func (m *mockSubscriptionGetter) GetSubscriptionsForCatalogItem([]string, string) ([]apic.CentralSubscription, error) {
+	args := m.Called()
+	cs := args.Get(0).([]apic.CentralSubscription)
+	return cs, args.Error(1)
+}
+
+func getSLATierInfo() (*anypoint.Tiers, *serviceHandler, *mocks.MockCentralClient) {
+	stage := "Sandbox"
+	mc := &anypoint.MockAnypointClient{}
+	tiers := anypoint.Tiers{
+		Total: 2,
+		Tiers: []anypoint.SLATier{{
+			ID:   123,
+			Name: "Gold",
+			Limits: []anypoint.Limits{{
+				TimePeriodInMilliseconds: 1000,
+				MaximumRequests:          10,
+			}},
+		}, {
+			ID:   456,
+			Name: "Silver",
+			Limits: []anypoint.Limits{{
+				TimePeriodInMilliseconds: 1000,
+				MaximumRequests:          1,
+			}},
+		}},
+	}
+
+	cig := &mockConsumerInstanceGetter{}
+
+	sm := subscription.New(logrus.StandardLogger(), cig)
+
+	sh := &serviceHandler{
+		stage:               stage,
+		discoveryTags:       []string{},
+		discoveryIgnoreTags: []string{},
+		client:              mc,
+		subscriptionManager: sm,
+	}
+
+	return &tiers, sh, &mocks.MockCentralClient{}
+}
+
+func TestCreateSubscriptionSchemaForSLATier(t *testing.T) {
+	tiers, sh, mcc := getSLATierInfo()
+
+	mcc.On("RegisterSubscriptionSchema").Return(nil)
+
+	_, err := sh.createSubscriptionSchemaForSLATier("1", tiers, mcc)
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func TestSLATierSchemaSubscriptionCreateFailure(t *testing.T) {
+	tiers, sh, mcc := getSLATierInfo()
+
+	mcc.On("RegisterSubscriptionSchema").Return(errors.New("Cannot register subscription schema"))
+	_, err := sh.createSubscriptionSchemaForSLATier("1", tiers, mcc)
+
+	assert.NotNil(t, err)
 }

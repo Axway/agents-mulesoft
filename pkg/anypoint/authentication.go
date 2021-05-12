@@ -90,7 +90,7 @@ func (a *auth) GetToken() string {
 	return a.token
 }
 
-// GetOrgID returns the organization Id of the currently authenticated user.
+// GetOrgID returns the organization ID of the currently authenticated user.
 func (a *auth) GetOrgID() string {
 	if a.user != nil {
 		return a.user.Organization.ID

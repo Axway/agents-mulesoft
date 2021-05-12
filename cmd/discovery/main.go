@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/Axway/agents-mulesoft/pkg/cmd/discovery"
+	_ "github.com/Axway/agents-mulesoft/pkg/subscription/clientid"
 )
 
 func main() {
