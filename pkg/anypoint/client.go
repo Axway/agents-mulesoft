@@ -114,6 +114,9 @@ func (c *AnypointClient) OnConfigChange(mulesoftConfig *config.MulesoftConfig) {
 	}
 
 	c.environment, err = c.GetEnvironmentByName(mulesoftConfig.Environment)
+	if c.environment == nil {
+		logrus.Fatalf("Failed to connect to Mulesoft. Environment for '%s' not found", mulesoftConfig.Environment)
+	}
 	if err != nil {
 		logrus.Fatalf("Failed to connect to Mulesoft environment %s: %s", mulesoftConfig.Environment, err.Error())
 	}
