@@ -1,49 +1,74 @@
-mulesoft_traceability_agent:
+apic_traceability_agent:
   central:
-    url: "${CENTRAL_URL:https://apicentral.axway.com}"
-    organizationID: "${CENTRAL_ORGANIZATIONID}"
-    team: ${CENTRAL_TEAM:""}
+    agentName: ${CENTRAL_AGENTNAME:""}
     deployment: "${CENTRAL_DEPLOYMENT:prod}"
     environment: "${CENTRAL_ENVIRONMENT}"
-    agentName: ${CENTRAL_AGENTNAME:""}
-    platformURL: "${CENTRAL_PLATFORMURL:https://platform.axway.com}"
-    platformEnvironmentId: ${CENTRAL_PLATFORMENVIRONMENTID:""}
-    lighthouseURL: ${CENTRAL_LIGHTHOUSEURL:"https://lighthouse.admin.axway.com"}
-    publishUsage: ${CENTRAL_PUBLISHUSAGE:true}
-    publishTraffic: ${CENTRAL_PUBLISHTRAFFIC:true}
     eventAggregationInterval: ${CENTRAL_EVENTAGGREGATIONINTERVAL:5m}
+    lighthouseURL: ${CENTRAL_LIGHTHOUSEURL:"https://lighthouse.admin.axway.com"}
+    organizationID: "${CENTRAL_ORGANIZATIONID}"
+    platformEnvironmentId: ${CENTRAL_PLATFORMENVIRONMENTID:""}
+    platformURL: "${CENTRAL_PLATFORMURL:https://platform.axway.com}"
+    pollInterval: ${CENTRAL_POLLINTERVAL:20s}
+    publishTraffic: ${CENTRAL_PUBLISHTRAFFIC:true}
+    publishUsage: ${CENTRAL_PUBLISHUSAGE:true}
     reportActivityFrequency: ${CENTRAL_REPORTACTIVITYFREQUENCY:5m}
-    pollInterval: 10s
+    team: ${CENTRAL_TEAM:""}
+    url: "${CENTRAL_URL:https://apicentral.axway.com}"
     auth:
-      url: "${CENTRAL_AUTH_URL:https://login.axway.com/auth}"
-      realm: "${CENTRAL_AUTH_REALM:Broker}"
       clientId: "${CENTRAL_AUTH_CLIENTID}"
+      keyPassword: ${CENTRAL_AUTH_KEYPASSWORD:""}
       privateKey: "${CENTRAL_AUTH_PRIVATEKEY:/keys/private_key.pem}"
       publicKey: "${CENTRAL_AUTH_PUBLICKEY:/keys/public_key.pem}"
-      keyPassword: ${CENTRAL_AUTH_KEYPASSWORD:""}
+      realm: "${CENTRAL_AUTH_REALM:Broker}"
+      url: "${CENTRAL_AUTH_URL:https://login.axway.com/auth}"
+    ssl:
+      cipherSuites: ${CENTRAL_SSL_CIPHERSUITES:["ECDHE-ECDSA-AES-256-GCM-SHA384", "ECDHE-RSA-AES-256-GCM-SHA384", "ECDHE-ECDSA-CHACHA20-POLY1305", "ECDHE-RSA-CHACHA20-POLY1305", "ECDHE-ECDSA-AES-128-GCM-SHA256", "ECDHE-RSA-AES-128-GCM-SHA256", "ECDHE-ECDSA-AES-128-CBC-SHA256", "ECDHE-RSA-AES-128-CBC-SHA256"]}
+      insecureSkipVerify: ${CENTRAL_SSL_INSECURESKIPVERIFY:false}
+      maxVersion: ${CENTRAL_SSL_MAXVERSION:"TLS1.3"}
+      minVersion: ${CENTRAL_SSL_MINVERSION:"TLS1.2"}
+      nextProtos: ${CENTRAL_SSL_NEXTPROTOS:[]}
+      # End Central Config
 
   log:
-    level: debug
-    format: json
-    output: stdout
-    path: logs
-
+    format: ${LOG_FORMAT:json}
+    level: ${LOG_LEVEL:info}
+    output: ${LOG_OUTPUT:stdout}
   mulesoft:
-    environment: "${MULESOFT_ENVIRONMENT:Sandbox}"
+    environment: "${MULESOFT_ENVIRONMENT}"
     cachePath: "${MULESOFT_CACHEPATH:/tmp}"
-    pollInterval: "${MULESOFT_POLLINTERVAL:20s}"
+    pollInterval: ${MULESOFT_POLLINTERVAL:20s}
     auth:
-      username: "${MULESOFT_USERNAME}"
-      password: "${MULESOFT_PASSWORD}"
+      username: "${MULESOFT_AUTH_USERNAME}"
+      password: "${MULESOFT_AUTH_PASSWORD}"
 
+# Condor Ingestion service
 output.traceability:
+  bulk_max_size: ${TRACEABILITY_BULKMAXSIZE:100}
+  compression_level: ${TRACEABILITY_COMPRESSIONLEVEL:3}
   enabled: true
+  loadbalance: ${TRACEABILITY_LOADBALANCE:true}
+  pipelining: ${TRACEABILITY_PIPELINING:0}
+  protocol: ${TRACEABILITY_PROTOCOL:"tcp"}
+  proxy_url: ${TRACEABILITY_PROXYURL:""}
+  slow_start: ${TRACEABILITY_SLOWSTART:true}
+  timeout: ${TRACEABILITY_TIMEOUT:300s}
+  worker: ${TRACEABILITY_WORKER:2}
   hosts:
     - ${TRACEABILITY_HOST:"ingestion-lumberjack.datasearch.axway.com:453"}
-  protocol: ${TRACEABILITY_PROTOCOL:"tcp"}
-  compression_level: ${TRACEABILITY_COMPRESSIONLEVEL:3}
+  redaction:
+    path:
+      show: ${TRACEABILITY_REDACTION_PATH_SHOW:[]}
+    queryArgument:
+      show: ${TRACEABILITY_REDACTION_QUERYARGUMENT_SHOW:[]}
+      sanitize: ${TRACEABILITY_REDACTION_QUERYARGUMENT_SANITIZE:[]}
+    requestHeader:
+      show: ${TRACEABILITY_REDACTION_REQUESTHEADER_SHOW:[]}
+      sanitize: ${TRACEABILITY_REDACTION_REQUESTHEADER_SANITIZE:[]}
+    responseHeader:
+      show: ${TRACEABILITY_REDACTION_RESPONSEHEADER_SHOW:[]}
+      sanitize: ${TRACEABILITY_REDACTION_RESPONSEHEADER_SANITIZE:[]}
   ssl:
-    enabled: true
+    enabled: ${TRACEABILITY_ENABLE_SSL:true}
     verification_mode: none
     cipher_suites:
       - "ECDHE-ECDSA-AES-128-GCM-SHA256"
@@ -53,9 +78,6 @@ output.traceability:
       - "ECDHE-RSA-AES-128-GCM-SHA256"
       - "ECDHE-RSA-AES-256-GCM-SHA384"
       - "ECDHE-RSA-CHACHA20-POLY1205"
-  worker: 1
-  pipelining: 0
-  proxy_url: ${TRACEABILITY_PROXYURL:""}
 
 logging:
   metrics:

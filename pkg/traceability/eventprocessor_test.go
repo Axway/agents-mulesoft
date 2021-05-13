@@ -152,6 +152,10 @@ responseHeader:
 // eventGeneratorMock - mock event generator
 type eventGeneratorMock struct{}
 
+func (c *eventGeneratorMock) CreateEvents(transaction.LogEvent, []transaction.LogEvent, time.Time, common.MapStr, common.MapStr, interface{}) (events []beat.Event, err error) {
+	return nil, nil
+}
+
 // CreateEvent - Creates a new mocked event for tests
 func (c *eventGeneratorMock) CreateEvent(
 	logEvent transaction.LogEvent,
@@ -188,10 +192,15 @@ func setupConfig() {
 	}
 	agentConfig.CentralConfig.SetEnvironmentID(EnvID)
 	agentConfig.CentralConfig.SetTeamID(TeamID)
+	config.SetConfig(agentConfig)
 	agent.Initialize(agentConfig.CentralConfig)
 }
 
 type eventGenMockErr struct{}
+
+func (c *eventGenMockErr) CreateEvents(transaction.LogEvent, []transaction.LogEvent, time.Time, common.MapStr, common.MapStr, interface{}) (events []beat.Event, err error) {
+	return nil, nil
+}
 
 func (c *eventGenMockErr) CreateEvent(
 	_ transaction.LogEvent,
