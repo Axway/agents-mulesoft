@@ -22,7 +22,8 @@ import (
 )
 
 const (
-	CacheKeyTimeStamp = "LAST_RUN"
+	CacheKeyTimeStamp   = "LAST_RUN"
+	HealthCheckEndpoint = "mulesoft"
 )
 
 // Page describes the page query parameter
@@ -88,7 +89,7 @@ func NewClient(mulesoftConfig *config.MulesoftConfig, options ...ClientOptions) 
 	}
 	client.OnConfigChange(mulesoftConfig)
 
-	hc.RegisterHealthcheck("Mulesoft Anypoint Exchange", "mulesoft", client.healthcheck)
+	hc.RegisterHealthcheck("Mulesoft Anypoint Exchange", HealthCheckEndpoint, client.healthcheck)
 	// TODO: handle error
 
 	return client
@@ -109,10 +110,13 @@ func (c *AnypointClient) OnConfigChange(mulesoftConfig *config.MulesoftConfig) {
 	var err error
 	c.auth, err = NewAuth(c)
 	if err != nil {
-		logrus.Fatalf("Failed to authenticate: %s", err.Error())
+		logrus.Fatalf("Failed to authenticate with Mulesoft: %s", err.Error())
 	}
 
 	c.environment, err = c.GetEnvironmentByName(mulesoftConfig.Environment)
+	if c.environment == nil {
+		logrus.Fatalf("Failed to connect to Mulesoft. Environment for '%s' not found", mulesoftConfig.Environment)
+	}
 	if err != nil {
 		logrus.Fatalf("Failed to connect to Mulesoft environment %s: %s", mulesoftConfig.Environment, err.Error())
 	}

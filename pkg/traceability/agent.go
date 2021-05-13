@@ -13,13 +13,12 @@ import (
 	"github.com/Axway/agents-mulesoft/pkg/config"
 	"github.com/elastic/beats/v7/libbeat/beat"
 	"github.com/elastic/beats/v7/libbeat/common"
-	"github.com/sirupsen/logrus"
 )
 
 // Agent - mulesoft Beater configuration. Implements the beat.Beater interface.
 type Agent struct {
 	client         beat.Client
-	done           chan struct{}
+	doneCh         chan struct{}
 	eventChannel   chan string
 	eventProcessor Processor
 	mule           Emitter
@@ -29,17 +28,20 @@ type Agent struct {
 func NewBeater(_ *beat.Beat, _ *common.Config) (beat.Beater, error) {
 	eventChannel := make(chan string)
 	agentConfig := config.GetConfig()
+	pollInterval := agentConfig.MulesoftConfig.PollInterval
 
 	var err error
 	generator := transaction.NewEventGenerator()
 	processor := NewEventProcessor(agentConfig, generator, &EventMapper{})
 	client := anypoint.NewClient(agentConfig.MulesoftConfig)
-	emitter, err := NewMuleEventEmitter(agentConfig, eventChannel, client)
+	emitter := NewMuleEventEmitter(eventChannel, client)
+
+	emitterJob, err := NewMuleEventEmitterJob(emitter, pollInterval, traceabilityHealthCheck, hc.GetStatus)
 	if err != nil {
 		return nil, err
 	}
 
-	return newAgent(processor, emitter, eventChannel)
+	return newAgent(processor, emitterJob, eventChannel)
 }
 
 func newAgent(
@@ -48,7 +50,7 @@ func newAgent(
 	eventChannel chan string,
 ) (*Agent, error) {
 	a := &Agent{
-		done:           make(chan struct{}),
+		doneCh:         make(chan struct{}),
 		eventChannel:   eventChannel,
 		eventProcessor: processor,
 		mule:           emitter,
@@ -80,10 +82,10 @@ func (a *Agent) Run(b *beat.Beat) error {
 
 	for {
 		select {
+		case <-a.doneCh:
+			return a.client.Close()
 		case <-gracefulStop:
-			logrus.Info("Received graceful shutdown signal")
-			a.Stop()
-			return nil
+			return a.client.Close()
 		case event := <-a.eventChannel:
 			eventsToPublish := a.eventProcessor.ProcessRaw([]byte(event))
 			a.client.PublishAll(eventsToPublish)
@@ -97,9 +99,7 @@ func (a *Agent) onConfigChange() {
 	a.mule.OnConfigChange(cfg)
 }
 
-// Stop stops customLogTraceabilityAgent.
+// Stop stops the agent.
 func (a *Agent) Stop() {
-	a.client.Close()
-	a.mule.Stop()
-	close(a.done)
+	a.doneCh <- struct{}{}
 }

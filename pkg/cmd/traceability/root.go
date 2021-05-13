@@ -31,16 +31,14 @@ func init() {
 	// The first parameter identifies the name of the yaml file that agent will look for to load the config
 	RootCmd = corecmd.NewCmd(
 		&cmd,
-		name,                          // Name of the agent and yaml config file
-		"Mulesoft Traceability Agent", // Agent description
-		initConfig,                    // Callback for initializing the agent config
-		run,                           // Callback for executing the agent
-		corecfg.TraceabilityAgent,     // Agent Type (Discovery or Traceability)
+		name, // Name of the agent and yaml config file
+		"Mulesoft Traceability Agent",
+		initConfig,
+		run,
+		corecfg.TraceabilityAgent,
 	)
 	config.AddConfigProperties(RootCmd.GetProperties())
-
 	RootCmd.AddCommand(service.GenServiceCmd("pathConfig"))
-
 }
 
 // Callback that agent will call to process the execution
