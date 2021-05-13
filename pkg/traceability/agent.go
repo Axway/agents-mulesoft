@@ -34,9 +34,9 @@ func NewBeater(_ *beat.Beat, _ *common.Config) (beat.Beater, error) {
 	generator := transaction.NewEventGenerator()
 	processor := NewEventProcessor(agentConfig, generator, &EventMapper{})
 	client := anypoint.NewClient(agentConfig.MulesoftConfig)
-	emitter := NewMuleEventEmitter(agentConfig, eventChannel, client)
+	emitter := NewMuleEventEmitter(eventChannel, client)
 
-	emitterJob, err := NewMuleEventEmitterJob(emitter, pollInterval, traceabilityHealthCheck)
+	emitterJob, err := NewMuleEventEmitterJob(emitter, pollInterval, traceabilityHealthCheck, hc.GetStatus)
 	if err != nil {
 		return nil, err
 	}

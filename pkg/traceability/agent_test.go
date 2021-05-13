@@ -28,7 +28,7 @@ func TestAgent_Run(t *testing.T) {
 		events: []anypoint.AnalyticsEvent{event},
 		err:    nil,
 	}
-	emitter := NewMuleEventEmitter(agentConfig, eventChannel, client)
+	emitter := NewMuleEventEmitter(eventChannel, client)
 	traceAgent, err := newAgent(processor, emitter, eventChannel)
 
 	assert.Nil(t, err)
@@ -50,7 +50,6 @@ func TestAgent_Run(t *testing.T) {
 
 	config.SetConfig(cfg)
 	traceAgent.onConfigChange()
-	assert.Equal(t, cfg.MulesoftConfig.PollInterval, emitter.pollInterval)
 
 	go traceAgent.Run(b)
 
@@ -72,7 +71,7 @@ func Test_newAgentError(t *testing.T) {
 		events: []anypoint.AnalyticsEvent{event},
 		err:    nil,
 	}
-	emitter := NewMuleEventEmitter(agentConfig, eventChannel, client)
+	emitter := NewMuleEventEmitter(eventChannel, client)
 	hc.RegisterHealthcheck("fake", "fake", func(name string) *hc.Status {
 		return &hc.Status{
 			Result: hc.FAIL,

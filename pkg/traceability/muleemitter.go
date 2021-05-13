@@ -23,14 +23,11 @@ type Emitter interface {
 	OnConfigChange(gatewayCfg *config.AgentConfig)
 }
 
-// MuleEventEmitter - Represents the Gateway client
+// MuleEventEmitter - Gathers analytics data for publishing to Central
 type MuleEventEmitter struct {
 	client            anypoint.AnalyticsClient
 	consecutiveErrors int
-	cfg               *config.AgentConfig
-	done              chan bool
 	eventChannel      chan string
-	pollInterval      time.Duration
 	jobID             string
 }
 
@@ -40,30 +37,28 @@ type MuleEventEmitterJob struct {
 	consecutiveErrors int
 	jobID             string
 	pollInterval      time.Duration
+	getStatusLevel    hc.GetStatusLevel
 }
 
 // NewMuleEventEmitter - Creates a client to poll for events.
-func NewMuleEventEmitter(
-	gatewayCfg *config.AgentConfig,
-	eventChannel chan string,
-	client anypoint.AnalyticsClient,
-) *MuleEventEmitter {
+func NewMuleEventEmitter(eventChannel chan string, client anypoint.AnalyticsClient) *MuleEventEmitter {
 	return &MuleEventEmitter{
-		cfg:          gatewayCfg,
-		pollInterval: gatewayCfg.MulesoftConfig.PollInterval,
-		done:         make(chan bool),
 		eventChannel: eventChannel,
 		client:       client,
 	}
 }
 
+// Start retrieves analytics data from anypoint and sends them on the event channel for processing.
 func (me *MuleEventEmitter) Start() error {
 	oldTime := time.Now()
+
 	events, err := me.client.GetAnalyticsWindow()
+
 	currentTime := time.Now()
 	duration := currentTime.Sub(oldTime)
 	logrus.WithFields(logrus.Fields{
 		"duration": fmt.Sprintf("%d ms", duration.Milliseconds()), "count": len(events)}).Debug("retrieved events from anypoint")
+
 	if err != nil {
 		logrus.WithError(err).Error("failed to get analytics data")
 		return err
@@ -79,9 +74,9 @@ func (me *MuleEventEmitter) Start() error {
 	return nil
 }
 
-// OnConfigChange -
+// OnConfigChange passes the new config to the client to handle config changes
+// since the MuleEventEmitter does not have any config value references.
 func (me *MuleEventEmitter) OnConfigChange(gatewayCfg *config.AgentConfig) {
-	me.pollInterval = gatewayCfg.MulesoftConfig.PollInterval
 	me.client.OnConfigChange(gatewayCfg.MulesoftConfig)
 }
 
@@ -89,15 +84,18 @@ func (me *MuleEventEmitter) OnConfigChange(gatewayCfg *config.AgentConfig) {
 func NewMuleEventEmitterJob(
 	emitter Emitter,
 	pollInterval time.Duration,
-	healthCheck hc.CheckStatus,
+	checkStatus hc.CheckStatus,
+	getStatus func(endpoint string) hc.StatusLevel,
 ) (*MuleEventEmitterJob, error) {
-	_, err := hc.RegisterHealthcheck("Data Ingestion Endpoint", healthCheckEndpoint, healthCheck)
+	_, err := hc.RegisterHealthcheck("Data Ingestion Endpoint", healthCheckEndpoint, checkStatus)
 	if err != nil {
 		return nil, err
 	}
+
 	return &MuleEventEmitterJob{
-		Emitter:      emitter,
-		pollInterval: pollInterval,
+		Emitter:        emitter,
+		pollInterval:   pollInterval,
+		getStatusLevel: getStatus,
 	}, nil
 }
 
@@ -108,6 +106,12 @@ func (m *MuleEventEmitterJob) Start() error {
 	return err
 }
 
+// OnConfigChange updates the MuleEventEmitterJob with any config changes, and calls OnConfigChange on the Emitter
+func (m *MuleEventEmitterJob) OnConfigChange(gatewayCfg *config.AgentConfig) {
+	m.pollInterval = gatewayCfg.MulesoftConfig.PollInterval
+	m.Emitter.OnConfigChange(gatewayCfg)
+}
+
 // Execute called by the sdk on each interval.
 func (m *MuleEventEmitterJob) Execute() error {
 	return m.Emitter.Start()
@@ -116,36 +120,41 @@ func (m *MuleEventEmitterJob) Execute() error {
 // Status Performs a health check for this job before it is executed.
 func (m *MuleEventEmitterJob) Status() error {
 	max := 3
-	status := hc.GetStatus(healthCheckEndpoint)
+	status := m.getStatusLevel(healthCheckEndpoint)
+
 	if status == hc.OK {
 		m.consecutiveErrors = 0
-		return nil
-	} else if m.consecutiveErrors >= max {
+	} else {
+		m.consecutiveErrors++
+	}
+
+	if m.consecutiveErrors >= max {
 		// If the job fails 3 times return an error
 		return fmt.Errorf("failed to start the Traceability agent %d times in a row", max)
 	}
-	m.consecutiveErrors++
+
 	return nil
 }
 
 // Ready determines if the job is ready to run.
 func (m *MuleEventEmitterJob) Ready() bool {
-	status := hc.GetStatus(healthCheckEndpoint)
+	status := m.getStatusLevel(healthCheckEndpoint)
 	if status == hc.OK {
 		return true
 	}
 	return false
 }
 
+// Check the status of the connection to mulesoft
 func traceabilityHealthCheck(name string) *hc.Status {
-	status := &hc.Status{
-		Result: hc.OK,
-	}
-	// Check the status of the connection to mulesoft
 	health := hc.GetStatus(anypoint.HealthCheckEndpoint)
 	if health == hc.FAIL {
-		status.Result = hc.FAIL
-		status.Details = fmt.Sprintf("%s Failed. Unable to connect to Mulesoft, check Mulesoft configuration.", name)
+		return &hc.Status{
+			Result:  hc.FAIL,
+			Details: fmt.Sprintf("%s Failed. Unable to connect to Mulesoft, check Mulesoft configuration.", name),
+		}
 	}
-	return status
+	return &hc.Status{
+		Result: hc.OK,
+	}
 }

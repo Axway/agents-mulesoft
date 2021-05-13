@@ -69,13 +69,13 @@ func (s *serviceHandler) ToServiceDetails(asset *anypoint.Asset) []*ServiceDetai
 		// TODO Implement deletion of items from cache
 		err := cache.GetCache().Set(key, api)
 		if err != nil {
-			log.WithFields(fields).Errorf("unable to set cache %s", err)
+			log.WithFields(fields).Error(err)
 		}
 
 		// TODO Handle purging of cache
 		err = cache.GetCache().SetWithSecondaryKey(key, strconv.FormatInt(api.ID, 10), api)
 		if err != nil {
-			log.WithFields(fields).Errorf("unable to set cache with secondary key %s", err)
+			log.WithFields(fields).Error(err)
 		}
 
 		serviceDetail, err := s.getServiceDetail(asset, &api)
@@ -99,9 +99,7 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 		"apiAssetVersion": api.AssetVersion,
 	})
 	if !shouldDiscoverAPI(api.EndpointURI, s.discoveryTags, s.discoveryIgnoreTags, api.Tags) {
-		logger.WithFields(logrus.Fields{
-			"endpoint": api.EndpointURI,
-		}).Debug("skipping discovery for api")
+		logger.WithField("endpoint", api.EndpointURI).Debug("skipping discovery for api")
 		return nil, nil
 	}
 
