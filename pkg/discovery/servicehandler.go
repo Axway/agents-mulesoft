@@ -4,22 +4,28 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"sort"
+	"strconv"
 	"strings"
 
+	"github.com/Axway/agent-sdk/pkg/util/oas"
+
+	"github.com/sirupsen/logrus"
+
+	"github.com/Axway/agents-mulesoft/pkg/subscription/slatier"
+
+	"github.com/Axway/agents-mulesoft/pkg/subscription"
+	"github.com/getkin/kin-openapi/openapi2"
+
 	"github.com/getkin/kin-openapi/openapi3"
-	openapi2 "github.com/go-openapi/spec"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 
 	"github.com/Axway/agent-sdk/pkg/apic"
 	"sigs.k8s.io/yaml"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/Axway/agent-sdk/pkg/cache"
-	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 	"github.com/Axway/agents-mulesoft/pkg/config"
 )
@@ -31,12 +37,11 @@ type ServiceHandler interface {
 }
 
 type serviceHandler struct {
-	assetCache          cache.Cache
-	freshCache          cache.Cache
 	stage               string
 	discoveryTags       []string
 	discoveryIgnoreTags []string
 	client              anypoint.Client
+	subscriptionManager subscription.SchemaHandler
 }
 
 func (s *serviceHandler) OnConfigChange(cfg *config.MulesoftConfig) {
@@ -49,16 +54,33 @@ func (s *serviceHandler) OnConfigChange(cfg *config.MulesoftConfig) {
 // can resolve to multiple ServiceDetails.
 func (s *serviceHandler) ToServiceDetails(asset *anypoint.Asset) []*ServiceDetail {
 	serviceDetails := []*ServiceDetail{}
+	log := logrus.WithFields(logrus.Fields{
+		"assetName": asset.AssetID,
+		"assetID":   asset.ID,
+	})
 	for _, api := range asset.APIs {
-		// Cache - update the existing to ensure it contains anything new, but create fresh cache
-		// to ensure deletions are detected.
+		fields := logrus.Fields{
+			"apiID":           api.ID,
+			"apiAssetVersion": api.AssetVersion,
+		}
+
 		key := formatCacheKey(fmt.Sprint(api.ID), s.stage)
-		s.assetCache.Set(key, api)
-		s.freshCache.Set(key, api) // Need to handle if the API exists but becomes undiscoverable
+
+		// TODO Implement deletion of items from cache
+		err := cache.GetCache().Set(key, api)
+		if err != nil {
+			log.WithFields(fields).Errorf("unable to set cache %s", err)
+		}
+
+		// TODO Handle purging of cache
+		err = cache.GetCache().SetWithSecondaryKey(key, strconv.FormatInt(api.ID, 10), api)
+		if err != nil {
+			log.WithFields(fields).Errorf("unable to set cache with secondary key %s", err)
+		}
 
 		serviceDetail, err := s.getServiceDetail(asset, &api)
 		if err != nil {
-			log.Errorf("Error gathering information for '%s(%d)': %s", asset.Name, asset.ID, err.Error())
+			log.WithFields(fields).Errorf("error getting the service details: %s", err.Error())
 			continue
 		}
 		if serviceDetail != nil {
@@ -70,7 +92,16 @@ func (s *serviceHandler) ToServiceDetails(asset *anypoint.Asset) []*ServiceDetai
 
 // getServiceDetail gets the ServiceDetail for the API asset.
 func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.API) (*ServiceDetail, error) {
+	logger := logrus.WithFields(logrus.Fields{
+		"assetName":       asset.AssetID,
+		"assetID":         asset.ID,
+		"apiID":           api.ID,
+		"apiAssetVersion": api.AssetVersion,
+	})
 	if !shouldDiscoverAPI(api.EndpointURI, s.discoveryTags, s.discoveryIgnoreTags, api.Tags) {
+		logger.WithFields(logrus.Fields{
+			"endpoint": api.EndpointURI,
+		}).Debug("skipping discovery for api")
 		return nil, nil
 	}
 
@@ -79,17 +110,42 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 	if err != nil {
 		return nil, err
 	}
-	authPolicy := getAuthPolicy(policies)
+	authPolicy, configuration, isSlaBased := getAuthPolicy(policies)
 
+	apiID := strconv.FormatInt(api.ID, 10)
+
+	subSchName := s.subscriptionManager.GetSubscriptionSchemaName(config.PolicyDetail{
+		Policy:     authPolicy,
+		IsSlaBased: isSlaBased,
+		APIId:      apiID,
+	})
+
+	// If the API has a new SLA Tier policy, create a new subscription schema for it
+	if subSchName == "" && isSlaBased {
+		// Get details of the SLA tiers
+		tiers, err1 := s.client.GetSLATiers(api.ID)
+		if err1 != nil {
+			return nil, err1
+		}
+		schema, err1 := s.createSubscriptionSchemaForSLATier(apiID, tiers, agent.GetCentralClient())
+		if err1 != nil {
+			return nil, err1
+		}
+
+		subSchName = schema.GetSubscriptionName()
+	}
+
+	// TODO can be refactored to not use authPolicy in checksum and use policy
 	isAlreadyPublished, checksum := isPublished(api, authPolicy)
 	if isAlreadyPublished {
 		// If true, then the api is published and there were no changes detected
+		logger.WithFields(logrus.Fields{"policy": authPolicy, "msg": "api is already published"})
 		return nil, nil
 	}
-	log.Debugf("Change detected in published asset %s(%d)", asset.AssetID, api.ID)
+	logger.WithField("policy", authPolicy).Debugf("change detected in published asset")
 
 	// Potentially discoverable API, gather the details
-	log.Infof("Gathering details for %s(%d)", asset.AssetID, api.ID)
+
 	exchangeAsset, err := s.client.GetExchangeAsset(api.GroupID, api.AssetID, api.AssetVersion)
 	if err != nil {
 		return nil, err
@@ -99,7 +155,7 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 
 	if exchFile == nil {
 		// SDK needs a spec
-		log.Debugf("No supported specification file found for asset '%s (%s)'", api.AssetID, api.AssetVersion)
+		logger.Debugf("no supported specification file found")
 		return nil, nil
 	}
 
@@ -113,9 +169,9 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 		return nil, err
 	}
 	if specType == "" {
-		return nil, fmt.Errorf("unknown spec type for '%s (%s)'", api.AssetID, api.AssetVersion)
+		return nil, fmt.Errorf("unknown spec type")
 	}
-	modifiedSpec, err := updateSpec(specType, api.EndpointURI, authPolicy, specContent)
+	modifiedSpec, err := updateSpec(specType, api.EndpointURI, authPolicy, configuration, specContent)
 	if err != nil {
 		return nil, err
 	}
@@ -126,19 +182,60 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 	}
 
 	return &ServiceDetail{
-		APIName:           api.AssetID,
-		APISpec:           modifiedSpec,
-		AuthPolicy:        authPolicy,
-		ID:                fmt.Sprint(api.ID),
-		Image:             icon,
-		ImageContentType:  iconContentType,
-		ResourceType:      specType,
-		ServiceAttributes: map[string]string{"checksum": checksum},
-		Stage:             s.stage,
-		Tags:              api.Tags,
-		Title:             asset.ExchangeAssetName,
-		Version:           api.AssetVersion,
+		APIName:          api.AssetID,
+		APISpec:          modifiedSpec,
+		AuthPolicy:       authPolicy,
+		ID:               fmt.Sprint(api.ID),
+		Image:            icon,
+		ImageContentType: iconContentType,
+		ResourceType:     specType,
+		ServiceAttributes: map[string]string{
+			"checksum": checksum,
+			"assetID":  fmt.Sprint(asset.ID),
+		},
+		Stage:            s.stage,
+		Tags:             api.Tags,
+		Title:            asset.ExchangeAssetName,
+		Version:          api.AssetVersion,
+		SubscriptionName: subSchName,
+		Status:           apic.PublishedStatus,
 	}, nil
+}
+
+func (s *serviceHandler) createSubscriptionSchemaForSLATier(
+	apiID string,
+	tiers *anypoint.Tiers,
+	centralClient apic.Client,
+) (apic.SubscriptionSchema, error) {
+
+	var names []string
+
+	for _, tier := range tiers.Tiers {
+		t := fmt.Sprintf("%v-%s", tier.ID, tier.Name)
+		names = append(names, t)
+	}
+
+	// Create a subscription schema to represent SLA Tiers.
+	schema := apic.NewSubscriptionSchema(apiID)
+	schema.AddProperty(anypoint.AppName, "string", "Name of the new app", "", true, nil)
+	schema.AddProperty(anypoint.Description, "string", "", "", false, nil)
+	schema.AddProperty(anypoint.TierLabel, "string", "", "", true, names)
+
+	// Register the schema with the mule subscription manager
+	s.subscriptionManager.RegisterNewSchema(slatier.NewSLATierContract(apiID, schema, s.client))
+
+	// Register the schema with the agent-sdk subscription manager
+	if err := centralClient.RegisterSubscriptionSchema(schema, true); err != nil {
+		return nil, fmt.Errorf("failed to register subscription schema %s: %w", schema.GetSubscriptionName(), err)
+	}
+
+	log.Infof("Schema registered: %s", schema.GetSubscriptionName())
+
+	return schema, nil
+}
+
+func (s *serviceHandler) registerSchema() {
+
 }
 
 // shouldDiscoverAPI determines if the API should be pushed to Central or not
@@ -162,17 +259,33 @@ func shouldDiscoverAPI(endpoint string, discoveryTags, ignoreTags, apiTags []str
 }
 
 // updateSpec Updates the spec endpoints based on the given type.
-func updateSpec(specType, endpointURI, authPolicy string, specContent []byte) ([]byte, error) {
+func updateSpec(
+	specType, endpointURI, authPolicy string, configuration map[string]interface{}, specContent []byte,
+) ([]byte, error) {
 	var err error
-	// Make a best effort to update the endpoints - required because the SDK is parsing from spec and not setting the
-	// endpoint information independently.
+	var oas2Swagger *openapi2.T
+	var oas3Swagger *openapi3.T
+
 	switch specType {
 	case apic.Oas2:
-		specContent, err = setOAS2Endpoint(endpointURI, specContent)
-		specContent, err = setOAS2policies(specContent, authPolicy)
+		oas2Swagger, err = oas.ParseOAS2(specContent)
+		if err != nil {
+			return nil, err
+		}
+		err = oas.SetOAS2HostDetails(oas2Swagger, endpointURI)
+		if err != nil {
+			logrus.Debugf("failed to update the spec with the given endpoint: %s", endpointURI)
+		}
+		specContent, err = setOAS2policies(oas2Swagger, authPolicy, configuration)
+
 	case apic.Oas3:
-		specContent, err = setOAS3Endpoint(endpointURI, specContent)
-		specContent, err = setOAS3policies(specContent, authPolicy)
+		oas3Swagger, err = oas.ParseOAS3(specContent)
+		if err != nil {
+			return nil, err
+		}
+		oas.SetOAS3Servers([]string{endpointURI}, oas3Swagger)
+		specContent, err = setOAS3policies(oas3Swagger, authPolicy, configuration)
+
 	case apic.Wsdl:
 		specContent, err = setWSDLEndpoint(endpointURI, specContent)
 	}
@@ -242,54 +355,22 @@ func getSpecType(file *anypoint.ExchangeFile, specContent []byte) (string, error
 }
 
 // getAuthPolicy gets the authentication policy type.
-func getAuthPolicy(policies anypoint.Policies) string {
+func getAuthPolicy(policies anypoint.Policies) (string, map[string]interface{}, bool) {
 	for _, policy := range policies.Policies {
-		if policy.Template.AssetId == anypoint.ClientID {
-			return apic.Apikey
+		if policy.Template.AssetID == anypoint.ClientID {
+			return apic.Apikey, policy.Configuration, false
 		}
 
-		if policy.Template.AssetId == anypoint.ExternalOauth {
-			return apic.Oauth
+		if strings.Contains(policy.Template.AssetID, anypoint.SlaAuth) {
+			return apic.Apikey, policy.Configuration, true
+		}
+
+		if policy.Template.AssetID == anypoint.ExternalOauth {
+			return apic.Oauth, policy.Configuration, false
 		}
 	}
 
-	return apic.Passthrough
-}
-
-func setOAS2Endpoint(endpointURL string, specContent []byte) ([]byte, error) {
-	endpoint, err := url.Parse(endpointURL)
-	if err != nil {
-		return specContent, err
-	}
-	spec := make(map[string]interface{})
-	err = json.Unmarshal(specContent, &spec)
-	if err != nil {
-		return specContent, err
-	}
-	spec["host"] = endpoint.Host
-	if endpoint.Path == "" {
-		log.Debug("Empty base path, manually changing to /")
-		spec["basePath"] = "/"
-	} else {
-		spec["basePath"] = endpoint.Path
-	}
-	spec["schemes"] = []string{endpoint.Scheme}
-	return json.Marshal(spec)
-}
-
-func setOAS3Endpoint(url string, specContent []byte) ([]byte, error) {
-	spec := make(map[string]interface{})
-
-	err := json.Unmarshal(specContent, &spec)
-	if err != nil {
-		return specContent, err
-	}
-
-	spec["servers"] = []interface{}{
-		map[string]string{"url": url},
-	}
-
-	return json.Marshal(spec)
+	return apic.Passthrough, nil, false
 }
 
 func setWSDLEndpoint(_ string, specContent []byte) ([]byte, error) {
@@ -316,132 +397,121 @@ func doesAPIContainAnyMatchingTag(tags, apiTags []string) bool {
 	return false
 }
 
-// Helper function to remove existing back-end security policies
-func removeOASpolicies(specContent []byte, oasVersion string) ([]byte, error) {
-	spec := make(map[string]interface{})
-	err := json.Unmarshal(specContent, &spec)
-	if err != nil {
-		return specContent, err
-	}
-	// Deleting any pre-existing security definitions
-	if oasVersion == "v2" {
-		if spec["securityDefinitions"] != nil {
-			delete(spec, "securityDefinitions")
-		}
-	}
-	if oasVersion == "v3" {
-
-		oas3Spec := openapi3.Swagger{}
-		err := json.Unmarshal(specContent, &oas3Spec)
-		if err != nil {
-			return specContent, err
-		}
-
-		// reset to empty
-		oas3Spec.Components.SecuritySchemes = nil
-		return json.Marshal(oas3Spec)
-
-	}
-
-	return json.Marshal(spec)
-}
-
 // TODO improve if fields are not complete, introduce per method swagger definitions, set up logic for multiple auth policies, use policy configurations
-func setOAS2policies(sc []byte, authPolicy string) ([]byte, error) {
-	// Removing pre-existing auth security policies
-	sc, err := removeOASpolicies(sc, "v2")
-	if err != nil {
-		return sc, err
-	}
-
-	oas2Spec := openapi2.Swagger{}
-	err = json.Unmarshal(sc, &oas2Spec)
-	if err != nil {
-		return nil, err
-	}
-
+func setOAS2policies(swagger *openapi2.T, authPolicy string, configuration map[string]interface{}) ([]byte, error) {
+	// remove existing security
+	swagger.SecurityDefinitions = make(map[string]*openapi2.SecurityScheme)
 	switch authPolicy {
 	case apic.Apikey:
-		ssp := openapi2.SecuritySchemeProps{
-			Type:        "apiKey",
-			Name:        "Authorization",
-			In:          "header",
-			Description: "Provided as: client_id:<INSERT_VALID_CLIENTID_HERE> client_secret:<INSERT_VALID_SECRET_HERE>",
-		}
-		ss := openapi2.SecurityScheme{
-			VendorExtensible:    openapi2.VendorExtensible{},
-			SecuritySchemeProps: ssp,
-		}
-		sd := openapi2.SecurityDefinitions{
-			"client-id-enforcement": &ss,
+
+		desc := anypoint.DescClienCred
+		if configuration[anypoint.CredOrigin] != nil {
+			desc += configuration[anypoint.CredOrigin].(string)
 		}
 
-		oas2Spec.SwaggerProps.SecurityDefinitions = sd
+		ss := openapi2.SecurityScheme{
+			Type:        anypoint.ApiKey,
+			Name:        anypoint.Authorization,
+			In:          anypoint.Header,
+			Description: desc,
+		}
+
+		sd := map[string]*openapi2.SecurityScheme{
+			anypoint.ClientID: &ss,
+		}
+		swagger.SecurityDefinitions = sd
 
 	case apic.Oauth:
-		ss := openapi2.OAuth2Implicit("dummy.io")
-		sd := openapi2.SecurityDefinitions{
-			"oauth": ss,
+		var tokenUrl string
+		scopes := make(map[string]string)
+
+		if configuration[anypoint.TokenUrl] != nil {
+			tokenUrl = configuration[anypoint.TokenUrl].(string)
 		}
 
-		oas2Spec.SwaggerProps.SecurityDefinitions = sd
-	}
+		if configuration[anypoint.Scopes] != nil {
+			scopes[anypoint.Scopes] = configuration[anypoint.Scopes].(string)
+		}
 
-	return json.Marshal(oas2Spec)
+		ssp := openapi2.SecurityScheme{
+			Description:      anypoint.DescOauth2,
+			Type:             anypoint.Oauth2,
+			Flow:             anypoint.AccessCode,
+			TokenURL:         tokenUrl,
+			AuthorizationURL: tokenUrl,
+			Scopes:           scopes,
+		}
+
+		sd := map[string]*openapi2.SecurityScheme{
+			anypoint.Oauth2: &ssp,
+		}
+
+		swagger.SecurityDefinitions = sd
+	}
+	// return sc, agenterrors.New(1161, anypoint.ErrAuthNotSupported)
+	return json.Marshal(swagger)
 }
 
-func setOAS3policies(sc []byte, authPolicy string) ([]byte, error) {
-	//Removing pre-existing auth security policies
-	sc, err := removeOASpolicies(sc, "v3")
-	if err != nil {
-		return sc, err
-	}
-
-	oas3Spec := openapi3.Swagger{}
-	err = json.Unmarshal(sc, &oas3Spec)
-	if err != nil {
-		return sc, err
-	}
-
+func setOAS3policies(spec *openapi3.T, authPolicy string, configuration map[string]interface{}) ([]byte, error) {
+	// remove existing security
+	spec.Components.SecuritySchemes = make(openapi3.SecuritySchemes)
 	switch authPolicy {
 	case apic.Apikey:
-		ss := openapi3.SecurityScheme{
-			Type:        "apiKey",
-			Name:        "Authorization",
-			In:          "header",
-			Description: "Provided as: client_id:<INSERT_VALID_CLIENTID_HERE> client_secret:<INSERT_VALID_SECRET_HERE>",
+		desc := anypoint.DescClienCred
+		if configuration[anypoint.CredOrigin] != nil {
+			desc += configuration[anypoint.CredOrigin].(string)
 		}
+
+		ss := openapi3.SecurityScheme{
+			Type:        anypoint.ApiKey,
+			Name:        anypoint.Authorization,
+			In:          anypoint.Header,
+			Description: desc}
 
 		ssr := openapi3.SecuritySchemeRef{
 			Value: &ss,
 		}
 
-		oas3Spec.Components.SecuritySchemes = openapi3.SecuritySchemes{"client-id-enforcement": &ssr}
-
+		spec.Components.SecuritySchemes = openapi3.SecuritySchemes{anypoint.ClientID: &ssr}
 	case apic.Oauth:
-		i := openapi3.OAuthFlow{
-			ExtensionProps:   openapi3.ExtensionProps{},
-			AuthorizationURL: "dummy.io",
-			Scopes:           make(map[string]string),
+		var tokenUrl string
+		scopes := make(map[string]string)
+
+		if configuration[anypoint.TokenUrl] != nil {
+			var ok bool
+			tokenUrl, ok = configuration[anypoint.TokenUrl].(string)
+			if !ok {
+				return nil, fmt.Errorf("Unable to perform type assertion on %#v", configuration[anypoint.TokenUrl])
+			}
+		}
+
+		if configuration[anypoint.Scopes] != nil {
+			scopes[anypoint.Scopes] = configuration[anypoint.Scopes].(string)
+
+		}
+
+		ac := openapi3.OAuthFlow{
+			TokenURL:         tokenUrl,
+			AuthorizationURL: tokenUrl,
+			Scopes:           scopes,
 		}
 		oAuthFlow := openapi3.OAuthFlows{
-			ExtensionProps: openapi3.ExtensionProps{},
-			Implicit:       &i,
+			AuthorizationCode: &ac,
 		}
 		ss := openapi3.SecurityScheme{
-			ExtensionProps: openapi3.ExtensionProps{},
-			Type:           "oauth2",
-			Description:    "This API uses OAuth 2 with the implicit grant flow",
-			Flows:          &oAuthFlow,
+			Type:        anypoint.Oauth2,
+			Description: anypoint.DescOauth2,
+			Flows:       &oAuthFlow,
 		}
 		ssr := openapi3.SecuritySchemeRef{
 			Value: &ss,
 		}
 
-		oas3Spec.Components.SecuritySchemes = openapi3.SecuritySchemes{"Oauth": &ssr}
+		spec.Components.SecuritySchemes = openapi3.SecuritySchemes{anypoint.Oauth2: &ssr}
 	}
 
-	return json.Marshal(oas3Spec)
+	// return sc, agenterrors.New(1162, anypoint.ErrAuthNotSupported)
+	return json.Marshal(spec)
 }
 
 // isPublished checks if an api is published with the latest changes. Returns true if it is, and false if it is not.

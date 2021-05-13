@@ -134,11 +134,6 @@ func TestClient(t *testing.T) {
 	err = client.invokeJSON(req, map[string]interface{}{})
 	assert.NotNil(t, err)
 
-	// assert that when the response body is '[]', that no error is thrown
-	req.URL = "emeptyslice.com"
-	err = client.invokeJSON(req, map[string]interface{}{})
-	assert.Nil(t, err)
-
 	token, user, duration, err := client.GetAccessToken()
 	logrus.Info(token, user, duration, err)
 	assert.Equal(t, "abc123", token)

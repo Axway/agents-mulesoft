@@ -127,3 +127,8 @@ The allowed cipher suites string values are allowed: ECDHE-ECDSA-AES-128-CBC-SHA
 
 The list of default cipher suites is: ECDHE-ECDSA-AES-256-GCM-SHA384, ECDHE-RSA-AES-256-GCM-SHA384, ECDHE-ECDSA-CHACHA20-POLY1305, ECDHE-RSA-CHACHA20-POLY1305, ECDHE-ECDSA-AES-128-GCM-SHA256, ECDHE-RSA-AES-128-GCM-SHA256, ECDHE-ECDSA-AES-128-CBC-SHA256, ECDHE-RSA-AES-128-CBC-SHA256
 
+## Build Docker images
+
+```bash
+docker build -t mulesoft-discovery -f Dockerfile.discovery .
+```

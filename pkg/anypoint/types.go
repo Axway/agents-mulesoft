@@ -105,8 +105,8 @@ type Policy struct {
 }
 
 type Template struct {
-	GroupId      string `json:"groupId"`
-	AssetId      string `json:"assetId"`
+	GroupID      string `json:"groupId"`
+	AssetID      string `json:"assetId"`
 	Assetversion string `json:"assetVersion"`
 }
 
@@ -221,5 +221,80 @@ type AnalyticsEvent struct {
 	ViolatedPolicyName string    `json:"Violated Policy Name"`
 }
 
-const ExternalOauth = "external-oauth2-access-token-enforcement"
-const ClientID = "client-id-enforcement"
+//TODO move the errors to the SDK
+const (
+	ExternalOauth       = "external-oauth2-access-token-enforcement"
+	ClientID            = "client-id-enforcement"
+	SlaAuth             = "sla-based"
+	ApiKey              = "apiKey"
+	Oauth2              = "oauth2"
+	TokenUrl            = "tokenUrl"
+	Scopes              = "scopes"
+	Header              = "header"
+	AccessCode          = "accessCode"
+	Authorization       = "authorization"
+	CredOrigin          = "credentialsOriginHasHttpBasicAuthenticationHeader"
+	DescClienCred       = "Provided as: client_id:<INSERT_VALID_CLIENTID_HERE> \n\n client_secret:<INSERT_VALID_SECRET_HERE>\n\n"
+	DescOauth2          = "This API supports OAuth 2.0 for authenticating all API requests"
+	ErrAuthNotSupported = "only Oauth and ClientID enforcement(ApiKey) security policies are supported"
+	ErrSpecNotSupported = "Invalid Spec Type, Only OAS specs are supported"
+	ClientIDProp        = "client_id"
+	ClientSecretProp    = "client_secret"
+	AppName             = "appName"
+	Description         = "description"
+	TierLabel           = "SLA Tier"
+)
+
+type Application struct {
+	Name         string `json:"name"`
+	Description  string `json:"description"`
+	ClientID     string `json:"clientId"`
+	ClientSecret string `json:"clientSecret"`
+	ID           int64  `json:"id"`
+	APIEndpoints bool   `json:"apiEndpoints,omitempty"`
+}
+
+type AppRequestBody struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
+type Contract struct {
+	APIID           string `json:"apiId"`
+	EnvironmentID   string `json:"environmentId"`
+	AcceptedTerms   bool   `json:"acceptedTerms"`
+	OrganizationID  string `json:"organizationId"`
+	GroupID         string `json:"groupId"`
+	AssetID         string `json:"assetId"`
+	Version         string `json:"version"`
+	VersionGroup    string `json:"versionGroup"`
+	RequestedTierID int64  `json:"requestedTierId,omitempty"`
+}
+
+type ContractResponse struct {
+	ID            int    `json:"id"`
+	Status        string `json:"status"`
+	ApplicationID int    `json:"applicationId"`
+	ClientID      string `json:"clientId"`
+	ClientSecret  string `json:"clientSecret"`
+	API           API    `json:"api"`
+}
+
+type Tiers struct {
+	Total int       `json:"total"`
+	Tiers []SLATier `json:"tiers"`
+}
+
+type SLATier struct {
+	ID          int         `json:"id"`
+	Name        string      `json:"name"`
+	Description interface{} `json:"description"`
+	Limits      []Limits    `json:"limits"`
+	Status      string      `json:"status"`
+}
+
+type Limits struct {
+	Visible                  bool `json:"visible"`
+	TimePeriodInMilliseconds int  `json:"timePeriodInMilliseconds"`
+	MaximumRequests          int  `json:"maximumRequests"`
+}
