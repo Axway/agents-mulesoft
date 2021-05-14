@@ -14,11 +14,12 @@ import (
 )
 
 var event = anypoint.AnalyticsEvent{
+	Application:        "App",
 	APIID:              "211799904",
 	APIName:            "petstore-3",
 	APIVersionID:       "16810512",
 	APIVersionName:     "v1",
-	ApplicationName:    "",
+	ApplicationName:    "foo",
 	Browser:            "Chrome",
 	City:               "Phoenix",
 	ClientIP:           "1.2.3.4",
@@ -56,6 +57,18 @@ func TestEventMapper_processMapping(t *testing.T) {
 	item, err := mapper.ProcessMapping(event)
 	assert.Nil(t, err)
 	assert.Equal(t, 3, len(item))
+	assert.NotNil(t, item[1].TransactionEvent.Protocol)
+	for i:=0; i<2; i++ {
+		rqstHeader:= item[i+1].TransactionEvent.Protocol.(*transaction.Protocol).RequestHeaders
+		respHeader:= item[i+1].TransactionEvent.Protocol.(*transaction.Protocol).ResponseHeaders
+		assert.Contains(t, rqstHeader, "User-AgentName")
+		assert.Contains(t, rqstHeader, "Request-ID")
+		assert.Contains(t, rqstHeader, "Forwarded-For")
+		assert.Contains(t, rqstHeader, "Violated-Policies")
+		assert.Contains(t, respHeader, "Request-Outcome")
+		assert.Contains(t, respHeader, "Response-Time")
+
+	}
 }
 
 func Test_getTransactionEventStatus(t *testing.T) {
@@ -139,6 +152,10 @@ func Test_APIServiceNameAndTransactionProxyNameAreEqual(t *testing.T) {
 	assert.Nil(t, err)
 	transactionProxyName := le.TransactionSummary.Proxy.Name
 	transactionProxyID := le.TransactionSummary.Proxy.ID
-	assert.Equal(t, apiServiceName, transactionProxyName)
+	assert.Contains(t, transactionProxyName, apiServiceName)
 	assert.Equal(t, transaction.FormatProxyID(body.RestAPIID), transactionProxyID)
+	//assert on application
+	assert.Equal(t, event.ApplicationName, le.TransactionSummary.Application.Name)
+	assert.Equal(t, transaction.FormatApplicationID(event.Application), le.TransactionSummary.Application.ID )
+
 }

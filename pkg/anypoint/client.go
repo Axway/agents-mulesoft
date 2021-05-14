@@ -339,7 +339,7 @@ func (c *AnypointClient) GetAnalyticsWindow() ([]AnalyticsEvent, error) {
 		"format":    "json",
 		"startDate": startDate,
 		"endDate":   endDate,
-		"fields":    "Application Name.Browser.City.Client IP.Continent.Country.Hardware Platform.Message ID.OS Family.OS Major Version.OS Minor Version.OS Version.Postal Code.Request Outcome.Request Size.Resource Path.Response Size.Response Time.Status Code.Timezone.User Agent Name.User Agent Version.Verb.Violated Policy Name",
+		"fields":    "Application Name.Application.Browser.City.Client IP.Continent.Country.Hardware Platform.Message ID.OS Family.OS Major Version.OS Minor Version.OS Version.Postal Code.Request Outcome.Request Size.Resource Path.Response Size.Response Time.Status Code.Timezone.User Agent Name.User Agent Version.Verb.Violated Policy Name",
 	}
 	headers := map[string]string{
 		"Authorization": "Bearer " + c.auth.GetToken(),

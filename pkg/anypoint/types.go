@@ -195,6 +195,7 @@ type AnalyticsEvent struct {
 	APIVersionID       string    `json:"API Version ID"`
 	APIVersionName     string    `json:"API Version Name"`
 	ApplicationName    string    `json:"Application Name"`
+	Application        string    `json:"Application"`
 	Browser            string    `json:"Browser"`
 	City               string    `json:"City"`
 	ClientIP           string    `json:"Client IP"`
