@@ -20,13 +20,13 @@ const MuleProxy = "Mule.APIProxy"
 const Backend = "Backend"
 
 type Mapper interface {
-	ProcessMapping(event anypoint.AnalyticsEvent) ([]*transaction.LogEvent, error)
+	ProcessMapping(event anypoint.AnalyticsEvent, c anypoint.AnalyticsClient) ([]*transaction.LogEvent, error)
 }
 
 // EventMapper -
 type EventMapper struct{}
 
-func (em *EventMapper) ProcessMapping(event anypoint.AnalyticsEvent) ([]*transaction.LogEvent, error) {
+func (em *EventMapper) ProcessMapping(event anypoint.AnalyticsEvent, c anypoint.AnalyticsClient) ([]*transaction.LogEvent, error) {
 	centralCfg := agent.GetCentralConfig()
 
 	eventTime := event.Timestamp.UnixNano() / 1000000
@@ -35,7 +35,7 @@ func (em *EventMapper) ProcessMapping(event anypoint.AnalyticsEvent) ([]*transac
 	leg0ID := FormatLeg0(txEventID)
 	leg1ID := FormatLeg1(txEventID)
 
-	transSummaryLogEvent, err := em.createSummaryEvent(eventTime, txID, event, centralCfg.GetTeamID())
+	transSummaryLogEvent, err := em.createSummaryEvent(eventTime, txID, event, centralCfg.GetTeamID(), c)
 	if err != nil {
 		return nil, err
 	}
@@ -115,6 +115,7 @@ func (em *EventMapper) createSummaryEvent(
 	txID string,
 	event anypoint.AnalyticsEvent,
 	teamID string,
+	ac anypoint.AnalyticsClient,
 ) (*transaction.LogEvent, error) {
 	host := event.ClientIP
 	method := event.Verb
@@ -134,11 +135,15 @@ func (em *EventMapper) createSummaryEvent(
 		SetTransactionID(txID).
 		SetTimestamp(eventTime)
 
-	//Associating the Client ID as the Application ID here since that is what we get from the analytics API as event.Application, the client ID can be changed from Mulesoft side but not from Amplify
-	//TODO an enhancement can be made to call another API and get the application ID associated with the Client ID application
-	// https://anypoint.mulesoft.com/exchange/api/v2/organizations/{Org_ID}/applications/{Client_ID}
-	if event.ApplicationName != "" && event.Application != "" {
-		builder.SetApplication(transaction.FormatApplicationID(event.Application), event.ApplicationName)
+
+	//TODO an enhancement can be made to use caching
+	//https://anypoint.mulesoft.com/exchange/api/v2/organizations/{Org_ID}/applications/{Client_ID}
+	if event.Application != "" {
+		app,err := ac.GetClientApplication(event.Application)
+		if err!=nil{
+
+		}
+		builder.SetApplication(transaction.FormatApplicationID(event.Application), app.Name)
 	}
 
 	return builder.Build()

@@ -52,6 +52,7 @@ type Client interface {
 type AnalyticsClient interface {
 	GetAnalyticsWindow() ([]AnalyticsEvent, error)
 	OnConfigChange(mulesoftConfig *config.MulesoftConfig)
+	GetClientApplication(appId string) (*Application, error)
 }
 
 type AuthClient interface {
@@ -414,6 +415,24 @@ func (c *AnypointClient) DeleteClientApplication(appId int64) error {
 	return c.invokeDelete(request)
 }
 
+func (c *AnypointClient) GetClientApplication(appId string) (*Application, error) {
+
+	var application Application
+	url := fmt.Sprintf("%s/exchange/api/v2/organizations/%s/applications/%s", c.baseURL, c.auth.GetOrgID(), appId)
+
+	headers := map[string]string{
+		"Authorization": "Bearer " + c.auth.GetToken(),
+	}
+
+	request := coreapi.Request{
+		Method:      coreapi.GET,
+		URL:         url,
+		QueryParams: nil,
+		Headers:     headers,
+	}
+	err := c.invokeJSON(request, &application)
+	return &application, err
+}
 func (c *AnypointClient) CreateContract(appID int64, contract *Contract) (*Contract, error) {
 	var cnt Contract
 
