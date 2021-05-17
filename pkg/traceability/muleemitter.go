@@ -25,10 +25,9 @@ type Emitter interface {
 
 // MuleEventEmitter - Gathers analytics data for publishing to Central.
 type MuleEventEmitter struct {
-	client            anypoint.AnalyticsClient
-	consecutiveErrors int
-	eventChannel      chan string
-	jobID             string
+	client       anypoint.AnalyticsClient
+	eventChannel chan string
+	jobID        string
 }
 
 // MuleEventEmitterJob wraps an Emitter and implements the Job interface so that it can be executed by the sdk.
