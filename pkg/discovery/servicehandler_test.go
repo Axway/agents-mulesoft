@@ -48,7 +48,7 @@ var exchangeAsset = anypoint.ExchangeAsset{
 	ModifiedAt:   time.Time{},
 	Name:         "petstore-3",
 	Public:       false,
-	Snapshopt:    false,
+	Snapshot:     false,
 	Status:       "published",
 	Version:      "1.0.0",
 	VersionGroup: "v1",

@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
@@ -15,13 +17,18 @@ import (
 
 const Inbound = "Inbound"
 const Outbound = "Outbound"
+const Client = "Client"
+const MuleProxy = "Mule.APIProxy"
+const Backend = "Backend"
 
 type Mapper interface {
 	ProcessMapping(event anypoint.AnalyticsEvent) ([]*transaction.LogEvent, error)
 }
 
 // EventMapper -
-type EventMapper struct{}
+type EventMapper struct {
+	client anypoint.AnalyticsClient
+}
 
 func (em *EventMapper) ProcessMapping(event anypoint.AnalyticsEvent) ([]*transaction.LogEvent, error) {
 	centralCfg := agent.GetCentralConfig()
@@ -32,25 +39,25 @@ func (em *EventMapper) ProcessMapping(event anypoint.AnalyticsEvent) ([]*transac
 	leg0ID := FormatLeg0(txEventID)
 	leg1ID := FormatLeg1(txEventID)
 
-	transInboundLogEventLeg, err := em.createTransactionEvent(eventTime, txID, event, leg0ID, "", Inbound)
-	if err != nil {
-		return nil, err
-	}
-
-	transOutboundLogEventLeg, err := em.createTransactionEvent(eventTime, txID, event, leg1ID, leg0ID, Outbound)
-	if err != nil {
-		return nil, err
-	}
-
 	transSummaryLogEvent, err := em.createSummaryEvent(eventTime, txID, event, centralCfg.GetTeamID())
+	if err != nil {
+		return nil, err
+	}
+
+	transOutboundLogEventLeg, err := em.createTransactionEvent(eventTime, txID, event, leg0ID, "", Outbound)
+	if err != nil {
+		return nil, err
+	}
+
+	transInboundLogEventLeg, err := em.createTransactionEvent(eventTime, txID, event, leg1ID, leg0ID, Inbound)
 	if err != nil {
 		return nil, err
 	}
 
 	return []*transaction.LogEvent{
 		transSummaryLogEvent,
-		transInboundLogEventLeg,
 		transOutboundLogEventLeg,
+		transInboundLogEventLeg,
 	}, nil
 }
 
@@ -62,9 +69,18 @@ func (em *EventMapper) createTransactionEvent(
 	parentEventID,
 	direction string,
 ) (*transaction.LogEvent, error) {
-	// TODO - Slim pickings on header data
-	req := map[string]string{"User-AgentName": txDetails.UserAgentName}
-	res := map[string]string{"Request-Outcome": txDetails.RequestOutcome}
+
+	req := map[string]string{
+		"User-AgentName":    txDetails.UserAgentName + txDetails.UserAgentVersion,
+		"Request-ID":        txDetails.MessageID,
+		"Forwarded-For":     txDetails.ClientIP,
+		"Violated-Policies": txDetails.ViolatedPolicyName,
+	}
+	res := map[string]string{
+		"Request-Outcome": txDetails.RequestOutcome,
+		"Response-Time":   strconv.Itoa(txDetails.ResponseTime),
+	}
+
 	httpProtocolDetails, err := transaction.NewHTTPProtocolBuilder().
 		SetByteLength(txDetails.RequestSize, txDetails.ResponseSize).
 		SetHeaders(buildHeaders(req), buildHeaders(res)).
@@ -73,21 +89,31 @@ func (em *EventMapper) createTransactionEvent(
 		SetStatus(txDetails.StatusCode, http.StatusText(txDetails.StatusCode)).
 		SetURI(txDetails.ResourcePath).
 		Build()
+
 	if err != nil {
 		return nil, err
 	}
 
-	return transaction.NewTransactionEventBuilder().
-		SetDestination(txDetails.APIName).
+	builder := transaction.NewTransactionEventBuilder().
 		SetDirection(direction).
 		SetID(eventID).
 		SetParentID(parentEventID).
 		SetProtocolDetail(httpProtocolDetails).
-		SetSource(txDetails.ClientIP + ":0").
 		SetStatus(getTransactionEventStatus(txDetails.StatusCode)).
 		SetTimestamp(eventTime).
-		SetTransactionID(txID).
-		Build()
+		SetTransactionID(txID)
+
+	if direction == Outbound {
+		builder.
+			SetSource(Client).
+			SetDestination(MuleProxy)
+	} else {
+		builder.
+			SetSource(MuleProxy).
+			SetDestination(Backend + txDetails.APIName)
+	}
+
+	return builder.Build()
 }
 
 func (em *EventMapper) createSummaryEvent(
@@ -98,22 +124,32 @@ func (em *EventMapper) createSummaryEvent(
 ) (*transaction.LogEvent, error) {
 	host := event.ClientIP
 	method := event.Verb
-	name := event.APIName
+	name := FormatAPIName(event.APIName, event.APIVersionName)
 	statusCode := event.StatusCode
 	uri := event.ResourcePath
 
 	// must be the same as the the 'externalAPIID' attribute set on the APIService.
 	apiVersionID := event.APIVersionID
 
-	return transaction.NewTransactionSummaryBuilder().
+	builder := transaction.NewTransactionSummaryBuilder().
 		SetDuration(event.ResponseTime).
 		SetEntryPoint("http", method, uri, host).
 		SetProxy(transaction.FormatProxyID(apiVersionID), name, 1).
 		SetStatus(getTransactionSummaryStatus(statusCode), strconv.Itoa(statusCode)).
 		SetTeam(teamID).
 		SetTransactionID(txID).
-		SetTimestamp(eventTime).
-		Build()
+		SetTimestamp(eventTime)
+
+	// TODO an enhancement can be made to use caching
+	if event.Application != "" {
+		app, err := em.client.GetClientApplication(event.Application)
+		if err != nil {
+			logrus.Errorf("failed to get application with id '%s'", event.Application)
+		}
+		builder.SetApplication(transaction.FormatApplicationID(event.Application), app.Name)
+	}
+
+	return builder.Build()
 }
 
 func getTransactionSummaryStatus(statusCode int) transaction.TxSummaryStatus {
@@ -151,6 +187,12 @@ func FormatTxnId(apiVersionID, messageID string) string {
 func FormatLeg0(id string) string {
 	return fmt.Sprintf("%s-leg0", id)
 }
+
 func FormatLeg1(id string) string {
 	return fmt.Sprintf("%s-leg1", id)
+}
+
+// FormatAPIName formats the name for the api that generated the event
+func FormatAPIName(apiName, apiVersionName string) string {
+	return fmt.Sprintf("%s-%s", apiName, apiVersionName)
 }
