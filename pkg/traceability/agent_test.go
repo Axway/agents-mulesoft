@@ -84,11 +84,16 @@ func Test_newAgentError(t *testing.T) {
 
 type mockAnalyticsClient struct {
 	events []anypoint.AnalyticsEvent
+	app    *anypoint.Application
 	err    error
 }
 
 func (m mockAnalyticsClient) GetAnalyticsWindow() ([]anypoint.AnalyticsEvent, error) {
 	return m.events, m.err
+}
+
+func (m mockAnalyticsClient) GetClientApplication(string) (*anypoint.Application, error) {
+	return m.app, m.err
 }
 
 func (m mockAnalyticsClient) OnConfigChange(_ *config.MulesoftConfig) {

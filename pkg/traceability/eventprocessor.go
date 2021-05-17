@@ -27,7 +27,6 @@ type Processor interface {
 // log entry and performs the mapping to structure expected for Amplify Central Observer. The method returns the converted Events to
 // transport publisher which then produces the events over the transport.
 type EventProcessor struct {
-	client         anypoint.AnalyticsClient
 	cfg            *config.AgentConfig
 	eventGenerator transaction.EventGenerator
 	eventMapper    Mapper
@@ -37,13 +36,11 @@ func NewEventProcessor(
 	gateway *config.AgentConfig,
 	eventGenerator transaction.EventGenerator,
 	mapper Mapper,
-	client anypoint.AnalyticsClient,
 ) *EventProcessor {
 	ep := &EventProcessor{
 		cfg:            gateway,
 		eventGenerator: eventGenerator,
 		eventMapper:    mapper,
-		client:         client,
 	}
 	return ep
 }
@@ -57,7 +54,7 @@ func (ep *EventProcessor) ProcessRaw(rawEvent []byte) []beat.Event {
 		return nil
 	}
 	// Map the log entry to log event structure expected by AmplifyCentral Observer
-	logEvents, err := ep.eventMapper.ProcessMapping(gatewayTrafficLogEntry,ep.client)
+	logEvents, err := ep.eventMapper.ProcessMapping(gatewayTrafficLogEntry)
 	if err != nil {
 		log.Error(err.Error())
 		return nil

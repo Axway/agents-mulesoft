@@ -33,7 +33,10 @@ func NewBeater(_ *beat.Beat, _ *common.Config) (beat.Beater, error) {
 	var err error
 	generator := transaction.NewEventGenerator()
 	client := anypoint.NewClient(agentConfig.MulesoftConfig)
-	processor := NewEventProcessor(agentConfig, generator, &EventMapper{}, client)
+	mapper := &EventMapper{
+		client: client,
+	}
+	processor := NewEventProcessor(agentConfig, generator, mapper)
 	emitter := NewMuleEventEmitter(eventChannel, client)
 
 	emitterJob, err := NewMuleEventEmitterJob(emitter, pollInterval, traceabilityHealthCheck, hc.GetStatus)

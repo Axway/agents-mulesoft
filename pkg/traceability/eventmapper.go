@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
@@ -20,13 +22,15 @@ const MuleProxy = "Mule.APIProxy"
 const Backend = "Backend"
 
 type Mapper interface {
-	ProcessMapping(event anypoint.AnalyticsEvent, c anypoint.AnalyticsClient) ([]*transaction.LogEvent, error)
+	ProcessMapping(event anypoint.AnalyticsEvent) ([]*transaction.LogEvent, error)
 }
 
 // EventMapper -
-type EventMapper struct{}
+type EventMapper struct {
+	client anypoint.AnalyticsClient
+}
 
-func (em *EventMapper) ProcessMapping(event anypoint.AnalyticsEvent, c anypoint.AnalyticsClient) ([]*transaction.LogEvent, error) {
+func (em *EventMapper) ProcessMapping(event anypoint.AnalyticsEvent) ([]*transaction.LogEvent, error) {
 	centralCfg := agent.GetCentralConfig()
 
 	eventTime := event.Timestamp.UnixNano() / 1000000
@@ -35,7 +39,7 @@ func (em *EventMapper) ProcessMapping(event anypoint.AnalyticsEvent, c anypoint.
 	leg0ID := FormatLeg0(txEventID)
 	leg1ID := FormatLeg1(txEventID)
 
-	transSummaryLogEvent, err := em.createSummaryEvent(eventTime, txID, event, centralCfg.GetTeamID(), c)
+	transSummaryLogEvent, err := em.createSummaryEvent(eventTime, txID, event, centralCfg.GetTeamID())
 	if err != nil {
 		return nil, err
 	}
@@ -85,6 +89,7 @@ func (em *EventMapper) createTransactionEvent(
 		SetStatus(txDetails.StatusCode, http.StatusText(txDetails.StatusCode)).
 		SetURI(txDetails.ResourcePath).
 		Build()
+
 	if err != nil {
 		return nil, err
 	}
@@ -99,15 +104,16 @@ func (em *EventMapper) createTransactionEvent(
 		SetTransactionID(txID)
 
 	if direction == Outbound {
-		builder.SetSource(Client).
+		builder.
+			SetSource(Client).
 			SetDestination(MuleProxy)
 	} else {
-		builder.SetSource(MuleProxy).
+		builder.
+			SetSource(MuleProxy).
 			SetDestination(Backend + txDetails.APIName)
 	}
 
 	return builder.Build()
-
 }
 
 func (em *EventMapper) createSummaryEvent(
@@ -115,11 +121,10 @@ func (em *EventMapper) createSummaryEvent(
 	txID string,
 	event anypoint.AnalyticsEvent,
 	teamID string,
-	ac anypoint.AnalyticsClient,
 ) (*transaction.LogEvent, error) {
 	host := event.ClientIP
 	method := event.Verb
-	name := event.APIName + "-" + event.APIVersionName
+	name := FormatAPIName(event.APIName, event.APIVersionName)
 	statusCode := event.StatusCode
 	uri := event.ResourcePath
 
@@ -135,13 +140,11 @@ func (em *EventMapper) createSummaryEvent(
 		SetTransactionID(txID).
 		SetTimestamp(eventTime)
 
-
-	//TODO an enhancement can be made to use caching
-	//https://anypoint.mulesoft.com/exchange/api/v2/organizations/{Org_ID}/applications/{Client_ID}
+	// TODO an enhancement can be made to use caching
 	if event.Application != "" {
-		app,err := ac.GetClientApplication(event.Application)
-		if err!=nil{
-
+		app, err := em.client.GetClientApplication(event.Application)
+		if err != nil {
+			logrus.Errorf("failed to get application with id '%s'", event.Application)
 		}
 		builder.SetApplication(transaction.FormatApplicationID(event.Application), app.Name)
 	}
@@ -184,6 +187,12 @@ func FormatTxnId(apiVersionID, messageID string) string {
 func FormatLeg0(id string) string {
 	return fmt.Sprintf("%s-leg0", id)
 }
+
 func FormatLeg1(id string) string {
 	return fmt.Sprintf("%s-leg1", id)
+}
+
+// FormatAPIName formats the name for the api that generated the event
+func FormatAPIName(apiName, apiVersionName string) string {
+	return fmt.Sprintf("%s-%s", apiName, apiVersionName)
 }
