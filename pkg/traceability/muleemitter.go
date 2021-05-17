@@ -23,7 +23,7 @@ type Emitter interface {
 	OnConfigChange(gatewayCfg *config.AgentConfig)
 }
 
-// MuleEventEmitter - Gathers analytics data for publishing to Central
+// MuleEventEmitter - Gathers analytics data for publishing to Central.
 type MuleEventEmitter struct {
 	client            anypoint.AnalyticsClient
 	consecutiveErrors int
