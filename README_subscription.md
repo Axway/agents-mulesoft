@@ -1,45 +1,55 @@
-# Subscription - TO-DO
-The subscrption mechanism has not been implemented in this release of the Discovery Agent.
-The steps required for adding subscription support could look like the following:
+# Subscription
+The subscription mechanism provided by the Discovery Agent can be used to create a client application and a contract on Mulesoft for an already discovered Mulesoft API. Currently, the below authentication policies are supported:
+1. Client ID Enforcement
+2. Rate Limiting - SLA based Policy
 
-1. Check if newly discovered API has an applied security policy
-```
-https://anypoint.mulesoft.com/apimanager/api/v1/organizations/{organizationId}/environments/{environmentId}/apis/{api-id}/policies
-```
-2. Check if API has SLA Tiers
-```
-https://anypoint.mulesoft.com/apimanager/api/v1/organizations/{organizationId}/environments/{environmentId}/apis/{environmentApiId}/tiers
-```
-3. Amplify CLI builds subscriptionDefinition using discovered SLA Tiers
-```
-…
-plan:
-   enum:
-      - Gold
-      - Silver
-… 
-```
-4. Amplify CLI builds API deployment file.  Associates ConsumerInstance with matching subscriptionDefinition
-5. When subsciption is approved, Amplify CLI uses discovered security policy to create an application and contract in Mulesoft API Gateway.
-```
-https://anypoint.mulesoft.com/exchange/api/v1/organizations/{organizationId}/applications
+# Pre-requitites
+1. Mulesoft Discovery Agent needs to be up and running
+2. At least one API exists on Mulesoft that has been configured with one of the above policies
 
-JSON body:
-{
-  "name" : "AppName"
-}
+# Example
 
-https://anypoint.mulesoft.com/apimanager/api/v1/organizations/{organizationId}/environments/{environmentId}/apis/{environmentApiId}/contracts
+## Subscribe
+1. Say you have an API on Mulesoft that has been configured with Rate Limiting - SLA based Policy along with SLA Tiers that are configured with auto-approval. Mulesoft Discovery agent picks this up and creates a few resources on Amplify, and one of them is the Catalog item.
 
-JSON body:
-{
-    "applicationId": 3,
-    "partyId": "",
-    "partyName": "",
-    "acceptedTerms": false,
-    "requestedTierId": 48
-}
+<img src="./img/CatalogItem.png" width="600">
+
+2. Clicking on the catalog item takes you to its detail page where you click the Subscribe button on the top-right corner 
+
+<img src="./img/CatalogItemDetail.png" width="600">
+
+3. Fill out the requested details on the pop-up modal
+
+<img src="./img/SubscriptionModal.png" width="600">
+
+4. Ask someone who has Platform administrator role on Amplify to approve the subscription request
+
+<img src="./img/SubscriptionApproval.png" width="600">
+
+5. Depending on the interval set for polling subscriptions on Central, wait until the subscription is active
+
+<img src="./img/SubscribingState.png" width="600">
+
+6. Refresh the page and verify that the subscription is activated
+
+<img src="./img/SubscriptionActive.png" width="600">
+
+7. Click on the subscription name and it takes you to the subscription detail page. Here you can access the client ID and client secret and invoke the Proxy endpoint
+
+```shell
+curl -v http://<Mulesoft_Proxy_URL>/store/inventory -H "client_id:<Value_from_subscription>" -H "client_secret:<Value_from_subscription>"
 ```
 
+## Unsubscribe
 
-Reference: [SDK Documentation - Building Discovery Agent](https://github.com/Axway/agent-sdk/blob/main/docs/discovery/index.md), [Mulesoft API Manager API](https://anypoint.mulesoft.com/exchange/portals/anypoint-platform/f1e97bc6-315a-4490-82a7-23abe036327a.anypoint-platform/api-manager-api/minor/1.0/console/method/%231156/)
+1. Click on the Unsubscribe option that appears after clicking on the subscription's cog icon
+
+<img src="./img/InitiateUnsubscribe.png" width="600">
+
+2. Wait until the request to unsubscribe is processed
+
+<img src="./img/UnsubscribingState.png" width="600">
+
+3. Refresh the page and verify that the subscription is no longer active
+
+<img src="./img/Unsubscibed.png" width="600">
