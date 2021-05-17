@@ -89,25 +89,25 @@ type API struct {
 
 // Policy -
 type Policy struct {
+	APIID                int64                  `json:"apiId"`
 	Audit                Audit                  `json:"audit"`
-	Type                 string                 `json:"type"`
+	Configuration        map[string]interface{} `json:"configuration"`
+	ID                   int64                  `json:"id"`
+	MasterOrganizationID string                 `json:"masterOrganizationId"`
 	Order                int                    `json:"order"`
+	OrganizationID       string                 `json:"organizationId"`
 	PointCutData         interface{}            `json:"pointCutData"`
 	PolicyID             int                    `json:"policyId"`
-	Version              int64                  `json:"version"`
-	MasterOrganizationID string                 `json:"masterOrganizationId"`
-	OrganizationID       string                 `json:"organizationId"`
-	ID                   int64                  `json:"id"`
-	Template             Template               `json:"template"`
-	APIID                int64                  `json:"apiId"`
 	PolicyTemplateID     string                 `json:"policyTemplateId"`
-	Configuration        map[string]interface{} `json:"configuration"`
+	Template             Template               `json:"template"`
+	Type                 string                 `json:"type"`
+	Version              int64                  `json:"version"`
 }
 
 type Template struct {
-	GroupID      string `json:"groupId"`
 	AssetID      string `json:"assetId"`
-	Assetversion string `json:"assetVersion"`
+	AssetVersion string `json:"assetVersion"`
+	GroupID      string `json:"groupId"`
 }
 
 type Policies struct {
@@ -142,7 +142,7 @@ type ExchangeAsset struct {
 	ModifiedAt   time.Time             `json:"modifiedAt"`
 	Name         string                `json:"name"`
 	Public       bool                  `json:"isPublic"`
-	Snapshopt    bool                  `json:"isSnapshot"`
+	Snapshot     bool                  `json:"isSnapshot"`
 	Status       string                `json:"status"`
 	Version      string                `json:"version"`
 	VersionGroup string                `json:"versionGroup"`
@@ -222,63 +222,63 @@ type AnalyticsEvent struct {
 	ViolatedPolicyName string    `json:"Violated Policy Name"`
 }
 
-//TODO move the errors to the SDK
+// TODO move the errors to the SDK
 const (
-	ExternalOauth       = "external-oauth2-access-token-enforcement"
-	ClientID            = "client-id-enforcement"
-	SlaAuth             = "sla-based"
-	ApiKey              = "apiKey"
-	Oauth2              = "oauth2"
-	TokenUrl            = "tokenUrl"
-	Scopes              = "scopes"
-	Header              = "header"
 	AccessCode          = "accessCode"
+	ApiKey              = "apiKey"
+	AppName             = "appName"
 	Authorization       = "authorization"
+	ClientID            = "client-id-enforcement"
+	ClientIDProp        = "client_id"
+	ClientSecretProp    = "client_secret"
 	CredOrigin          = "credentialsOriginHasHttpBasicAuthenticationHeader"
 	DescClienCred       = "Provided as: client_id:<INSERT_VALID_CLIENTID_HERE> \n\n client_secret:<INSERT_VALID_SECRET_HERE>\n\n"
 	DescOauth2          = "This API supports OAuth 2.0 for authenticating all API requests"
+	Description         = "description"
 	ErrAuthNotSupported = "only Oauth and ClientID enforcement(ApiKey) security policies are supported"
 	ErrSpecNotSupported = "Invalid Spec Type, Only OAS specs are supported"
-	ClientIDProp        = "client_id"
-	ClientSecretProp    = "client_secret"
-	AppName             = "appName"
-	Description         = "description"
+	ExternalOauth       = "external-oauth2-access-token-enforcement"
+	Header              = "header"
+	Oauth2              = "oauth2"
+	Scopes              = "scopes"
+	SlaAuth             = "sla-based"
 	TierLabel           = "SLA Tier"
+	TokenUrl            = "tokenUrl"
 )
 
 type Application struct {
-	Name         string `json:"name"`
-	Description  string `json:"description"`
+	APIEndpoints bool   `json:"apiEndpoints,omitempty"`
 	ClientID     string `json:"clientId"`
 	ClientSecret string `json:"clientSecret"`
+	Description  string `json:"description"`
 	ID           int64  `json:"id"`
-	APIEndpoints bool   `json:"apiEndpoints,omitempty"`
+	Name         string `json:"name"`
 }
 
 type AppRequestBody struct {
-	Name        string `json:"name"`
 	Description string `json:"description"`
+	Name        string `json:"name"`
 }
 
 type Contract struct {
-	APIID           string `json:"apiId"`
-	EnvironmentID   string `json:"environmentId"`
 	AcceptedTerms   bool   `json:"acceptedTerms"`
-	OrganizationID  string `json:"organizationId"`
-	GroupID         string `json:"groupId"`
+	APIID           string `json:"apiId"`
 	AssetID         string `json:"assetId"`
+	EnvironmentID   string `json:"environmentId"`
+	GroupID         string `json:"groupId"`
+	OrganizationID  string `json:"organizationId"`
+	RequestedTierID int64  `json:"requestedTierId,omitempty"`
 	Version         string `json:"version"`
 	VersionGroup    string `json:"versionGroup"`
-	RequestedTierID int64  `json:"requestedTierId,omitempty"`
 }
 
 type ContractResponse struct {
-	ID            int    `json:"id"`
-	Status        string `json:"status"`
+	API           API    `json:"api"`
 	ApplicationID int    `json:"applicationId"`
 	ClientID      string `json:"clientId"`
 	ClientSecret  string `json:"clientSecret"`
-	API           API    `json:"api"`
+	ID            int    `json:"id"`
+	Status        string `json:"status"`
 }
 
 type Tiers struct {
@@ -287,15 +287,15 @@ type Tiers struct {
 }
 
 type SLATier struct {
-	ID          int         `json:"id"`
-	Name        string      `json:"name"`
 	Description interface{} `json:"description"`
+	ID          int         `json:"id"`
 	Limits      []Limits    `json:"limits"`
+	Name        string      `json:"name"`
 	Status      string      `json:"status"`
 }
 
 type Limits struct {
-	Visible                  bool `json:"visible"`
-	TimePeriodInMilliseconds int  `json:"timePeriodInMilliseconds"`
 	MaximumRequests          int  `json:"maximumRequests"`
+	TimePeriodInMilliseconds int  `json:"timePeriodInMilliseconds"`
+	Visible                  bool `json:"visible"`
 }
