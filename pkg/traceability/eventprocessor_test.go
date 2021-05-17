@@ -39,7 +39,11 @@ func init() {
 }
 
 func TestEventProcessor_ProcessRaw(t *testing.T) {
-	processor := NewEventProcessor(agentConfig, &eventGeneratorMock{}, &EventMapper{})
+	client := &mockAnalyticsClient{
+		app: app,
+	}
+	mapper := &EventMapper{client: client}
+	processor := NewEventProcessor(agentConfig, &eventGeneratorMock{}, mapper)
 
 	bts, err := json.Marshal(&event)
 	assert.Nil(t, err)
@@ -59,7 +63,7 @@ func TestEventProcessor_ProcessRaw(t *testing.T) {
 	assert.Equal(t, TeamID, summaryEvent.TransactionSummary.Team.ID)
 	assert.Equal(t, transaction.FormatProxyID(event.APIVersionID), summaryEvent.TransactionSummary.Proxy.ID)
 	assert.Equal(t, 1, summaryEvent.TransactionSummary.Proxy.Revision)
-	assert.Equal(t, event.APIName, summaryEvent.TransactionSummary.Proxy.Name)
+	assert.Equal(t, FormatAPIName(event.APIName, event.APIVersionName), summaryEvent.TransactionSummary.Proxy.Name)
 	assert.Nil(t, summaryEvent.TransactionSummary.Runtime)
 	assert.Equal(t, "http", summaryEvent.TransactionSummary.EntryPoint.Type)
 	assert.Equal(t, event.Verb, summaryEvent.TransactionSummary.EntryPoint.Method)
@@ -73,7 +77,7 @@ func TestEventProcessor_ProcessRaw(t *testing.T) {
 	assert.Nil(t, err)
 	assertLegCommonFields(t, event, leg0Event, transaction.TypeTransactionEvent)
 	assert.Equal(t, FormatLeg0(event.MessageID), leg0Event.TransactionEvent.ID)
-	assertLegTransactionEvent(t, event, leg0Event, Inbound, "")
+	assertLegTransactionEvent(t, event, leg0Event, Outbound, "")
 
 	leg1Raw := evts[2]
 	leg1Event := &transaction.LogEvent{}
@@ -82,7 +86,7 @@ func TestEventProcessor_ProcessRaw(t *testing.T) {
 	assert.Nil(t, err)
 	assertLegCommonFields(t, event, leg1Event, transaction.TypeTransactionEvent)
 	assert.Equal(t, FormatLeg1(event.MessageID), leg1Event.TransactionEvent.ID)
-	assertLegTransactionEvent(t, event, leg1Event, Outbound, FormatLeg0(event.MessageID))
+	assertLegTransactionEvent(t, event, leg1Event, Inbound, FormatLeg0(event.MessageID))
 }
 
 func TestEventProcessor_ProcessRaw_Errors(t *testing.T) {
@@ -94,14 +98,18 @@ func TestEventProcessor_ProcessRaw_Errors(t *testing.T) {
 	assert.Nil(t, evts)
 
 	// returns an empty array when the EventGenerator throws an error
-	processor = NewEventProcessor(agentConfig, &eventGenMockErr{}, &EventMapper{})
+	client := &mockAnalyticsClient{
+		app: app,
+	}
+	mapper := &EventMapper{client: client}
+	processor = NewEventProcessor(agentConfig, &eventGenMockErr{}, mapper)
 	bts, err = json.Marshal(&event)
 	assert.Nil(t, err)
 	evts = processor.ProcessRaw(bts)
 	assert.Equal(t, 0, len(evts))
 
 	// return nil when given bad json
-	processor = NewEventProcessor(agentConfig, &eventGeneratorMock{}, &EventMapper{})
+	processor = NewEventProcessor(agentConfig, &eventGeneratorMock{}, mapper)
 	evts = processor.ProcessRaw([]byte("nope"))
 	assert.Nil(t, evts)
 }
@@ -120,10 +128,19 @@ func assertLegCommonFields(t *testing.T, muleEvent anypoint.AnalyticsEvent, logE
 }
 
 func assertLegTransactionEvent(t *testing.T, muleEvent anypoint.AnalyticsEvent, logEvent *transaction.LogEvent, direction, parent string) {
+	source := ""
+	destination := ""
+	if direction == Outbound {
+		source = Client
+		destination = MuleProxy
+	} else {
+		source = MuleProxy
+		destination = Backend + muleEvent.APIName
+	}
 	assert.Nil(t, logEvent.TransactionSummary)
 	assert.Equal(t, parent, logEvent.TransactionEvent.ParentID)
-	assert.Equal(t, muleEvent.ClientIP+":0", logEvent.TransactionEvent.Source)
-	assert.Equal(t, muleEvent.APIName, logEvent.TransactionEvent.Destination)
+	assert.Equal(t, source, logEvent.TransactionEvent.Source)
+	assert.Equal(t, destination, logEvent.TransactionEvent.Destination)
 	assert.Equal(t, 0, logEvent.TransactionEvent.Duration)
 	assert.Equal(t, direction, logEvent.TransactionEvent.Direction)
 	assert.Equal(t, "Pass", logEvent.TransactionEvent.Status)
