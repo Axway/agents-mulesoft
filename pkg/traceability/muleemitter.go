@@ -63,16 +63,47 @@ func (me *MuleEventEmitter) Start() error {
 		return err
 	}
 
+	var lastTime time.Time
+	var lastEvent *anypoint.AnalyticsEvent = nil
+	strLastTime, _ := me.client.GetLastRun()
+	lastTime,err = time.Parse(time.RFC3339, strLastTime)
+	if err != nil {
+		logrus.WithError(err).Error("Unable to Parse Last Time")
+		return err
+	}
+	events = me.pruneEvents(events)
 	for _, event := range events {
+			if event.Timestamp.After(lastTime){
+				lastEvent = &event
+			}
 		j, err := json.Marshal(event)
 		if err != nil {
 			log.Warnf("failed to marshal event: %s", err.Error())
 		}
 		me.eventChannel <- string(j)
 	}
+	if lastEvent != nil {
+	    me.client.SaveLastRun(lastEvent.Timestamp.Format(time.RFC3339), lastEvent.MessageID)
+	}
 	return nil
+
 }
 
+func (me *MuleEventEmitter)  pruneEvents(events []anypoint.AnalyticsEvent) ([]anypoint.AnalyticsEvent) {
+	lastMsg :=me.client.GetLastMessageID()
+	if lastMsg == "" {
+		return events
+	}
+	trim:=0
+	for x, event := range events {
+
+		if event.MessageID == lastMsg {
+			trim=x+1
+			break;
+		}
+	}
+	return events[trim:]
+}
 // OnConfigChange passes the new config to the client to handle config changes
 // since the MuleEventEmitter does not have any config value references.
 func (me *MuleEventEmitter) OnConfigChange(gatewayCfg *config.AgentConfig) {
@@ -157,3 +188,4 @@ func traceabilityHealthCheck(name string) *hc.Status {
 		Result: hc.OK,
 	}
 }
+
