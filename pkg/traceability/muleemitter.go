@@ -82,28 +82,15 @@ func (me *MuleEventEmitter) Start() error {
 		}
 		me.eventChannel <- string(j)
 	}
+	// Add 1 second to the last time stamp if we found records from this pull.
+	// This will prevent duplicate records from being retrieved
 	if lastEvent != nil {
 	    me.client.SaveLastRun(lastEvent.Timestamp.Add(time.Second * 1).Format(time.RFC3339))
 	}
 	return nil
 
 }
-//pruneEvents - Analytics API allows fetching at full second intervals- prune avoids duplicate events
-func (me *MuleEventEmitter)  pruneEvents(events []anypoint.AnalyticsEvent) ([]anypoint.AnalyticsEvent) {
-	lastMsg :=me.client.GetLastMessageID()
-	if lastMsg == "" {
-		return events
-	}
-	trim:=0
-	for x, event := range events {
 
-		if event.MessageID == lastMsg {
-			trim=x
-			break;
-		}
-	}
-	return events[:trim-1]
-}
 // OnConfigChange passes the new config to the client to handle config changes
 // since the MuleEventEmitter does not have any config value references.
 func (me *MuleEventEmitter) OnConfigChange(gatewayCfg *config.AgentConfig) {
