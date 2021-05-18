@@ -98,7 +98,11 @@ func (m mockAnalyticsClient) GetClientApplication(string) (*anypoint.Application
 
 func (m mockAnalyticsClient) OnConfigChange(_ *config.MulesoftConfig) {
 }
-
+func (m mockAnalyticsClient) GetLastRun () (string,string){
+	return "",""
+}
+func (m mockAnalyticsClient) SaveLastRun (string) (){
+}
 type mockProcessor struct {
 	channel chan bool
 }

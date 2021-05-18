@@ -23,6 +23,7 @@ import (
 
 const (
 	CacheKeyTimeStamp   = "LAST_RUN"
+	CacheKeyMessageID   = "LAST_MESSAGE_ID"
 	HealthCheckEndpoint = "mulesoft"
 )
 
@@ -53,6 +54,9 @@ type AnalyticsClient interface {
 	GetAnalyticsWindow() ([]AnalyticsEvent, error)
 	OnConfigChange(mulesoftConfig *config.MulesoftConfig)
 	GetClientApplication(appId string) (*Application, error)
+	GetLastRun() (string, string)
+	GetLastMessageID()(string)
+	SaveLastRun(string, string)
 }
 
 type AuthClient interface {
@@ -335,7 +339,7 @@ func (c *AnypointClient) GetExchangeFileContent(link, packaging, mainFile string
 
 // GetAnalyticsWindow lists the managed assets in Mulesoft: https://docs.qax.mulesoft.com/api-manager/2.x/analytics-event-api
 func (c *AnypointClient) GetAnalyticsWindow() ([]AnalyticsEvent, error) {
-	startDate, endDate := c.getLastRun()
+	startDate, endDate := c.GetLastRun()
 	query := map[string]string{
 		"format":    "json",
 		"startDate": startDate,
@@ -451,17 +455,27 @@ func (c *AnypointClient) CreateContract(appID int64, contract *Contract) (*Contr
 	return &cnt, nil
 }
 
-func (c *AnypointClient) getLastRun() (string, string) {
+func (c *AnypointClient) GetLastRun() (string, string) {
 	tStamp, _ := c.cache.Get(CacheKeyTimeStamp)
 	now := time.Now()
 	tNow := now.Format(time.RFC3339)
 	if tStamp == nil {
 		tStamp = tNow
 	}
-	c.cache.Set(CacheKeyTimeStamp, tNow)
-	c.cache.Save(c.cachePath)
 	return tStamp.(string), tNow
-
+}
+func (c *AnypointClient) GetLastMessageID() (string) {
+	msgID, _ := c.cache.Get(CacheKeyMessageID)
+	retVal:=""
+	if msgID != nil {
+		retVal=msgID.(string)
+	}
+	return retVal
+}
+func (c *AnypointClient) SaveLastRun(lastTime string, messageID string)  {
+	c.cache.Set(CacheKeyTimeStamp, lastTime)
+	c.cache.Set(CacheKeyMessageID, messageID)
+	c.cache.Save(c.cachePath)
 }
 
 func (c *AnypointClient) invokeJSONGet(url string, page *Page, resp interface{}) error {
