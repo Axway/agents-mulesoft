@@ -23,7 +23,6 @@ import (
 
 const (
 	CacheKeyTimeStamp   = "LAST_RUN"
-	CacheKeyMessageID   = "LAST_MESSAGE_ID"
 	HealthCheckEndpoint = "mulesoft"
 )
 
@@ -55,8 +54,7 @@ type AnalyticsClient interface {
 	OnConfigChange(mulesoftConfig *config.MulesoftConfig)
 	GetClientApplication(appId string) (*Application, error)
 	GetLastRun() (string, string)
-	GetLastMessageID()(string)
-	SaveLastRun(string, string)
+	SaveLastRun(string)
 }
 
 type AuthClient interface {
@@ -464,17 +462,8 @@ func (c *AnypointClient) GetLastRun() (string, string) {
 	}
 	return tStamp.(string), tNow
 }
-func (c *AnypointClient) GetLastMessageID() (string) {
-	msgID, _ := c.cache.Get(CacheKeyMessageID)
-	retVal:=""
-	if msgID != nil {
-		retVal=msgID.(string)
-	}
-	return retVal
-}
-func (c *AnypointClient) SaveLastRun(lastTime string, messageID string)  {
+func (c *AnypointClient) SaveLastRun(lastTime string)  {
 	c.cache.Set(CacheKeyTimeStamp, lastTime)
-	c.cache.Set(CacheKeyMessageID, messageID)
 	c.cache.Save(c.cachePath)
 }
 

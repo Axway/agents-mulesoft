@@ -63,15 +63,15 @@ func (me *MuleEventEmitter) Start() error {
 		return err
 	}
 
-	var lastTime time.Time
 	var lastEvent *anypoint.AnalyticsEvent = nil
+	var lastTime time.Time
 	strLastTime, _ := me.client.GetLastRun()
 	lastTime,err = time.Parse(time.RFC3339, strLastTime)
 	if err != nil {
 		logrus.WithError(err).Error("Unable to Parse Last Time")
 		return err
 	}
-	events = me.pruneEvents(events)
+	//events = me.pruneEvents(events)
 	for _, event := range events {
 			if event.Timestamp.After(lastTime){
 				lastEvent = &event
@@ -83,12 +83,12 @@ func (me *MuleEventEmitter) Start() error {
 		me.eventChannel <- string(j)
 	}
 	if lastEvent != nil {
-	    me.client.SaveLastRun(lastEvent.Timestamp.Format(time.RFC3339), lastEvent.MessageID)
+	    me.client.SaveLastRun(lastEvent.Timestamp.Add(time.Second * 1).Format(time.RFC3339))
 	}
 	return nil
 
 }
-
+//pruneEvents - Analytics API allows fetching at full second intervals- prune avoids duplicate events
 func (me *MuleEventEmitter)  pruneEvents(events []anypoint.AnalyticsEvent) ([]anypoint.AnalyticsEvent) {
 	lastMsg :=me.client.GetLastMessageID()
 	if lastMsg == "" {
@@ -98,11 +98,11 @@ func (me *MuleEventEmitter)  pruneEvents(events []anypoint.AnalyticsEvent) ([]an
 	for x, event := range events {
 
 		if event.MessageID == lastMsg {
-			trim=x+1
+			trim=x
 			break;
 		}
 	}
-	return events[trim:]
+	return events[:trim-1]
 }
 // OnConfigChange passes the new config to the client to handle config changes
 // since the MuleEventEmitter does not have any config value references.
