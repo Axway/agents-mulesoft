@@ -459,6 +459,7 @@ func (c *AnypointClient) GetLastRun() (string, string) {
 	tNow := now.Format(time.RFC3339)
 	if tStamp == nil {
 		tStamp = tNow
+		c.SaveLastRun(tNow)
 	}
 	return tStamp.(string), tNow
 }
