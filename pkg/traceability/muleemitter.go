@@ -63,18 +63,16 @@ func (me *MuleEventEmitter) Start() error {
 		return err
 	}
 
-	var lastEvent *anypoint.AnalyticsEvent = nil
 	var lastTime time.Time
 	strLastTime, _ := me.client.GetLastRun()
-	lastTime,err = time.Parse(time.RFC3339, strLastTime)
+	lastTime, err = time.Parse(time.RFC3339, strLastTime)
 	if err != nil {
 		logrus.WithError(err).Error("Unable to Parse Last Time")
 		return err
 	}
-	//events = me.pruneEvents(events)
 	for _, event := range events {
 			if event.Timestamp.After(lastTime){
-				lastEvent = &event
+				lastTime = event.Timestamp
 			}
 		j, err := json.Marshal(event)
 		if err != nil {
@@ -84,9 +82,10 @@ func (me *MuleEventEmitter) Start() error {
 	}
 	// Add 1 second to the last time stamp if we found records from this pull.
 	// This will prevent duplicate records from being retrieved
-	if lastEvent != nil {
-	    me.client.SaveLastRun(lastEvent.Timestamp.Add(time.Second * 1).Format(time.RFC3339))
+	if len(events) > 0 {
+		me.client.SaveLastRun(lastTime.Add(time.Second * 1).Format(time.RFC3339))
 	}
+
 	return nil
 
 }
