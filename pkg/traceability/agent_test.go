@@ -28,7 +28,7 @@ func TestAgent_Run(t *testing.T) {
 		events: []anypoint.AnalyticsEvent{event},
 		err:    nil,
 	}
-	emitter := NewMuleEventEmitter(eventChannel, client)
+	emitter := NewMuleEventEmitter(&config.MulesoftConfig{CachePath: "/tmp"}, eventChannel, client)
 	traceAgent, err := newAgent(processor, emitter, eventChannel)
 
 	assert.Nil(t, err)
@@ -71,7 +71,7 @@ func Test_newAgentError(t *testing.T) {
 		events: []anypoint.AnalyticsEvent{event},
 		err:    nil,
 	}
-	emitter := NewMuleEventEmitter(eventChannel, client)
+	emitter := NewMuleEventEmitter(&config.MulesoftConfig{CachePath: "/tmp"}, eventChannel, client)
 	hc.RegisterHealthcheck("fake", "fake", func(name string) *hc.Status {
 		return &hc.Status{
 			Result: hc.FAIL,
@@ -88,7 +88,7 @@ type mockAnalyticsClient struct {
 	err    error
 }
 
-func (m mockAnalyticsClient) GetAnalyticsWindow() ([]anypoint.AnalyticsEvent, error) {
+func (m mockAnalyticsClient) GetAnalyticsWindow(_,_ string) ([]anypoint.AnalyticsEvent, error) {
 	return m.events, m.err
 }
 

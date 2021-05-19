@@ -37,7 +37,6 @@ type Client interface {
 	GetExchangeAsset(groupID, assetID, assetVersion string) (*ExchangeAsset, error)
 	GetExchangeAssetIcon(icon string) (string, string, error)
 	GetExchangeFileContent(link, packaging, mainFile string) ([]byte, error)
-	GetAnalyticsWindow() ([]AnalyticsEvent, error)
 	CreateClientApplication(string, *AppRequestBody) (*Application, error)
 	CreateContract(int64, *Contract) (*Contract, error)
 	GetSLATiers(int642 int64) (*Tiers, error)
