@@ -4,6 +4,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Axway/agents-mulesoft/pkg/common"
+
 	"github.com/Axway/agents-mulesoft/pkg/subscription"
 
 	"github.com/Axway/agent-sdk/pkg/cache"
@@ -79,7 +81,7 @@ func Test_validateAPI(t *testing.T) {
 		ID:    apiID,
 		Stage: stageName,
 	}
-	err := c.Set(FormatCacheKey(apiID, stageName), sd)
+	err := c.Set(common.FormatAPICacheKey(apiID, stageName), sd)
 	if err != nil {
 		t.Error(err)
 	}

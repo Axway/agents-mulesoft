@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Axway/agents-mulesoft/pkg/common"
+
 	"github.com/Axway/agent-sdk/pkg/apic"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
@@ -63,7 +65,7 @@ func (ssm *SubStateManager) Unsubscribe(log logrus.FieldLogger, sub apic.Subscri
 
 func (ssm *SubStateManager) doSubscribe(log logrus.FieldLogger, sub apic.Subscription) (string, string, error) {
 	// Create a new application and create a new contract
-	apiID := sub.GetRemoteAPIAttributes()["API ID"]
+	apiID := sub.GetRemoteAPIAttributes()[common.AttrAPIID]
 	stage := sub.GetRemoteAPIStage()
 	tier := sub.GetPropertyValue(anypoint.TierLabel)
 
@@ -145,7 +147,7 @@ func parseTierID(tierValue string, logger logrus.FieldLogger) int64 {
 }
 
 func getMuleAPI(apiID, stage string) (*anypoint.API, error) {
-	api, err := cache.GetCache().GetBySecondaryKey(fmt.Sprintf("%s-%s", apiID, stage))
+	api, err := cache.GetCache().GetBySecondaryKey(common.FormatAPICacheKey(apiID, stage))
 	if err != nil {
 		return nil, err
 	}

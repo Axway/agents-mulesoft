@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/Axway/agents-mulesoft/pkg/common"
+
 	"github.com/Axway/agents-mulesoft/pkg/config"
 
 	"github.com/Axway/agents-mulesoft/pkg/subscription/mocks"
@@ -27,7 +29,7 @@ var mockSub = &apic.MockSubscription{
 	Name:           "name",
 	ApicID:         "8a2e924a7943c8d501795810a5fd1bbc",
 	RemoteAPIID:    mockRemoteAPIID,
-	RemoteAPIStage: "Sandbox",
+	RemoteAPIStage: "1.0.5",
 	CatalogID:      "8a2e855979191de701795810a8f82f3a",
 	UserID:         "5",
 	State:          apic.PublishedState,
@@ -35,6 +37,9 @@ var mockSub = &apic.MockSubscription{
 		anypoint.AppName:     "mule-app",
 		anypoint.Description: "desc",
 		anypoint.TierLabel:   "666892-gold",
+	},
+	RemoteAPIAttributes: map[string]string{
+		common.AttrAPIID: "16810512",
 	},
 	ReceivedValues:               map[string]interface{}{},
 	ReceivedAppName:              "",

@@ -6,6 +6,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Axway/agents-mulesoft/pkg/common"
+
+	"github.com/Axway/agent-sdk/pkg/cache"
+
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
@@ -55,7 +59,6 @@ var exchangeAsset = anypoint.ExchangeAsset{
 }
 
 func TestServiceHandler(t *testing.T) {
-	stage := "Sandbox"
 	content := `{"openapi":"3.0.1","servers":[{"url":"https://abc.com"}], "paths":{}, "info":{"title":"petstore3"}}`
 	policies := anypoint.Policies{Policies: []anypoint.Policy{
 		{
@@ -72,26 +75,45 @@ func TestServiceHandler(t *testing.T) {
 
 	msh := &mockSchemaHandler{}
 	sh := &serviceHandler{
-		muleEnv:             stage,
+		muleEnv:             "Sandbox",
 		discoveryTags:       []string{"tag1"},
 		discoveryIgnoreTags: []string{"nah"},
 		client:              mc,
 		subscriptionManager: msh,
+		cache:               cache.New(),
 	}
 
-	details := sh.ToServiceDetails(&asset)
-
-	assert.Equal(t, 1, len(details))
-	item := details[0]
+	list := sh.ToServiceDetails(&asset)
+	api := asset.APIs[0]
+	assert.Equal(t, 1, len(list))
+	item := list[0]
 	assert.Equal(t, asset.APIs[0].AssetID, item.APIName)
-	assert.Equal(t, "verify-api-key", item.AuthPolicy)
-	assert.Equal(t, fmt.Sprint(asset.APIs[0].ID), item.ID)
+	assert.Equal(t, apic.Apikey, item.AuthPolicy)
+	assert.Equal(t, fmt.Sprint(asset.ID), item.ID)
 	assert.Equal(t, apic.Oas3, item.ResourceType)
-	assert.Equal(t, stage, item.Stage)
+	assert.Equal(t, api.ProductVersion, item.Stage)
 	assert.Equal(t, asset.ExchangeAssetName, item.Title)
-	assert.Equal(t, asset.APIs[0].AssetVersion, item.Version)
-	assert.Equal(t, asset.APIs[0].Tags, item.Tags)
-	assert.NotEmpty(t, item.ServiceAttributes["checksum"])
+	assert.Equal(t, api.ProductVersion, item.Version)
+	assert.Equal(t, api.Tags, item.Tags)
+	assert.NotEmpty(t, item.ServiceAttributes[common.AttrChecksum])
+	assert.Equal(t, fmt.Sprint(api.ID), item.ServiceAttributes[common.AttrAPIID])
+	assert.Equal(t, fmt.Sprint(asset.ID), item.ServiceAttributes[common.AttrAssetID])
+	assert.Equal(t, api.AssetVersion, item.ServiceAttributes[common.AttrAssetVersion])
+	assert.Equal(t, api.ProductVersion, item.ServiceAttributes[common.AttrProductVersion])
+
+	// Should find the api in the cache
+	cachedItem, err := sh.cache.Get(item.ServiceAttributes[common.AttrChecksum])
+	assert.Nil(t, err)
+	assert.Equal(t, api, cachedItem)
+
+	// Should find the api in the cache by the secondary key
+	cachedItem, err = sh.cache.GetBySecondaryKey(common.FormatAPICacheKey(fmt.Sprint(api.ID), api.ProductVersion))
+	assert.Nil(t, err)
+	assert.Equal(t, api, cachedItem)
+
+	// Should not discover an API that is saved in the cache.
+	list = sh.ToServiceDetails(&asset)
+	assert.Equal(t, 0, len(list))
 }
 
 func TestServiceHandlerSLAPolicy(t *testing.T) {
@@ -101,7 +123,6 @@ func TestServiceHandlerSLAPolicy(t *testing.T) {
 		UpdateFromAPIServer: false,
 	})
 	agent.InitializeForTest(cc)
-	stage := "Sandbox"
 	content := `{"openapi":"3.0.1","servers":[{"url":"https://abc.com"}], "paths":{}, "info":{"title":"petstore3"}}`
 	policies := anypoint.Policies{Policies: []anypoint.Policy{
 		{
@@ -118,11 +139,12 @@ func TestServiceHandlerSLAPolicy(t *testing.T) {
 
 	msh := &mockSchemaHandler{}
 	sh := &serviceHandler{
-		muleEnv:             stage,
+		muleEnv:             "Sandbox",
 		discoveryTags:       []string{"tag1"},
 		discoveryIgnoreTags: []string{"nah"},
 		client:              mc,
 		subscriptionManager: msh,
+		cache:               cache.New(),
 	}
 
 	details := sh.ToServiceDetails(&asset)
@@ -133,7 +155,6 @@ func TestServiceHandlerSLAPolicy(t *testing.T) {
 }
 
 func TestServiceHandlerDidNotDiscoverAPI(t *testing.T) {
-	stage := "Sandbox"
 	policies := anypoint.Policies{Policies: []anypoint.Policy{
 		{
 			Template: anypoint.Template{
@@ -144,10 +165,12 @@ func TestServiceHandlerDidNotDiscoverAPI(t *testing.T) {
 	mc := &anypoint.MockAnypointClient{}
 	mc.On("GetPolicies").Return(policies, nil)
 	sh := &serviceHandler{
-		muleEnv:             stage,
+		muleEnv:             "Sandbox",
 		discoveryTags:       []string{"nothing"},
 		discoveryIgnoreTags: []string{"nah"},
 		client:              mc,
+		cache:               cache.New(),
+		subscriptionManager: &mockSchemaHandler{},
 	}
 	details := sh.ToServiceDetails(&asset)
 	assert.Equal(t, 0, len(details))
@@ -165,6 +188,8 @@ func TestServiceHandlerGetPolicyError(t *testing.T) {
 		discoveryTags:       []string{},
 		discoveryIgnoreTags: []string{},
 		client:              mc,
+		cache:               cache.New(),
+		subscriptionManager: &mockSchemaHandler{},
 	}
 	sd, err := sh.getServiceDetail(&asset, &asset.APIs[0])
 
@@ -185,6 +210,7 @@ func TestServiceHandlerGetExchangeAssetError(t *testing.T) {
 		discoveryIgnoreTags: []string{},
 		client:              mc,
 		subscriptionManager: &mockSchemaHandler{},
+		cache:               cache.New(),
 	}
 	sd, err := sh.getServiceDetail(&asset, &asset.APIs[0])
 
@@ -744,16 +770,6 @@ func (m *mockConsumerInstanceGetter) GetConsumerInstanceByID(string) (*v1alpha1.
 	return ci, args.Error(1)
 }
 
-type mockSubscriptionGetter struct {
-	mock.Mock
-}
-
-func (m *mockSubscriptionGetter) GetSubscriptionsForCatalogItem([]string, string) ([]apic.CentralSubscription, error) {
-	args := m.Called()
-	cs := args.Get(0).([]apic.CentralSubscription)
-	return cs, args.Error(1)
-}
-
 func getSLATierInfo() (*anypoint.Tiers, *serviceHandler, *mocks.MockCentralClient) {
 	stage := "Sandbox"
 	mc := &anypoint.MockAnypointClient{}
@@ -786,6 +802,7 @@ func getSLATierInfo() (*anypoint.Tiers, *serviceHandler, *mocks.MockCentralClien
 		discoveryIgnoreTags: []string{},
 		client:              mc,
 		subscriptionManager: sm,
+		cache:               cache.New(),
 	}
 
 	return &tiers, sh, &mocks.MockCentralClient{}

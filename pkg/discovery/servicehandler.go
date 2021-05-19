@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Axway/agents-mulesoft/pkg/common"
+
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/util/oas"
 
@@ -41,6 +43,7 @@ type serviceHandler struct {
 	discoveryIgnoreTags []string
 	client              anypoint.Client
 	subscriptionManager subscription.SchemaHandler
+	cache               cache.Cache
 }
 
 func (s *serviceHandler) OnConfigChange(cfg *config.MulesoftConfig) {
@@ -97,22 +100,21 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 	authPolicy, configuration, isSlaBased := getAuthPolicy(policies)
 
 	// TODO can be refactored to not use authPolicy in checksum and use policy
-	isAlreadyPublished, checksum := isPublished(api, authPolicy)
+	isAlreadyPublished, checksum := isPublished(api, authPolicy, s.cache)
 	// If true, then the api is published and there were no changes detected
 	if isAlreadyPublished {
 		logger.WithFields(logrus.Fields{"policy": authPolicy, "msg": "api is already published"})
 		return nil, nil
 	}
 
-	assetCache := cache.GetCache()
 	// TODO Handle purging of cache
 	// Set the item so that it can be found by the agent-sdk for validation
-	cacheKey := FormatCacheKey(fmt.Sprint(asset.ID), api.ProductVersion)
-	err = assetCache.Set(cacheKey, *api)
-	secondaryKey := FormatCacheKey(fmt.Sprint(api.ID), api.ProductVersion)
+	cacheKey := common.FormatAPICacheKey(fmt.Sprint(asset.ID), api.ProductVersion)
+	err = s.cache.Set(cacheKey, *api)
+	secondaryKey := common.FormatAPICacheKey(fmt.Sprint(api.ID), api.ProductVersion)
 	// Setting with the checksum allows a way to see if the item changed.
 	// Setting with the secondary key allows the subscription manager to find the api.
-	err = assetCache.SetWithSecondaryKey(checksum, secondaryKey, *api)
+	err = s.cache.SetWithSecondaryKey(checksum, secondaryKey, *api)
 	if err != nil {
 		logger.Error(err)
 	}
@@ -184,11 +186,11 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 		ImageContentType: iconContentType,
 		ResourceType:     specType,
 		ServiceAttributes: map[string]string{
-			"API ID":          fmt.Sprint(api.ID),
-			"Asset ID":        fmt.Sprint(asset.ID),
-			"Asset Version":   api.AssetVersion,
-			"checksum":        checksum,
-			"Product Version": api.ProductVersion,
+			common.AttrAssetID:        fmt.Sprint(asset.ID),
+			common.AttrAPIID:          fmt.Sprint(api.ID),
+			common.AttrAssetVersion:   api.AssetVersion,
+			common.AttrChecksum:       checksum,
+			common.AttrProductVersion: api.ProductVersion,
 		},
 		Stage:            api.ProductVersion,
 		Tags:             api.Tags,
@@ -244,7 +246,7 @@ func shouldDiscoverAPI(endpoint string, discoveryTags, ignoreTags, apiTags []str
 	}
 
 	if doesAPIContainAnyMatchingTag(ignoreTags, apiTags) {
-		return false // ignore
+		return false
 	}
 
 	if len(discoveryTags) > 0 {
@@ -512,10 +514,10 @@ func setOAS3policies(spec *openapi3.T, authPolicy string, configuration map[stri
 }
 
 // isPublished checks if an api is published with the latest changes. Returns true if it is, and false if it is not.
-func isPublished(api *anypoint.API, authPolicy string) (bool, string) {
+func isPublished(api *anypoint.API, authPolicy string, c cache.Cache) (bool, string) {
 	// Change detection (asset + policies)
 	checksum := makeChecksum(api, authPolicy)
-	item, err := cache.GetCache().Get(checksum)
+	item, err := c.Get(checksum)
 	if err != nil || item == nil {
 		return false, checksum
 	} else {
