@@ -99,7 +99,7 @@ func (m mockAnalyticsClient) GetClientApplication(string) (*anypoint.Application
 func (m mockAnalyticsClient) OnConfigChange(_ *config.MulesoftConfig) {
 }
 func (m mockAnalyticsClient) GetLastRun () (string,string){
-	return "",""
+	return "2021-05-18T23:23:40Z",""
 }
 func (m mockAnalyticsClient) SaveLastRun (string) (){
 }

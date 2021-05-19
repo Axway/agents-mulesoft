@@ -69,9 +69,6 @@ func TestMuleEventEmitterJob(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotEmpty(t, job.jobID)
 
-	err = job.Status()
-	assert.Nil(t, err)
-	assert.Equal(t, 0, job.consecutiveErrors)
 
 	ok := job.Ready()
 	assert.True(t, ok)
