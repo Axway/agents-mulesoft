@@ -36,7 +36,7 @@ func Test_MuleEventEmitter(t *testing.T) {
 	}
 	emitter = NewMuleEventEmitter(&config.MulesoftConfig{CachePath: "/tmp"}, eventCh, client)
 	err := emitter.Start()
-	emitter.SaveLastRun("2021-05-19T14:30:20-07:00")
+	emitter.saveLastRun("2021-05-19T14:30:20-07:00")
 	nextRun,_:=emitter.GetLastRun()
 	assert.Equal(t, nextRun, "2021-05-19T14:30:20-07:00")
 	assert.Equal(t, client.err, err)

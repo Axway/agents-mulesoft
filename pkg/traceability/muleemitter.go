@@ -25,9 +25,6 @@ const (
 type Emitter interface {
 	Start() error
 	OnConfigChange(gatewayCfg *config.AgentConfig)
-	GetLastRun() (string, string)
-	SaveLastRun(string)
-
 }
 
 // MuleEventEmitter - Gathers analytics data for publishing to Central.
@@ -55,7 +52,7 @@ func NewMuleEventEmitter(mulesoftConfig *config.MulesoftConfig, eventChannel cha
 		client:       client,
 	}
     me.cachePath=formatCachePath(mulesoftConfig.CachePath)
-	me.cache= cache.Load(formatCachePath(me.cachePath))
+	me.cache= cache.Load(me.cachePath)
     return me
 }
 
@@ -96,7 +93,7 @@ func (me *MuleEventEmitter) Start() error {
 	// Add 1 second to the last time stamp if we found records from this pull.
 	// This will prevent duplicate records from being retrieved
 	if len(events) > 0 {
-		me.SaveLastRun(lastTime.Add(time.Second * 1).Format(time.RFC3339))
+		me.saveLastRun(lastTime.Add(time.Second * 1).Format(time.RFC3339))
 	}
 
 	return nil
@@ -108,11 +105,11 @@ func (me *MuleEventEmitter) GetLastRun() (string, string) {
 	tNow := now.Format(time.RFC3339)
 	if tStamp == nil {
 		tStamp = tNow
-		me.SaveLastRun(tNow)
+		me.saveLastRun(tNow)
 	}
 	return tStamp.(string), tNow
 }
-func (me *MuleEventEmitter) SaveLastRun(lastTime string)  {
+func (me *MuleEventEmitter) saveLastRun(lastTime string)  {
 	me.cache.Set(CacheKeyTimeStamp, lastTime)
 	me.cache.Save(me.cachePath)
 }
