@@ -79,7 +79,7 @@ func Test_validateAPI(t *testing.T) {
 		ID:    apiID,
 		Stage: stageName,
 	}
-	err := c.Set(formatCacheKey(apiID, stageName), sd)
+	err := c.Set(FormatCacheKey(apiID, stageName), sd)
 	if err != nil {
 		t.Error(err)
 	}

@@ -72,7 +72,7 @@ func TestServiceHandler(t *testing.T) {
 
 	msh := &mockSchemaHandler{}
 	sh := &serviceHandler{
-		stage:               stage,
+		muleEnv:             stage,
 		discoveryTags:       []string{"tag1"},
 		discoveryIgnoreTags: []string{"nah"},
 		client:              mc,
@@ -118,7 +118,7 @@ func TestServiceHandlerSLAPolicy(t *testing.T) {
 
 	msh := &mockSchemaHandler{}
 	sh := &serviceHandler{
-		stage:               stage,
+		muleEnv:             stage,
 		discoveryTags:       []string{"tag1"},
 		discoveryIgnoreTags: []string{"nah"},
 		client:              mc,
@@ -144,7 +144,7 @@ func TestServiceHandlerDidNotDiscoverAPI(t *testing.T) {
 	mc := &anypoint.MockAnypointClient{}
 	mc.On("GetPolicies").Return(policies, nil)
 	sh := &serviceHandler{
-		stage:               stage,
+		muleEnv:             stage,
 		discoveryTags:       []string{"nothing"},
 		discoveryIgnoreTags: []string{"nah"},
 		client:              mc,
@@ -161,7 +161,7 @@ func TestServiceHandlerGetPolicyError(t *testing.T) {
 	expectedErr := fmt.Errorf("failed to get policies")
 	mc.On("GetPolicies").Return(policies, expectedErr)
 	sh := &serviceHandler{
-		stage:               stage,
+		muleEnv:             stage,
 		discoveryTags:       []string{},
 		discoveryIgnoreTags: []string{},
 		client:              mc,
@@ -180,7 +180,7 @@ func TestServiceHandlerGetExchangeAssetError(t *testing.T) {
 	mc.On("GetPolicies").Return(policies, nil)
 	mc.On("GetExchangeAsset").Return(&anypoint.ExchangeAsset{}, expectedErr)
 	sh := &serviceHandler{
-		stage:               stage,
+		muleEnv:             stage,
 		discoveryTags:       []string{},
 		discoveryIgnoreTags: []string{},
 		client:              mc,
@@ -326,8 +326,8 @@ func TestGetExchangeAssetSpecFile(t *testing.T) {
 }
 
 func Test_checksum(t *testing.T) {
-	s1 := checksum(&asset, apic.Passthrough)
-	s2 := checksum(&asset, anypoint.ClientID)
+	s1 := makeChecksum(&asset, apic.Passthrough)
+	s2 := makeChecksum(&asset, anypoint.ClientID)
 	assert.NotEmpty(t, s1)
 	assert.NotEqual(t, s1, s2)
 }
@@ -781,7 +781,7 @@ func getSLATierInfo() (*anypoint.Tiers, *serviceHandler, *mocks.MockCentralClien
 	sm := subscription.New(logrus.StandardLogger(), cig)
 
 	sh := &serviceHandler{
-		stage:               stage,
+		muleEnv:             stage,
 		discoveryTags:       []string{},
 		discoveryIgnoreTags: []string{},
 		client:              mc,

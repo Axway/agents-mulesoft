@@ -63,7 +63,8 @@ func (ssm *SubStateManager) Unsubscribe(log logrus.FieldLogger, sub apic.Subscri
 
 func (ssm *SubStateManager) doSubscribe(log logrus.FieldLogger, sub apic.Subscription) (string, string, error) {
 	// Create a new application and create a new contract
-	apiID := sub.GetRemoteAPIID()
+	apiID := sub.GetRemoteAPIAttributes()["API ID"]
+	stage := sub.GetRemoteAPIStage()
 	tier := sub.GetPropertyValue(anypoint.TierLabel)
 
 	application, err := ssm.createApp(apiID, sub)
@@ -73,7 +74,7 @@ func (ssm *SubStateManager) doSubscribe(log logrus.FieldLogger, sub apic.Subscri
 
 	log.WithField("Client application", application.Name).Debug("Created a client application on Mulesoft")
 
-	muleAPI, err := getMuleAPI(apiID)
+	muleAPI, err := getMuleAPI(apiID, stage)
 	if err != nil {
 		return "", "", err
 	}
@@ -143,8 +144,8 @@ func parseTierID(tierValue string, logger logrus.FieldLogger) int64 {
 	return i
 }
 
-func getMuleAPI(apiID string) (*anypoint.API, error) {
-	api, err := cache.GetCache().GetBySecondaryKey(apiID)
+func getMuleAPI(apiID, stage string) (*anypoint.API, error) {
+	api, err := cache.GetCache().GetBySecondaryKey(fmt.Sprintf("%s-%s", apiID, stage))
 	if err != nil {
 		return nil, err
 	}

@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/util/oas"
 
 	"github.com/sirupsen/logrus"
@@ -23,11 +24,9 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 
 	"github.com/Axway/agent-sdk/pkg/apic"
-	"sigs.k8s.io/yaml"
-
-	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 	"github.com/Axway/agents-mulesoft/pkg/config"
+	"sigs.k8s.io/yaml"
 )
 
 // ServiceHandler converts a mulesoft asset to an array of ServiceDetails
@@ -37,7 +36,7 @@ type ServiceHandler interface {
 }
 
 type serviceHandler struct {
-	stage               string
+	muleEnv             string
 	discoveryTags       []string
 	discoveryIgnoreTags []string
 	client              anypoint.Client
@@ -47,40 +46,30 @@ type serviceHandler struct {
 func (s *serviceHandler) OnConfigChange(cfg *config.MulesoftConfig) {
 	s.discoveryTags = cleanTags(cfg.DiscoveryTags)
 	s.discoveryIgnoreTags = cleanTags(cfg.DiscoveryIgnoreTags)
-	s.stage = cfg.Environment
+	s.muleEnv = cfg.Environment
 }
 
 // ToServiceDetails gathers the ServiceDetail for a single Mulesoft Asset. Each Asset has multiple versions and
 // can resolve to multiple ServiceDetails.
 func (s *serviceHandler) ToServiceDetails(asset *anypoint.Asset) []*ServiceDetail {
 	serviceDetails := []*ServiceDetail{}
-	log := logrus.WithFields(logrus.Fields{
+	logger := logrus.WithFields(logrus.Fields{
 		"assetName": asset.AssetID,
 		"assetID":   asset.ID,
 	})
 	for _, api := range asset.APIs {
-		fields := logrus.Fields{
-			"apiID":           api.ID,
-			"apiAssetVersion": api.AssetVersion,
-		}
+		logger.
+			WithField("apiID", api.ID).
+			WithField("apiAssetVersion", api.AssetVersion)
 
-		key := formatCacheKey(fmt.Sprint(api.ID), s.stage)
-
-		// TODO Implement deletion of items from cache
-		err := cache.GetCache().Set(key, api)
-		if err != nil {
-			log.WithFields(fields).Error(err)
-		}
-
-		// TODO Handle purging of cache
-		err = cache.GetCache().SetWithSecondaryKey(key, strconv.FormatInt(api.ID, 10), api)
-		if err != nil {
-			log.WithFields(fields).Error(err)
+		if !shouldDiscoverAPI(api.EndpointURI, s.discoveryTags, s.discoveryIgnoreTags, api.Tags) {
+			logger.WithField("endpoint", api.EndpointURI).Debug("skipping discovery for api")
+			continue
 		}
 
 		serviceDetail, err := s.getServiceDetail(asset, &api)
 		if err != nil {
-			log.WithFields(fields).Errorf("error getting the service details: %s", err.Error())
+			logger.Errorf("error getting the service details: %s", err.Error())
 			continue
 		}
 		if serviceDetail != nil {
@@ -92,16 +81,13 @@ func (s *serviceHandler) ToServiceDetails(asset *anypoint.Asset) []*ServiceDetai
 
 // getServiceDetail gets the ServiceDetail for the API asset.
 func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.API) (*ServiceDetail, error) {
+	api.ActiveContractsCount = 0
 	logger := logrus.WithFields(logrus.Fields{
 		"assetName":       asset.AssetID,
 		"assetID":         asset.ID,
 		"apiID":           api.ID,
 		"apiAssetVersion": api.AssetVersion,
 	})
-	if !shouldDiscoverAPI(api.EndpointURI, s.discoveryTags, s.discoveryIgnoreTags, api.Tags) {
-		logger.WithField("endpoint", api.EndpointURI).Debug("skipping discovery for api")
-		return nil, nil
-	}
 
 	// Get the policies associated with the API
 	policies, err := s.client.GetPolicies(api.ID)
@@ -109,6 +95,27 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 		return nil, err
 	}
 	authPolicy, configuration, isSlaBased := getAuthPolicy(policies)
+
+	// TODO can be refactored to not use authPolicy in checksum and use policy
+	isAlreadyPublished, checksum := isPublished(api, authPolicy)
+	// If true, then the api is published and there were no changes detected
+	if isAlreadyPublished {
+		logger.WithFields(logrus.Fields{"policy": authPolicy, "msg": "api is already published"})
+		return nil, nil
+	}
+
+	assetCache := cache.GetCache()
+	// TODO Handle purging of cache
+	// Set the item so that it can be found by the agent-sdk for validation
+	cacheKey := FormatCacheKey(fmt.Sprint(asset.ID), api.ProductVersion)
+	err = assetCache.Set(cacheKey, *api)
+	secondaryKey := FormatCacheKey(fmt.Sprint(api.ID), api.ProductVersion)
+	// Setting with the checksum allows a way to see if the item changed.
+	// Setting with the secondary key allows the subscription manager to find the api.
+	err = assetCache.SetWithSecondaryKey(checksum, secondaryKey, *api)
+	if err != nil {
+		logger.Error(err)
+	}
 
 	apiID := strconv.FormatInt(api.ID, 10)
 
@@ -132,17 +139,6 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 
 		subSchName = schema.GetSubscriptionName()
 	}
-
-	// TODO can be refactored to not use authPolicy in checksum and use policy
-	isAlreadyPublished, checksum := isPublished(api, authPolicy)
-	if isAlreadyPublished {
-		// If true, then the api is published and there were no changes detected
-		logger.WithFields(logrus.Fields{"policy": authPolicy, "msg": "api is already published"})
-		return nil, nil
-	}
-	logger.WithField("policy", authPolicy).Debugf("change detected in published asset")
-
-	// Potentially discoverable API, gather the details
 
 	exchangeAsset, err := s.client.GetExchangeAsset(api.GroupID, api.AssetID, api.AssetVersion)
 	if err != nil {
@@ -183,18 +179,21 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 		APIName:          api.AssetID,
 		APISpec:          modifiedSpec,
 		AuthPolicy:       authPolicy,
-		ID:               fmt.Sprint(api.ID),
+		ID:               fmt.Sprint(asset.ID),
 		Image:            icon,
 		ImageContentType: iconContentType,
 		ResourceType:     specType,
 		ServiceAttributes: map[string]string{
-			"checksum": checksum,
-			"assetID":  fmt.Sprint(asset.ID),
+			"API ID":          fmt.Sprint(api.ID),
+			"Asset ID":        fmt.Sprint(asset.ID),
+			"Asset Version":   api.AssetVersion,
+			"checksum":        checksum,
+			"Product Version": api.ProductVersion,
 		},
-		Stage:            s.stage,
+		Stage:            api.ProductVersion,
 		Tags:             api.Tags,
 		Title:            asset.ExchangeAssetName,
-		Version:          api.AssetVersion,
+		Version:          api.ProductVersion,
 		SubscriptionName: subSchName,
 		Status:           apic.PublishedStatus,
 	}, nil
@@ -376,8 +375,8 @@ func setWSDLEndpoint(_ string, specContent []byte) ([]byte, error) {
 	return specContent, nil
 }
 
-// checksum generates a checksum for the api for change detection
-func checksum(val interface{}, authPolicy string) string {
+// makeChecksum generates a makeChecksum for the api for change detection
+func makeChecksum(val interface{}, authPolicy string) string {
 	sum := sha256.Sum256([]byte(fmt.Sprintf("%v%s", val, authPolicy)))
 	return fmt.Sprintf("%x", sum)
 }
@@ -515,14 +514,11 @@ func setOAS3policies(spec *openapi3.T, authPolicy string, configuration map[stri
 // isPublished checks if an api is published with the latest changes. Returns true if it is, and false if it is not.
 func isPublished(api *anypoint.API, authPolicy string) (bool, string) {
 	// Change detection (asset + policies)
-	checksum := checksum(api, authPolicy)
-	if agent.IsAPIPublishedByID(fmt.Sprint(api.ID)) {
-		publishedChecksum := agent.GetAttributeOnPublishedAPIByID(fmt.Sprint(api.ID), "checksum")
-		if checksum == publishedChecksum {
-			// the api is already published with the latest changes
-			return true, checksum
-		}
+	checksum := makeChecksum(api, authPolicy)
+	item, err := cache.GetCache().Get(checksum)
+	if err != nil || item == nil {
+		return false, checksum
+	} else {
+		return true, checksum
 	}
-	// the api is not published
-	return false, checksum
 }

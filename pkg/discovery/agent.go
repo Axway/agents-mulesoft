@@ -26,11 +26,10 @@ type Repeater interface {
 
 // Agent links the mulesoft client and the gateway client.
 type Agent struct {
-	assetCache cache.Cache
-	client     anypoint.Client
-	stopAgent  chan bool
-	discovery  Repeater
-	publisher  Repeater
+	client    anypoint.Client
+	stopAgent chan bool
+	discovery Repeater
+	publisher Repeater
 }
 
 // NewAgent creates a new agent
@@ -45,7 +44,7 @@ func NewAgent(cfg *config.AgentConfig, client anypoint.Client, sm subscription.S
 	}
 
 	svcHandler := &serviceHandler{
-		stage:               cfg.MulesoftConfig.Environment,
+		muleEnv:             cfg.MulesoftConfig.Environment,
 		discoveryTags:       cleanTags(cfg.MulesoftConfig.DiscoveryTags),
 		discoveryIgnoreTags: cleanTags(cfg.MulesoftConfig.DiscoveryIgnoreTags),
 		client:              client,
@@ -132,7 +131,7 @@ func (a *Agent) Stop() {
 // discovery loop.
 func validateAPI() func(apiID, stageName string) bool {
 	return func(apiID, stageName string) bool {
-		asset, err := cache.GetCache().Get(formatCacheKey(apiID, stageName))
+		asset, err := cache.GetCache().Get(FormatCacheKey(apiID, stageName))
 		if err != nil {
 			log.Warnf("Unable to validate API: %s", err.Error())
 			// If we can't validate it exists then assume it does until known otherwise.
@@ -155,7 +154,7 @@ func cleanTags(tagCSV string) []string {
 	return clean
 }
 
-// formatCacheKey ensure consistent naming of asset cache key
-func formatCacheKey(apiID, stageName string) string {
+// FormatCacheKey ensure consistent naming of asset cache key
+func FormatCacheKey(apiID, stageName string) string {
 	return fmt.Sprintf("%s-%s", apiID, stageName)
 }

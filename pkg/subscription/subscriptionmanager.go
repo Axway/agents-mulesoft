@@ -171,7 +171,7 @@ func logFields(sub apic.Subscription) logrus.Fields {
 		"subscriptionName":   sub.GetName(),
 		"subscriptionID":     sub.GetID(),
 		"catalogItemID":      sub.GetCatalogItemID(),
-		"remoteID":           sub.GetRemoteAPIID(),
+		"remoteID":           sub.GetRemoteAPIAttributes()["API ID"],
 		"consumerInstanceID": sub.GetApicID(),
 		"currentState":       sub.GetState(),
 	}

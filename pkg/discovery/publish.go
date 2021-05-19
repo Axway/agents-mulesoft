@@ -39,9 +39,10 @@ func (p *publisher) Loop() {
 // publish Publishes the API to Amplify Central.
 func (p *publisher) publish(serviceDetail *ServiceDetail) {
 	log := logrus.WithFields(logrus.Fields{
-		"name":  serviceDetail.APIName,
-		"id":    serviceDetail.ID,
-		"stage": serviceDetail.Stage,
+		"name":    serviceDetail.APIName,
+		"id":      serviceDetail.ID,
+		"stage":   serviceDetail.Stage,
+		"version": serviceDetail.Version,
 	})
 	log.Infof("Publishing to Amplify Central")
 
