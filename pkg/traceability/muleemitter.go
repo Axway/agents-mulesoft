@@ -71,9 +71,10 @@ func (me *MuleEventEmitter) Start() error {
 		return err
 	}
 	for _, event := range events {
-			if event.Timestamp.After(lastTime){
-				lastTime = event.Timestamp
-			}
+		// Results are not sorted. We want the most recent time to bubble up
+		if event.Timestamp.After(lastTime){
+			lastTime = event.Timestamp
+		}
 		j, err := json.Marshal(event)
 		if err != nil {
 			log.Warnf("failed to marshal event: %s", err.Error())
