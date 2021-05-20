@@ -67,3 +67,7 @@ func (m *MockCentralClient) DeleteServiceByAPIID(string) error {
 func (m *MockCentralClient) GetConsumerInstancesByExternalAPIID(string) ([]*v1alpha1.ConsumerInstance, error) {
 	return nil, nil
 }
+
+func (m *MockCentralClient) GetUserName(id string) (string, error) {
+	return "", nil
+}

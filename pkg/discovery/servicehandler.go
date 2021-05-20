@@ -353,15 +353,27 @@ func getSpecType(file *anypoint.ExchangeFile, specContent []byte) (string, error
 func getAuthPolicy(policies anypoint.Policies) (string, map[string]interface{}, bool) {
 	for _, policy := range policies.Policies {
 		if policy.Template.AssetID == anypoint.ClientID {
-			return apic.Apikey, policy.Configuration, false
+			conf, ok := policy.Configuration.(map[string]interface{})
+			if !ok {
+				logrus.Errorf("unable to perform type assertion on %#v", policy.Configuration)
+			}
+			return apic.Apikey, conf, false
 		}
 
 		if strings.Contains(policy.Template.AssetID, anypoint.SlaAuth) {
-			return apic.Apikey, policy.Configuration, true
+			conf, ok := policy.Configuration.(map[string]interface{})
+			if !ok {
+				logrus.Errorf("unable to perform type assertion on %#v", policy.Configuration)
+			}
+			return apic.Apikey, conf, true
 		}
 
 		if policy.Template.AssetID == anypoint.ExternalOauth {
-			return apic.Oauth, policy.Configuration, false
+			conf, ok := policy.Configuration.(map[string]interface{})
+			if !ok {
+				logrus.Errorf("unable to perform type assertion on %#v", policy.Configuration)
+			}
+			return apic.Oauth, conf, false
 		}
 	}
 
