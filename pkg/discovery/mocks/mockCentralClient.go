@@ -68,6 +68,6 @@ func (m *MockCentralClient) GetConsumerInstancesByExternalAPIID(string) ([]*v1al
 	return nil, nil
 }
 
-func (m *MockCentralClient) GetUserName(id string) (string, error) {
+func (m *MockCentralClient) GetUserName(string) (string, error) {
 	return "", nil
 }

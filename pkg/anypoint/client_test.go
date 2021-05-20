@@ -160,7 +160,7 @@ func TestClient(t *testing.T) {
 	logrus.Info(i, contentType)
 	assert.NotEmpty(t, i)
 	assert.Empty(t, contentType)
-	events, err := client.GetAnalyticsWindow()
+	events, err := client.GetAnalyticsWindow("2021-05-19T14:30:20-07:00","2021-05-19T14:30:22-07:00")
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(events))
 
