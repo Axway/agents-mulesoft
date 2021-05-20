@@ -3,8 +3,9 @@ package traceability
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/Axway/agent-sdk/pkg/cache"
 	"time"
+
+	"github.com/Axway/agent-sdk/pkg/cache"
 
 	"github.com/Axway/agent-sdk/pkg/jobs"
 
@@ -47,13 +48,13 @@ type MuleEventEmitterJob struct {
 
 // NewMuleEventEmitter - Creates a client to poll for events.
 func NewMuleEventEmitter(cachePath string, eventChannel chan string, client anypoint.AnalyticsClient) *MuleEventEmitter {
-	me :=&MuleEventEmitter{
+	me := &MuleEventEmitter{
 		eventChannel: eventChannel,
 		client:       client,
 	}
-    me.cachePath=formatCachePath(cachePath)
-	me.cache= cache.Load(me.cachePath)
-    return me
+	me.cachePath = formatCachePath(cachePath)
+	me.cache = cache.Load(me.cachePath)
+	return me
 }
 
 // Start retrieves analytics data from anypoint and sends them on the event channel for processing.
@@ -76,11 +77,11 @@ func (me *MuleEventEmitter) Start() error {
 	var lastTime time.Time
 	lastTime, err = time.Parse(time.RFC3339, strStartTime)
 	if err != nil {
-		logrus.WithFields(logrus.Fields{"strStartTime":strStartTime }).Warn("Unable to Parse Last Time")
+		logrus.WithFields(logrus.Fields{"strStartTime": strStartTime}).Warn("Unable to Parse Last Time")
 	}
 	for _, event := range events {
 		// Results are not sorted. We want the most recent time to bubble up
-		if event.Timestamp.After(lastTime){
+		if event.Timestamp.After(lastTime) {
 			lastTime = event.Timestamp
 		}
 		j, err := json.Marshal(event)
@@ -108,7 +109,7 @@ func (me *MuleEventEmitter) getLastRun() (string, string) {
 	}
 	return tStamp.(string), tNow
 }
-func (me *MuleEventEmitter) saveLastRun(lastTime string)  {
+func (me *MuleEventEmitter) saveLastRun(lastTime string) {
 	me.cache.Set(CacheKeyTimeStamp, lastTime)
 	me.cache.Save(me.cachePath)
 }
