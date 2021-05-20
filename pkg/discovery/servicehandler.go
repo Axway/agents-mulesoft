@@ -177,10 +177,16 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 		return nil, err
 	}
 
+	status := apic.PublishedStatus
+	if api.Deprecated == true {
+		status = apic.DeprecatedStatus
+	}
+
 	return &ServiceDetail{
 		APIName:          api.AssetID,
 		APISpec:          modifiedSpec,
 		AuthPolicy:       authPolicy,
+		Description:      api.Description,
 		ID:               fmt.Sprint(asset.ID),
 		Image:            icon,
 		ImageContentType: iconContentType,
@@ -197,7 +203,7 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 		Title:            asset.ExchangeAssetName,
 		Version:          api.ProductVersion,
 		SubscriptionName: subSchName,
-		Status:           apic.PublishedStatus,
+		Status:           status,
 	}, nil
 }
 
@@ -524,10 +530,10 @@ func isPublished(api *anypoint.API, authPolicy string, c cache.Cache) (bool, str
 	}
 }
 
-func getMapFromInterface(generic interface{}) map[string]interface{} {
-	conf, ok := generic.(map[string]interface{})
+func getMapFromInterface(item interface{}) map[string]interface{} {
+	conf, ok := item.(map[string]interface{})
 	if !ok {
-		logrus.Errorf("unable to perform type assertion on %#v", generic)
+		logrus.Errorf("unable to perform type assertion on %#v", item)
 		return map[string]interface{}{}
 	}
 	return conf
