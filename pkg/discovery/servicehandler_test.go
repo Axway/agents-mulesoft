@@ -370,6 +370,7 @@ func Test_getAuthPolicy(t *testing.T) {
 			policies: anypoint.Policies{
 				Policies: []anypoint.Policy{
 					{
+						Configuration: map[string]interface{}{},
 						Template: anypoint.Template{
 							AssetID: anypoint.ClientID,
 						},
@@ -383,6 +384,7 @@ func Test_getAuthPolicy(t *testing.T) {
 			policies: anypoint.Policies{
 				Policies: []anypoint.Policy{
 					{
+						Configuration: map[string]interface{}{},
 						Template: anypoint.Template{
 							AssetID: anypoint.ExternalOauth,
 						},
@@ -396,10 +398,25 @@ func Test_getAuthPolicy(t *testing.T) {
 			policies: anypoint.Policies{
 				Policies: []anypoint.Policy{
 					{
+						Configuration: map[string]interface{}{},
 						Template: anypoint.Template{
 							AssetID: "fake",
 						},
 					},
+					{
+						Configuration: map[string]interface{}{},
+						Template: anypoint.Template{
+							AssetID: anypoint.ClientID,
+						},
+					},
+				},
+			},
+		},
+		{
+			name:     "should return a map for the configuration when it is not set.'",
+			expected: apic.Apikey,
+			policies: anypoint.Policies{
+				Policies: []anypoint.Policy{
 					{
 						Template: anypoint.Template{
 							AssetID: anypoint.ClientID,
@@ -416,8 +433,9 @@ func Test_getAuthPolicy(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			policy, _, _ := getAuthPolicy(tc.policies)
+			policy, conf, _ := getAuthPolicy(tc.policies)
 			assert.Equal(t, policy, tc.expected)
+			assert.NotNil(t, conf)
 		})
 	}
 }

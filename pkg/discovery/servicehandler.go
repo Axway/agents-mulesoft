@@ -355,6 +355,7 @@ func getAuthPolicy(policies anypoint.Policies) (string, map[string]interface{}, 
 		if policy.Template.AssetID == anypoint.ClientID {
 			conf, ok := policy.Configuration.(map[string]interface{})
 			if !ok {
+				conf = map[string]interface{}{}
 				logrus.Errorf("unable to perform type assertion on %#v", policy.Configuration)
 			}
 			return apic.Apikey, conf, false
@@ -363,6 +364,7 @@ func getAuthPolicy(policies anypoint.Policies) (string, map[string]interface{}, 
 		if strings.Contains(policy.Template.AssetID, anypoint.SlaAuth) {
 			conf, ok := policy.Configuration.(map[string]interface{})
 			if !ok {
+				conf = map[string]interface{}{}
 				logrus.Errorf("unable to perform type assertion on %#v", policy.Configuration)
 			}
 			return apic.Apikey, conf, true
@@ -371,13 +373,14 @@ func getAuthPolicy(policies anypoint.Policies) (string, map[string]interface{}, 
 		if policy.Template.AssetID == anypoint.ExternalOauth {
 			conf, ok := policy.Configuration.(map[string]interface{})
 			if !ok {
+				conf = map[string]interface{}{}
 				logrus.Errorf("unable to perform type assertion on %#v", policy.Configuration)
 			}
 			return apic.Oauth, conf, false
 		}
 	}
 
-	return apic.Passthrough, nil, false
+	return apic.Passthrough, map[string]interface{}{}, false
 }
 
 func setWSDLEndpoint(_ string, specContent []byte) ([]byte, error) {
