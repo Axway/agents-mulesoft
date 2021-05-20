@@ -23,11 +23,17 @@ func Test_MuleEventEmitter(t *testing.T) {
 	emitter := NewMuleEventEmitter(	"/tmp", eventCh, client)
 
 	assert.NotNil(t, emitter)
+	//Check to be sure the time changes
+	startDateBefore, _ :=emitter.getLastRun()
 
 	go emitter.Start()
 
 	e := <-eventCh
 	assert.NotEmpty(t, e)
+	startDateAfter, _ :=emitter.getLastRun()
+	assert.NotEqual(t, startDateBefore, startDateAfter)
+
+
 
 	// Should throw an error when the client returns an error
 	client = &mockAnalyticsClient{
@@ -36,9 +42,6 @@ func Test_MuleEventEmitter(t *testing.T) {
 	}
 	emitter = NewMuleEventEmitter("/tmp", eventCh, client)
 	err := emitter.Start()
-	emitter.saveLastRun("2021-05-19T14:30:20-07:00")
-	nextRun,_:=emitter.getLastRun()
-	assert.Equal(t, nextRun, "2021-05-19T14:30:20-07:00")
 	assert.Equal(t, client.err, err)
 }
 

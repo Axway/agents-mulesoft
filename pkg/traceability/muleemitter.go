@@ -76,8 +76,7 @@ func (me *MuleEventEmitter) Start() error {
 	var lastTime time.Time
 	lastTime, err = time.Parse(time.RFC3339, strStartTime)
 	if err != nil {
-		logrus.WithError(err).Error("Unable to Parse Last Time")
-		return err
+		logrus.WithFields(logrus.Fields{"strStartTime":strStartTime }).Warn("Unable to Parse Last Time")
 	}
 	for _, event := range events {
 		// Results are not sorted. We want the most recent time to bubble up
