@@ -353,29 +353,17 @@ func getSpecType(file *anypoint.ExchangeFile, specContent []byte) (string, error
 func getAuthPolicy(policies anypoint.Policies) (string, map[string]interface{}, bool) {
 	for _, policy := range policies.Policies {
 		if policy.Template.AssetID == anypoint.ClientID {
-			conf, ok := policy.Configuration.(map[string]interface{})
-			if !ok {
-				conf = map[string]interface{}{}
-				logrus.Errorf("unable to perform type assertion on %#v", policy.Configuration)
-			}
+			conf := getMapFromInterface(policy.Configuration)
 			return apic.Apikey, conf, false
 		}
 
 		if strings.Contains(policy.Template.AssetID, anypoint.SlaAuth) {
-			conf, ok := policy.Configuration.(map[string]interface{})
-			if !ok {
-				conf = map[string]interface{}{}
-				logrus.Errorf("unable to perform type assertion on %#v", policy.Configuration)
-			}
+			conf := getMapFromInterface(policy.Configuration)
 			return apic.Apikey, conf, true
 		}
 
 		if policy.Template.AssetID == anypoint.ExternalOauth {
-			conf, ok := policy.Configuration.(map[string]interface{})
-			if !ok {
-				conf = map[string]interface{}{}
-				logrus.Errorf("unable to perform type assertion on %#v", policy.Configuration)
-			}
+			conf := getMapFromInterface(policy.Configuration)
 			return apic.Oauth, conf, false
 		}
 	}
@@ -534,4 +522,13 @@ func isPublished(api *anypoint.API, authPolicy string, c cache.Cache) (bool, str
 	} else {
 		return true, checksum
 	}
+}
+
+func getMapFromInterface(generic interface{}) map[string]interface{} {
+	conf, ok := generic.(map[string]interface{})
+	if !ok {
+		logrus.Errorf("unable to perform type assertion on %#v", generic)
+		return map[string]interface{}{}
+	}
+	return conf
 }
