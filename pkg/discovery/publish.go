@@ -1,18 +1,17 @@
 package discovery
 
 import (
+	coreAgent "github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	"github.com/Axway/agents-mulesoft/pkg/config"
 	"github.com/sirupsen/logrus"
 )
 
-type PublishAPI func(serviceBody apic.ServiceBody) error
-
 // publisher implements the Repeater interface. Waits for for items on a channel and publishes them to central
 type publisher struct {
 	apiChan     chan *ServiceDetail
 	stopPublish chan bool
-	publishAPI  PublishAPI
+	publishAPI  coreAgent.PublishAPIFunc
 }
 
 func (p *publisher) Stop() {

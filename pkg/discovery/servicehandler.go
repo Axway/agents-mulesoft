@@ -233,10 +233,6 @@ func (s *serviceHandler) createSubscriptionSchemaForSLATier(
 	return schema, nil
 }
 
-func (s *serviceHandler) registerSchema() {
-
-}
-
 // shouldDiscoverAPI determines if the API should be pushed to Central or not
 func shouldDiscoverAPI(endpoint string, discoveryTags, ignoreTags, apiTags []string) bool {
 	if endpoint == "" {
