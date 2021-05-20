@@ -28,7 +28,7 @@ func TestAgent_Run(t *testing.T) {
 		events: []anypoint.AnalyticsEvent{event},
 		err:    nil,
 	}
-	emitter := NewMuleEventEmitter(&config.MulesoftConfig{CachePath: "/tmp"}, eventChannel, client)
+	emitter := NewMuleEventEmitter("/tmp", eventChannel, client)
 	traceAgent, err := newAgent(processor, emitter, eventChannel)
 
 	assert.Nil(t, err)
@@ -71,7 +71,7 @@ func Test_newAgentError(t *testing.T) {
 		events: []anypoint.AnalyticsEvent{event},
 		err:    nil,
 	}
-	emitter := NewMuleEventEmitter(&config.MulesoftConfig{CachePath: "/tmp"}, eventChannel, client)
+	emitter := NewMuleEventEmitter("/tmp", eventChannel, client)
 	hc.RegisterHealthcheck("fake", "fake", func(name string) *hc.Status {
 		return &hc.Status{
 			Result: hc.FAIL,
@@ -98,11 +98,7 @@ func (m mockAnalyticsClient) GetClientApplication(string) (*anypoint.Application
 
 func (m mockAnalyticsClient) OnConfigChange(_ *config.MulesoftConfig) {
 }
-func (m mockAnalyticsClient) GetLastRun () (string,string){
-	return "2021-05-18T23:23:40Z",""
-}
-func (m mockAnalyticsClient) SaveLastRun (string) (){
-}
+
 type mockProcessor struct {
 	channel chan bool
 }

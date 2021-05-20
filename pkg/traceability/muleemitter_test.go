@@ -20,7 +20,7 @@ func Test_MuleEventEmitter(t *testing.T) {
 		events: []anypoint.AnalyticsEvent{event},
 		err:    nil,
 	}
-	emitter := NewMuleEventEmitter(	&config.MulesoftConfig{CachePath: "/tmp"}, eventCh, client)
+	emitter := NewMuleEventEmitter(	"/tmp", eventCh, client)
 
 	assert.NotNil(t, emitter)
 
@@ -34,10 +34,10 @@ func Test_MuleEventEmitter(t *testing.T) {
 		events: []anypoint.AnalyticsEvent{},
 		err:    fmt.Errorf("failed"),
 	}
-	emitter = NewMuleEventEmitter(&config.MulesoftConfig{CachePath: "/tmp"}, eventCh, client)
+	emitter = NewMuleEventEmitter("/tmp", eventCh, client)
 	err := emitter.Start()
 	emitter.saveLastRun("2021-05-19T14:30:20-07:00")
-	nextRun,_:=emitter.GetLastRun()
+	nextRun,_:=emitter.getLastRun()
 	assert.Equal(t, nextRun, "2021-05-19T14:30:20-07:00")
 	assert.Equal(t, client.err, err)
 }
@@ -56,7 +56,7 @@ func TestMuleEventEmitterJob(t *testing.T) {
 		events: []anypoint.AnalyticsEvent{event},
 		err:    nil,
 	}
-	emitter := NewMuleEventEmitter(&config.MulesoftConfig{CachePath: "/tmp"}, eventCh, client)
+	emitter := NewMuleEventEmitter("/tmp", eventCh, client)
 
 	job, err := NewMuleEventEmitterJob(emitter, pollInterval, mockHealthCheck, getStatusSuccess)
 	assert.Nil(t, err)

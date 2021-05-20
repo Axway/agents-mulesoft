@@ -46,12 +46,12 @@ type MuleEventEmitterJob struct {
 }
 
 // NewMuleEventEmitter - Creates a client to poll for events.
-func NewMuleEventEmitter(mulesoftConfig *config.MulesoftConfig, eventChannel chan string, client anypoint.AnalyticsClient) *MuleEventEmitter {
+func NewMuleEventEmitter(cachePath string, eventChannel chan string, client anypoint.AnalyticsClient) *MuleEventEmitter {
 	me :=&MuleEventEmitter{
 		eventChannel: eventChannel,
 		client:       client,
 	}
-    me.cachePath=formatCachePath(mulesoftConfig.CachePath)
+    me.cachePath=formatCachePath(cachePath)
 	me.cache= cache.Load(me.cachePath)
     return me
 }
@@ -59,7 +59,7 @@ func NewMuleEventEmitter(mulesoftConfig *config.MulesoftConfig, eventChannel cha
 // Start retrieves analytics data from anypoint and sends them on the event channel for processing.
 func (me *MuleEventEmitter) Start() error {
 	oldTime := time.Now()
-	strStartTime, strEndTime := me.GetLastRun()
+	strStartTime, strEndTime := me.getLastRun()
 
 	events, err := me.client.GetAnalyticsWindow(strStartTime, strEndTime)
 
@@ -99,7 +99,7 @@ func (me *MuleEventEmitter) Start() error {
 	return nil
 
 }
-func (me *MuleEventEmitter) GetLastRun() (string, string) {
+func (me *MuleEventEmitter) getLastRun() (string, string) {
 	tStamp, _ := me.cache.Get(CacheKeyTimeStamp)
 	now := time.Now()
 	tNow := now.Format(time.RFC3339)
