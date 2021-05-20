@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/Axway/agents-mulesoft/pkg/common"
+
 	"github.com/Axway/agent-sdk/pkg/apic"
 
 	"github.com/Axway/agents-mulesoft/pkg/subscription/mocks"
@@ -182,7 +184,10 @@ func Test_doSubscribeErrors(t *testing.T) {
 
 func Test_doSubscribeSuccess(t *testing.T) {
 	// should subscribe with no error
-	cache.GetCache().SetWithSecondaryKey(fmt.Sprintf("%s-sandbox", mockSub.RemoteAPIID), mockRemoteAPIID, muleAPI)
+	apiID := mockSub.RemoteAPIAttributes[common.AttrAPIID]
+
+	// set an item in the cache so it can be found by the function.
+	cache.GetCache().SetWithSecondaryKey("fake-checksum", common.FormatAPICacheKey(apiID, mockSub.RemoteAPIStage), muleAPI)
 
 	client := &anypoint.MockAnypointClient{}
 	mockContract := &mocks.MockContract{}
@@ -203,11 +208,11 @@ func Test_doSubscribeSuccess(t *testing.T) {
 	client.On("CreateContract").Return(&anypoint.Contract{}, nil)
 
 	base := NewSubStateManager(client, mockContract)
-	cID, scrt, err := base.doSubscribe(logrus.StandardLogger(), mockSub)
+	cID, secret, err := base.doSubscribe(logrus.StandardLogger(), mockSub)
 
 	assert.Nil(t, err)
 	assert.Equal(t, app.ClientID, cID)
-	assert.Equal(t, app.ClientSecret, scrt)
+	assert.Equal(t, app.ClientSecret, secret)
 
 	// should subscribe with no tier id
 	mockSub.PropertyVals[anypoint.TierLabel] = ""
@@ -216,11 +221,11 @@ func Test_doSubscribeSuccess(t *testing.T) {
 	client.On("CreateClientApplication").Return(app, nil)
 	client.On("GetExchangeAsset").Return(asset, nil)
 	client.On("CreateContract").Return(&anypoint.Contract{}, nil)
-	cID, scrt, err = base.doSubscribe(logrus.StandardLogger(), mockSub)
+	cID, secret, err = base.doSubscribe(logrus.StandardLogger(), mockSub)
 
 	assert.Nil(t, err)
 	assert.Equal(t, app.ClientID, cID)
-	assert.Equal(t, app.ClientSecret, scrt)
+	assert.Equal(t, app.ClientSecret, secret)
 
 }
 
