@@ -177,10 +177,16 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 		return nil, err
 	}
 
+	status := apic.PublishedStatus
+	if api.Deprecated == true {
+		status = apic.DeprecatedStatus
+	}
+
 	return &ServiceDetail{
 		APIName:          api.AssetID,
 		APISpec:          modifiedSpec,
 		AuthPolicy:       authPolicy,
+		Description:      api.Description,
 		ID:               fmt.Sprint(asset.ID),
 		Image:            icon,
 		ImageContentType: iconContentType,
@@ -197,7 +203,7 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 		Title:            asset.ExchangeAssetName,
 		Version:          api.ProductVersion,
 		SubscriptionName: subSchName,
-		Status:           apic.PublishedStatus,
+		Status:           status,
 	}, nil
 }
 
@@ -353,19 +359,22 @@ func getSpecType(file *anypoint.ExchangeFile, specContent []byte) (string, error
 func getAuthPolicy(policies anypoint.Policies) (string, map[string]interface{}, bool) {
 	for _, policy := range policies.Policies {
 		if policy.Template.AssetID == anypoint.ClientID {
-			return apic.Apikey, policy.Configuration, false
+			conf := getMapFromInterface(policy.Configuration)
+			return apic.Apikey, conf, false
 		}
 
 		if strings.Contains(policy.Template.AssetID, anypoint.SlaAuth) {
-			return apic.Apikey, policy.Configuration, true
+			conf := getMapFromInterface(policy.Configuration)
+			return apic.Apikey, conf, true
 		}
 
 		if policy.Template.AssetID == anypoint.ExternalOauth {
-			return apic.Oauth, policy.Configuration, false
+			conf := getMapFromInterface(policy.Configuration)
+			return apic.Oauth, conf, false
 		}
 	}
 
-	return apic.Passthrough, nil, false
+	return apic.Passthrough, map[string]interface{}{}, false
 }
 
 func setWSDLEndpoint(_ string, specContent []byte) ([]byte, error) {
@@ -519,4 +528,13 @@ func isPublished(api *anypoint.API, authPolicy string, c cache.Cache) (bool, str
 	} else {
 		return true, checksum
 	}
+}
+
+func getMapFromInterface(item interface{}) map[string]interface{} {
+	conf, ok := item.(map[string]interface{})
+	if !ok {
+		logrus.Errorf("unable to perform type assertion on %#v", item)
+		return map[string]interface{}{}
+	}
+	return conf
 }
