@@ -18,11 +18,11 @@ spec:
         app.kubernetes.io/instance: discovery
     spec:
 #      imagePullSecrets:
-#        - name: docker-config-teams
+#        - name: <Secret_Name>
       containers:
         - env:
             - name: CENTRAL_AUTH_CLIENTID
-              value:
+              value: DOSA_c544a7c1a52348139da6277a33239772
             - name: CENTRAL_AUTH_PRIVATEKEY
               value: /keys/privateKey
             - name: CENTRAL_AUTH_PUBLICKEY
@@ -30,11 +30,11 @@ spec:
             - name: CENTRAL_POLLINTERVAL
               value: 20s
             - name: CENTRAL_ENVIRONMENT
-              value:
+              value: demo
             - name: CENTRAL_TEAM
-              value:
+              value: "Default Team"
             - name: CENTRAL_ORGANIZATIONID
-              value:
+              value: "383015860672618"
             - name: LOG_LEVEL
               value: debug
             - name: LOG_OUTPUT
@@ -44,20 +44,20 @@ spec:
             - name: MULESOFT_ANYPOINTEXCHANGEURL
               value: https://anypoint.mulesoft.com
             - name: MULESOFT_AUTH_PASSWORD
-              value:
+              value: Reg1ons1
             - name: MULESOFT_AUTH_USERNAME
-              value:
+              value: axway
             - name: MULESOFT_CACHEPATH
               value: /tmp
             - name: MULESOFT_ENVIRONMENT
-              value:
+              value: Dev
             - name: MULESOFT_ORGNAME
-              value:
+              value: MBANK
             - name: MULESOFT_POLLINTERVAL
               value: 20s
             - name: STATUS_PORT
               value: "8989"
-          image: axway.jfrog.io/ampc-xenon-docker-release/agents-mulesoft/discovery-agent:0.1.0
+          image: <Path_To_Image>
           imagePullPolicy: Always
           name: discovery
           resources: {}

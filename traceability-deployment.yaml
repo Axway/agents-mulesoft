@@ -18,7 +18,7 @@ spec:
         app.kubernetes.io/instance: traceability
     spec:
 #      imagePullSecrets:
-#        - name: docker-config-teams
+#        - name: <Secret_Name>
       containers:
         - env:
             - name: CENTRAL_AUTH_CLIENTID
@@ -73,7 +73,7 @@ spec:
               value: tcp
             - name: TRACEABILITY_WORKER
               value: "1"
-          image: axway.jfrog.io/ampc-xenon-docker-release/agents-mulesoft/traceability-agent:0.1.0
+          image: <Path_To_Image>
           imagePullPolicy: Always
           name: traceability
           resources: {}
