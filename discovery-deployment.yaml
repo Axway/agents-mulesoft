@@ -22,7 +22,7 @@ spec:
       containers:
         - env:
             - name: CENTRAL_AUTH_CLIENTID
-              value: DOSA_c544a7c1a52348139da6277a33239772
+              value:
             - name: CENTRAL_AUTH_PRIVATEKEY
               value: /keys/privateKey
             - name: CENTRAL_AUTH_PUBLICKEY
@@ -30,11 +30,11 @@ spec:
             - name: CENTRAL_POLLINTERVAL
               value: 20s
             - name: CENTRAL_ENVIRONMENT
-              value: demo
+              value:
             - name: CENTRAL_TEAM
-              value: "Default Team"
+              value:
             - name: CENTRAL_ORGANIZATIONID
-              value: "383015860672618"
+              value:
             - name: LOG_LEVEL
               value: debug
             - name: LOG_OUTPUT
