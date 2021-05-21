@@ -240,7 +240,6 @@ func (s *serviceHandler) createSubscriptionSchemaForSLATier(
 func shouldDiscoverAPI(endpoint string, discoveryTags, ignoreTags, apiTags []string) bool {
 	if endpoint == "" {
 		// If the API has no exposed endpoint we're not going to discover it.
-		logrus.Debugf("consumer endpoint not found")
 		return false
 	}
 

@@ -41,18 +41,22 @@ func NewAgent(cfg *config.AgentConfig, client anypoint.Client, sm subscription.S
 		publishAPI:  coreAgent.PublishAPI,
 	}
 
+	assetCache := cache.GetCache()
+
 	svcHandler := &serviceHandler{
 		muleEnv:             cfg.MulesoftConfig.Environment,
 		discoveryTags:       cleanTags(cfg.MulesoftConfig.DiscoveryTags),
 		discoveryIgnoreTags: cleanTags(cfg.MulesoftConfig.DiscoveryIgnoreTags),
 		client:              client,
 		subscriptionManager: sm,
-		cache:               cache.GetCache(),
+		cache:               assetCache,
 	}
 
 	disc := &discovery{
 		apiChan:           apiChan,
+		cache:             assetCache,
 		client:            client,
+		centralClient:     coreAgent.GetCentralClient(),
 		discoveryPageSize: 50,
 		pollInterval:      cfg.MulesoftConfig.PollInterval,
 		stopDiscovery:     make(chan bool),

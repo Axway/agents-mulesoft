@@ -92,5 +92,7 @@ func (m *MockCentralClient) GetUserName(string) (string, error) {
 }
 
 func (m *MockCentralClient) GetAPIRevisions(map[string]string, string) ([]v1alpha1.APIServiceRevision, error) {
-	return nil, nil
+	args := m.Called()
+	revs := args.Get(0)
+	return revs.([]v1alpha1.APIServiceRevision), args.Error(1)
 }

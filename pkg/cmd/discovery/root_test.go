@@ -22,7 +22,6 @@ func Test_initConfig(t *testing.T) {
 	cfg, ok := conf.(*config.AgentConfig)
 	assert.True(t, ok)
 	assert.IsType(t, &config.AgentConfig{}, cfg)
-	assert.Equal(t, cfg.CentralConfig.GetDataPlaneName(), mulesoft)
 
 	cfg.MulesoftConfig.Username = "username"
 	cfg.MulesoftConfig.Password = "123"
