@@ -44,9 +44,15 @@ spec:
             - name: MULESOFT_ANYPOINTEXCHANGEURL
               value: https://anypoint.mulesoft.com
             - name: MULESOFT_AUTH_PASSWORD
-              value:
+              valueFrom:
+                secretKeyRef:
+                  name: muleauth-traceability
+                  key: password
             - name: MULESOFT_AUTH_USERNAME
-              value:
+              valueFrom:
+                secretKeyRef:
+                  name: muleauth-traceability
+                  key: username
             - name: MULESOFT_CACHEPATH
               value: /tmp
             - name: MULESOFT_ENVIRONMENT

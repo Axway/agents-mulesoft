@@ -44,15 +44,21 @@ spec:
             - name: MULESOFT_ANYPOINTEXCHANGEURL
               value: https://anypoint.mulesoft.com
             - name: MULESOFT_AUTH_PASSWORD
-              value: Reg1ons1
+              valueFrom:
+                secretKeyRef:
+                  name: muleauth-discovery
+                  key: password
             - name: MULESOFT_AUTH_USERNAME
-              value: axway
+              valueFrom:
+                secretKeyRef:
+                  name: muleauth-discovery
+                  key: username
             - name: MULESOFT_CACHEPATH
               value: /tmp
             - name: MULESOFT_ENVIRONMENT
-              value: Dev
+              value:
             - name: MULESOFT_ORGNAME
-              value: MBANK
+              value:
             - name: MULESOFT_POLLINTERVAL
               value: 20s
             - name: STATUS_PORT
