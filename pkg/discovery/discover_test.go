@@ -4,6 +4,14 @@ import (
 	"testing"
 	"time"
 
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agents-mulesoft/pkg/common"
+
+	"github.com/Axway/agent-sdk/pkg/cache"
+
+	"github.com/Axway/agents-mulesoft/pkg/discovery/mocks"
+
 	"github.com/stretchr/testify/assert"
 
 	"github.com/sirupsen/logrus"
@@ -62,10 +70,14 @@ func TestDiscovery_Loop(t *testing.T) {
 
 	msh := &mockServiceHandler{}
 	msh.On("ToServiceDetails").Return([]*ServiceDetail{sd})
+	centralClient := &mocks.MockCentralClient{}
+	centralClient.On("GetAPIRevisions").Return([]v1alpha1.APIServiceRevision{}, nil)
 
 	disc := &discovery{
 		apiChan:           apiChan,
 		client:            client,
+		cache:             cache.GetCache(),
+		centralClient:     centralClient,
 		discoveryPageSize: 50,
 		pollInterval:      0001 * time.Second,
 		stopDiscovery:     stopCh,
@@ -79,7 +91,6 @@ func TestDiscovery_Loop(t *testing.T) {
 	for count < 3 {
 		select {
 		case <-disc.apiChan:
-			// assert.Equal(t, )
 			count++
 		}
 	}
@@ -114,9 +125,15 @@ func Test_discoverAPIs(t *testing.T) {
 			client.On("ListAssets").Return(make([]anypoint.Asset, 0), tc.err)
 			msh := &mockServiceHandler{}
 			msh.On("ToServiceDetails").Return([]*ServiceDetail{sd})
+
+			centralClient := &mocks.MockCentralClient{}
+			centralClient.On("GetAPIRevisions").Return([]v1alpha1.APIServiceRevision{}, nil)
+
 			disc := &discovery{
 				apiChan:           apiChan,
+				cache:             cache.GetCache(),
 				client:            client,
+				centralClient:     centralClient,
 				discoveryPageSize: tc.pageSize,
 				pollInterval:      0001 * time.Second,
 				stopDiscovery:     stopCh,
@@ -131,6 +148,52 @@ func Test_discoverAPIs(t *testing.T) {
 		})
 	}
 
+}
+
+func Test_getRevisions(t *testing.T) {
+	apiChan := make(chan *ServiceDetail)
+	stopCh := make(chan bool)
+
+	client := &anypoint.MockAnypointClient{}
+	client.On("ListAssets").Return(assets, nil)
+
+	msh := &mockServiceHandler{}
+	msh.On("ToServiceDetails").Return([]*ServiceDetail{sd})
+
+	centralClient := &mocks.MockCentralClient{}
+	rev := v1alpha1.APIServiceRevision{
+		ResourceMeta: v1.ResourceMeta{
+			Attributes: map[string]string{
+				common.AttrAPIID:          "123456",
+				common.AttrProductVersion: "1.0.0",
+				common.AttrChecksum:       "abc123",
+			},
+		},
+	}
+	centralClient.On("GetAPIRevisions").Return([]v1alpha1.APIServiceRevision{rev}, nil)
+
+	disc := &discovery{
+		apiChan:           apiChan,
+		client:            client,
+		cache:             cache.GetCache(),
+		centralClient:     centralClient,
+		discoveryPageSize: 50,
+		pollInterval:      0001 * time.Second,
+		stopDiscovery:     stopCh,
+		serviceHandler:    msh,
+	}
+
+	disc.getRevisions()
+
+	attrs := rev.Attributes
+	item, err := disc.cache.Get(attrs[common.AttrChecksum])
+	assert.Nil(t, err)
+	assert.NotNil(t, item)
+
+	key := common.FormatAPICacheKey(attrs[common.AttrAPIID], attrs[common.AttrProductVersion])
+	item, err = disc.cache.GetBySecondaryKey(key)
+	assert.Nil(t, err)
+	assert.NotNil(t, item)
 }
 
 type mockServiceHandler struct {

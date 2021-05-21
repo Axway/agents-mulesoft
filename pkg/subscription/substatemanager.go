@@ -71,7 +71,7 @@ func (ssm *SubStateManager) doSubscribe(log logrus.FieldLogger, sub apic.Subscri
 
 	application, err := ssm.createApp(apiID, sub)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to create Mulesoft application: %s", err)
+		return "", "", err
 	}
 
 	log.WithField("Client application", application.Name).Debug("Created a client application on Mulesoft")
@@ -140,7 +140,6 @@ func parseTierID(tierValue string, logger logrus.FieldLogger) int64 {
 	tierID := strings.Split(tierValue, "-")[0]
 	i, err := strconv.ParseInt(tierID, 10, 64)
 	if err != nil {
-		logger.WithField("tierID", tierValue).Debug("cannot parse tier id")
 		return 0
 	}
 	return i

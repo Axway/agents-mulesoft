@@ -507,12 +507,12 @@ func (c *AnypointClient) invokeDelete(request coreapi.Request) error {
 func (c *AnypointClient) invokeJSON(request coreapi.Request, resp interface{}) error {
 	body, _, err := c.invoke(request)
 	if err != nil {
-		return agenterrors.Wrap(ErrCommunicatingWithGateway, err.Error())
+		return err
 	}
 
 	err = json.Unmarshal(body, resp)
 	if err != nil {
-		return agenterrors.Wrap(ErrMarshallingBody, err.Error())
+		return err
 	}
 	return nil
 }
@@ -533,14 +533,13 @@ func (c *AnypointClient) invoke(request coreapi.Request) ([]byte, map[string][]s
 	if err != nil {
 		return nil, nil, agenterrors.Wrap(ErrCommunicatingWithGateway, err.Error())
 	}
-
 	if !(response.Code == http.StatusOK || response.Code == http.StatusCreated) {
-		return nil, nil, agenterrors.Wrap(ErrCommunicatingWithGateway, fmt.Sprint(response.Code))
+		res := NewErrorResponse(string(response.Body), response.Code)
+		return nil, nil, agenterrors.Wrap(ErrCommunicatingWithGateway, res.String())
 	}
 
 	return response.Body, response.Headers, nil
 }
-
 
 // SetClient replaces the default apiClient with anything that implements the Client interface. Can be used for writing tests.
 func SetClient(c coreapi.Client) ClientOptions {

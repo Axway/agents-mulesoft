@@ -108,9 +108,6 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 	}
 
 	// TODO Handle purging of cache
-	// Set the item so that it can be found by the agent-sdk for validation
-	cacheKey := common.FormatAPICacheKey(fmt.Sprint(asset.ID), api.ProductVersion)
-	err = s.cache.Set(cacheKey, *api)
 	secondaryKey := common.FormatAPICacheKey(fmt.Sprint(api.ID), api.ProductVersion)
 	// Setting with the checksum allows a way to see if the item changed.
 	// Setting with the secondary key allows the subscription manager to find the api.
@@ -243,7 +240,6 @@ func (s *serviceHandler) createSubscriptionSchemaForSLATier(
 func shouldDiscoverAPI(endpoint string, discoveryTags, ignoreTags, apiTags []string) bool {
 	if endpoint == "" {
 		// If the API has no exposed endpoint we're not going to discover it.
-		logrus.Debugf("consumer endpoint not found")
 		return false
 	}
 
