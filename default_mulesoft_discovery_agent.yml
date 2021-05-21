@@ -24,8 +24,9 @@ log:
 
 mulesoft:
   anypointExchangeUrl: https://anypoint.mulesoft.com
-  environment: Sandbox
+  environment: "${MULESOFT_ENVIRONMENT}"
   pollInterval: 20s
+  orgName: "${MULESOFT_ORGNAME}"
   # Comma-separated list of tags. Used to filter the APIs that have a particular tag in their configuration.
   # Default value: empty. Meaning that no matching is performed.
   #discoveryTags: tags1, tags2

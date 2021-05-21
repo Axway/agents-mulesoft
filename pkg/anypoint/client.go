@@ -66,6 +66,7 @@ type AnypointClient struct {
 	apiClient   coreapi.Client
 	auth        Auth
 	environment *Environment
+	orgName     string
 }
 
 type ClientOptions func(*AnypointClient)
@@ -95,6 +96,7 @@ func (c *AnypointClient) OnConfigChange(mulesoftConfig *config.MulesoftConfig) {
 	c.baseURL = mulesoftConfig.AnypointExchangeURL
 	c.username = mulesoftConfig.Username
 	c.password = mulesoftConfig.Password
+	c.orgName = mulesoftConfig.OrgName
 	c.lifetime = mulesoftConfig.SessionLifetime
 
 	var err error
@@ -203,6 +205,15 @@ func (c *AnypointClient) getCurrentUser(token string) (*User, error) {
 	err := c.invokeJSON(request, &user)
 	if err != nil {
 		return nil, err
+	}
+
+	//this sets the User.Organization.ID as the Org ID of the Business Unit specified in Config
+	for _, value := range user.User.MemberOfOrganizations {
+		if value.Name == c.orgName {
+			user.User.Organization.ID = value.ID
+			user.User.Organization.Name = value.Name
+		}
+
 	}
 
 	return &user.User, nil

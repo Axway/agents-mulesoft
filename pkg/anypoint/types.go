@@ -11,13 +11,14 @@ type CurrentUser struct {
 
 // User -
 type User struct {
-	Email        string       `json:"email"`
-	FirstName    string       `json:"firstName"`
-	ID           string       `json:"id"`
-	IdentityType string       `json:"identityType"`
-	LastName     string       `json:"lastName"`
-	Organization Organization `json:"organization"`
-	Username     string       `json:"username"`
+	Email                 string                  `json:"email"`
+	FirstName             string                  `json:"firstName"`
+	ID                    string                  `json:"id"`
+	IdentityType          string                  `json:"identityType"`
+	LastName              string                  `json:"lastName"`
+	Organization          Organization            `json:"organization"`
+	MemberOfOrganizations []MemberOfOrganizations `json:"memberOfOrganizations"`
+	Username              string                  `json:"username"`
 }
 
 // Organization -
@@ -25,6 +26,12 @@ type Organization struct {
 	Domain string `json:"domain"`
 	ID     string `json:"id"`
 	Name   string `json:"name"`
+}
+
+// MemberOfOrganizations -
+type MemberOfOrganizations struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 // Environment -
@@ -295,7 +302,7 @@ type SLATier struct {
 }
 
 type Limits struct {
-	MaximumRequests          int  `json:"maximumRequests"`
-	TimePeriodInMilliseconds int  `json:"timePeriodInMilliseconds"`
-	Visible                  bool `json:"visible"`
+	MaximumRequests          interface{} `json:"maximumRequests,omitempty"`
+	TimePeriodInMilliseconds int         `json:"timePeriodInMilliseconds,omitempty"`
+	Visible                  bool        `json:"visible,omitempty"`
 }
