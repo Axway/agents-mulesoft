@@ -11,7 +11,7 @@ services:
       CENTRAL_AUTH_PUBLICKEY: /keys/dosa-public.pem
       CENTRAL_AUTH_PRIVATEKEY: /keys/dosa-key.pem
       #CENTRAL_AUTH_KEYPASSWORD:
-      CENTRAL_ENVIRONMENT: muletest
+      CENTRAL_ENVIRONMENT:
       CENTRAL_AUTH_CLIENTID: <DOSA>
       LOG_LEVEL: debug
       #LOG_FORMAT: json
@@ -36,14 +36,14 @@ services:
       CENTRAL_AUTH_PUBLICKEY: /keys/dosa-public.pem
       CENTRAL_AUTH_PRIVATEKEY: /keys/dosa-key.pem
       #CENTRAL_AUTH_KEYPASSWORD:
-      CENTRAL_ENVIRONMENT: muletest
+      CENTRAL_ENVIRONMENT:
       CENTRAL_AUTH_CLIENTID: <DOSA>
       LOG_LEVEL: debug
       #LOG_FORMAT: json
       LOG_OUTPUT: stdout
       LOG_PATH: logs
       MULESOFT_ANYPOINTEXCHANGEURL: https://anypoint.mulesoft.com
-      MULESOFT_ENVIRONMENT: Sandbox
+      MULESOFT_ENVIRONMENT:
       MULESOFT_ORGNAME: <ORG_NAME>
       MULESOFT_POLLINTERVAL: 20s
       MULESOFT_AUTH_USERNAME: <USER>
