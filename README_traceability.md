@@ -121,6 +121,20 @@ After making the public/private keys associated with the CENTRAL_AUTH_CLIENTID, 
 ```bash
 kubectl create secret generic key-pair --from-file=publicKey=public_key.pem --from-file=privateKey=private_key.pem
 ```
+Also, create a secret based on the credentials associated with the mulesoft account  by populating the values in muleauth-traceability.yaml
+```
+apiVersion: v1
+kind: Secret
+metadata:
+  name: muleauth-traceability
+type: Opaque
+stringData:
+  username:
+  password:
+```
+```bash
+kubectl apply -f muleauth-traceability.yaml
+```
 Provide the environment Variables required by the manifest file. 
 ```bash
 kubectl apply -f traceability-deployment.yaml
