@@ -59,7 +59,7 @@ func (d *discovery) Loop() {
 
 // getRevisions add revisions to the cache when the agent starts.
 func (d *discovery) getRevisions() {
-	revs, err := agent.CentralClient.GetAPIRevisions(map[string]string{}, "")
+	revs, err := agent.GetCentralClient().GetAPIRevisions(map[string]string{}, "")
 	if err != nil {
 		logrus.Error(err)
 	}
