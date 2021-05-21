@@ -6,15 +6,12 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/Axway/agents-mulesoft/pkg/common"
-
 	"github.com/Axway/agents-mulesoft/pkg/subscription"
 
 	coreAgent "github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	utilErrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
-	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 	"github.com/Axway/agents-mulesoft/pkg/config"
 )
@@ -104,8 +101,6 @@ func (a *Agent) CheckHealth() error {
 
 // Run the agent loop
 func (a *Agent) Run() {
-	validator := validateAPI()
-	coreAgent.RegisterAPIValidator(validator)
 	coreAgent.OnConfigChange(a.onConfigChange)
 
 	go a.discovery.Loop()
@@ -126,21 +121,6 @@ func (a *Agent) Stop() {
 	a.discovery.Stop()
 	a.publisher.Stop()
 	close(a.stopAgent)
-}
-
-// validateAPI checks that the API still exists on the data plane. If it doesn't the agent
-// performs cleanup on the API Central environment. The cache is populated by the
-// discovery loop.
-func validateAPI() func(apiID, stageName string) bool {
-	return func(apiID, stageName string) bool {
-		asset, err := cache.GetCache().Get(common.FormatAPICacheKey(apiID, stageName))
-		if err != nil {
-			log.Warnf("Unable to validate API: %s", err.Error())
-			// If we can't validate it exists then assume it does until known otherwise.
-			return true
-		}
-		return asset != nil
-	}
 }
 
 // cleanTags splits the CSV and trims off whitespace

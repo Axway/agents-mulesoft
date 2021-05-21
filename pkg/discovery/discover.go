@@ -3,6 +3,11 @@ package discovery
 import (
 	"time"
 
+	"github.com/Axway/agent-sdk/pkg/cache"
+	"github.com/Axway/agents-mulesoft/pkg/common"
+
+	"github.com/Axway/agent-sdk/pkg/agent"
+
 	"github.com/Axway/agents-mulesoft/pkg/config"
 
 	"github.com/sirupsen/logrus"
@@ -33,6 +38,7 @@ func (d *discovery) OnConfigChange(cfg *config.MulesoftConfig) {
 // Loop Discovery event loop.
 func (d *discovery) Loop() {
 	go func() {
+		d.getRevisions()
 		// Instant fist "tick"
 		d.discoverAPIs()
 		logrus.Info("Starting poller for Mulesoft APIs")
@@ -49,6 +55,21 @@ func (d *discovery) Loop() {
 			}
 		}
 	}()
+}
+
+// getRevisions add revisions to the cache when the agent starts.
+func (d *discovery) getRevisions() {
+	revs, err := agent.CentralClient.GetAPIRevisions(map[string]string{}, "")
+	if err != nil {
+		logrus.Error(err)
+	}
+	for _, rev := range revs {
+		key := common.FormatAPICacheKey(rev.Attributes[common.AttrAPIID], rev.Attributes[common.AttrProductVersion])
+		err := cache.GetCache().SetWithSecondaryKey(rev.Attributes[common.AttrChecksum], key, rev)
+		if err != nil {
+			logrus.WithError(err).Error("failed to save to the cache")
+		}
+	}
 }
 
 // discoverAPIs Finds APIs from exchange
