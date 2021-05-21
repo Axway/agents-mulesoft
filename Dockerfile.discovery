@@ -29,12 +29,6 @@ COPY --from=builder $APP_HOME/default_mulesoft_discovery_agent.yml /mulesoft_dis
 COPY --from=builder $APP_HOME/bin/discovery /discovery
 COPY --from=builder /etc/passwd /etc/passwd
 
-RUN mkdir /keys && \
-  apk add ca-certificates && apk update && update-ca-certificates \
-  apk --no-cache add curl=7.69.1-r0 && \
-  chown -R $APP_USER /keys && \
-  find / -perm /6000 -type f -exec chmod a-s {} \; || true
-
 USER $APP_USER
 VOLUME ["/keys"]
 HEALTHCHECK --retries=1 CMD curl --fail http://localhost:${STATUS_PORT:-8989}/status || exit 1

@@ -1,4 +1,4 @@
-apic_traceability_agent:
+mulesoft_traceability_agent:
   central:
     agentName: ${CENTRAL_AGENTNAME:""}
     deployment: "${CENTRAL_DEPLOYMENT:prod}"
@@ -17,8 +17,8 @@ apic_traceability_agent:
     auth:
       clientId: "${CENTRAL_AUTH_CLIENTID}"
       keyPassword: ${CENTRAL_AUTH_KEYPASSWORD:""}
-      privateKey: "${CENTRAL_AUTH_PRIVATEKEY:/keys/private_key.pem}"
-      publicKey: "${CENTRAL_AUTH_PUBLICKEY:/keys/public_key.pem}"
+      privateKey: "${CENTRAL_AUTH_PRIVATEKEY:}"
+      publicKey: "${CENTRAL_AUTH_PUBLICKEY:}"
       realm: "${CENTRAL_AUTH_REALM:Broker}"
       url: "${CENTRAL_AUTH_URL:https://login.axway.com/auth}"
     ssl:
@@ -35,6 +35,7 @@ apic_traceability_agent:
     output: ${LOG_OUTPUT:stdout}
   mulesoft:
     environment: "${MULESOFT_ENVIRONMENT}"
+    orgName: "${MULESOFT_ORGNAME}"
     cachePath: "${MULESOFT_CACHEPATH:/tmp}"
     pollInterval: ${MULESOFT_POLLINTERVAL:20s}
     auth:

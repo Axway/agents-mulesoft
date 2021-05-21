@@ -2,8 +2,8 @@ version: "3.9"
 services:
   discovery:
     image: mulesoft-discovery
-    ports:
-      - "8089:8089"
+    # ports:
+    #   - "8089:8089"
     volumes:
       - /path/to/keys:/keys
     environment:
@@ -19,18 +19,20 @@ services:
       LOG_PATH: logs
       MULESOFT_ANYPOINTEXCHANGEURL: https://anypoint.mulesoft.com
       MULESOFT_ENVIRONMENT: Sandbox
+      MULESOFT_ORGID: <ORG_ID>
       MULESOFT_POLLINTERVAL: 20s
       MULESOFT_AUTH_USERNAME: <USERNAME>
       MULESOFT_AUTH_PASSWORD: <PASSWORD>
   traceability:
     image: mulesoft-traceability
-    ports:
-      - "8189:8189"
+    # ports:
+    #   - "8189:8189"
     volumes:
       - /path/to/keys:/keys
       - /path/to/data:/data
     environment:
-      CENTRAL_ORGANIZATIONID: "xxxxxxxx"
+      STATUS_PORT: 8989
+      CENTRAL_ORGANIZATIONID: "xxxxxxx"
       CENTRAL_AUTH_PUBLICKEY: /keys/dosa-public.pem
       CENTRAL_AUTH_PRIVATEKEY: /keys/dosa-key.pem
       #CENTRAL_AUTH_KEYPASSWORD:
@@ -42,6 +44,7 @@ services:
       LOG_PATH: logs
       MULESOFT_ANYPOINTEXCHANGEURL: https://anypoint.mulesoft.com
       MULESOFT_ENVIRONMENT: Sandbox
+      MULESOFT_ORGNAME: <ORG_NAME>
       MULESOFT_POLLINTERVAL: 20s
       MULESOFT_AUTH_USERNAME: <USER>
       MULESOFT_AUTH_PASSWORD: <PASSWORD>

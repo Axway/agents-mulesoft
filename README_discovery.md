@@ -108,6 +108,7 @@ mulesoft:
 | MULESOFT_DISCOVERYIGNORETAGS                                       | mulesoft.discoveryIgnoreTags                                        | Comma-separated black list of tags that, if any are present, will prevent an API being publised to Amplify Central. Take precedence over MULESOFT_DISCOVERYTAGS                                                                                                                                          | (empty tag list)                                                     |
 | MULESOFT_DISCOVERYTAGS                                             | mulesoft.discoveryTags                                              | Comma-separated list of tags that, if any are present, will allow an API to be publised to Amplify Central. All APIs are discovered if not tags are specified                                                                                                                                            | (empty tag list)                                                     |
 | MULESOFT_ENVIRONMENT                                               | mulesoft.environment                                                | The Mulesoft Anypoint Exchange the agent connects to, e.g. Sandbox.                                                                                                                                                                                                                                      |                                                                      |
+| MULESOFT_ORGNAME                                                   | mulesoft.orgName                                                    | The Mulesoft Anypoint Business Unit the agent connects to                                                                                                                                                                                                                                                |                                                                      |
 | MULESOFT_POLLINTERVAL                                              | mulesoft.pollInterval                                               | The frequency in which Mulesoft API Manager is polled for new endpoints.                                                                                                                                                                                                                                 | _30s_                                                                |
 | MULESOFT_PROXYURL                                                  | mulesoft.proxyUrl                                                   | The url for the proxy for API Manager (e.g. http://username:password@hostname:port). If empty, no proxy is defined.                                                                                                                                                                                      | Internally, this value defaults to empty                             |
 | MULESOFT_SSL_CIPHERSUITES                                          | mulesoft.ssl.cipherSuites                                           | An array of strings. It is a list of supported cipher suites for TLS versions up to TLS 1.2. If CipherSuites is nil, a default list of secure cipher suites is used, with a preference order based on hardware performance. [See below](#supported-cipher-suites) for currently supported cipher suites. | [See below](#default-cipher-suites) for default cipher suite setting |
@@ -131,4 +132,15 @@ The list of default cipher suites is: ECDHE-ECDSA-AES-256-GCM-SHA384, ECDHE-RSA-
 
 ```bash
 docker build -t mulesoft-discovery -f Dockerfile.discovery .
+```
+
+## Deploy in Kubernetes Cluster
+
+After making the public/private keys associated with the CENTRAL_AUTH_CLIENTID, make a resource of type secret from the files.
+```bash
+kubectl create secret generic key-pair --from-file=publicKey=public_key.pem --from-file=privateKey=private_key.pem
+```
+Provide the environment Variables required by the manifest file. 
+```bash
+kubectl apply -f discovery-deployment.yaml
 ```

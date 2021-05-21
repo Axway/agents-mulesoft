@@ -16,6 +16,7 @@ var config *AgentConfig
 const (
 	pathAnypointExchangeURL   = "mulesoft.anypointExchangeUrl"
 	pathEnvironment           = "mulesoft.environment"
+	pathOrgName               = "mulesoft.orgName"
 	pathDiscoveryTags         = "mulesoft.discoveryTags"
 	pathDiscoveryIgnoreTags   = "mulesoft.discoveryIgnoreTags"
 	pathAuthUsername          = "mulesoft.auth.username"
@@ -56,6 +57,7 @@ type MulesoftConfig struct {
 	DiscoveryIgnoreTags string            `config:"discoveryIgnoreTags"`
 	DiscoveryTags       string            `config:"discoveryTags"`
 	Environment         string            `config:"environment"`
+	OrgName             string            `config:"orgname"`
 	Password            string            `config:"auth.password"`
 	PollInterval        time.Duration     `config:"pollInterval"`
 	ProxyURL            string            `config:"proxyUrl"`
@@ -82,6 +84,10 @@ func (c *MulesoftConfig) ValidateCfg() (err error) {
 		return errors.New("Invalid mulesoft configuration: environment is not configured")
 	}
 
+	if c.OrgName == "" {
+		return errors.New("Invalid mulesoft configuration: OrgName is not configured")
+	}
+
 	if c.PollInterval == 0 {
 		return errors.New("Invalid mulesoft configuration: pollInterval is invalid")
 	}
@@ -97,6 +103,7 @@ func (c *MulesoftConfig) ValidateCfg() (err error) {
 func AddConfigProperties(props properties.Properties) {
 	props.AddStringProperty(pathAnypointExchangeURL, "https://anypoint.mulesoft.com", "Mulesoft Anypoint Exchange URL.")
 	props.AddStringProperty(pathEnvironment, "", "Mulesoft Anypoint environment.")
+	props.AddStringProperty(pathOrgName, "", "Mulesoft Anypoint Business Group.")
 	props.AddStringProperty(pathAuthUsername, "", "Mulesoft username.")
 	props.AddStringProperty(pathAuthPassword, "", "Mulesoft password.")
 	props.AddDurationProperty(pathAuthLifetime, 60*time.Minute, "Mulesoft session lifetime.")
@@ -121,6 +128,7 @@ func NewMulesoftConfig(props properties.Properties) *MulesoftConfig {
 		DiscoveryIgnoreTags: props.StringPropertyValue(pathDiscoveryIgnoreTags),
 		DiscoveryTags:       props.StringPropertyValue(pathDiscoveryTags),
 		Environment:         props.StringPropertyValue(pathEnvironment),
+		OrgName:             props.StringPropertyValue(pathOrgName),
 		Password:            props.StringPropertyValue(pathAuthPassword),
 		PollInterval:        props.DurationPropertyValue(pathPollInterval),
 		ProxyURL:            props.StringPropertyValue(pathProxyURL),

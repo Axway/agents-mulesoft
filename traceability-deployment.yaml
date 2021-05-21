@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: traceability-agent
+  labels:
+    name: traceability-agent
+    instance: traceability
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: traceability-agent
+      app.kubernetes.io/instance: traceability
+  template:
+    metadata:
+      annotations:
+      labels:
+        app.kubernetes.io/name: traceability-agent
+        app.kubernetes.io/instance: traceability
+    spec:
+#      imagePullSecrets:
+#        - name: docker-config-teams
+      containers:
+        - env:
+            - name: CENTRAL_AUTH_CLIENTID
+              value:
+            - name: CENTRAL_AUTH_PRIVATEKEY
+              value: /keys/privateKey
+            - name: CENTRAL_AUTH_PUBLICKEY
+              value: /keys/publicKey
+            - name: CENTRAL_POLLINTERVAL
+              value: 20s
+            - name: CENTRAL_ENVIRONMENT
+              value:
+            - name: CENTRAL_TEAM
+              value:
+            - name: CENTRAL_ORGANIZATIONID
+              value:
+            - name: LOG_LEVEL
+              value: info
+            - name: LOG_OUTPUT
+              value: stdout
+            - name: LOG_PATH
+              value: logs
+            - name: MULESOFT_ANYPOINTEXCHANGEURL
+              value: https://anypoint.mulesoft.com
+            - name: MULESOFT_AUTH_PASSWORD
+              value:
+            - name: MULESOFT_AUTH_USERNAME
+              value:
+            - name: MULESOFT_CACHEPATH
+              value: /tmp
+            - name: MULESOFT_ENVIRONMENT
+              value:
+            - name: MULESOFT_ORGNAME
+              value:
+            - name: MULESOFT_POLLINTERVAL
+              value: 20s
+            - name: STATUS_PORT
+              value: "8989"
+            - name: TRACEABILITY_REDACTION_PATH_SHOW
+              value: '[{keyMatch:".*"}]'
+            - name: TRACEABILITY_REDACTION_QUERYARGUMENT_SHOW
+              value: '[{keyMatch:".*"}]'
+            - name: TRACEABILITY_REDACTION_REQUESTHEADER_SHOW
+              value: '[{keyMatch:".*"}]'
+            - name: TRACEABILITY_REDACTION_RESPONSEHEADER_SHOW
+              value: '[{keyMatch:".*"}]'
+            - name: TRACEABILITY_COMPRESSIONLEVEL
+              value: "3"
+            - name: TRACEABILITY_HOST
+              value: ingestion-lumberjack.datasearch.axway.com:453
+            - name: TRACEABILITY_PROTOCOL
+              value: tcp
+            - name: TRACEABILITY_WORKER
+              value: "1"
+          image: axway.jfrog.io/ampc-xenon-docker-release/agents-mulesoft/traceability-agent:0.1.0
+          imagePullPolicy: Always
+          name: traceability
+          resources: {}
+          volumeMounts:
+            - mountPath: /keys
+              name: jwt-auth-keys-volume
+      restartPolicy: Always
+      volumes:
+        - name: jwt-auth-keys-volume
+          secret:
+            secretName: key-pair
