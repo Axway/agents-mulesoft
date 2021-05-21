@@ -27,6 +27,7 @@ func Test_initConfig(t *testing.T) {
 	cfg.MulesoftConfig.Password = "123"
 	cfg.MulesoftConfig.Environment = "env1"
 	cfg.MulesoftConfig.PollInterval = 5 * time.Second
+	cfg.MulesoftConfig.OrgName = "dev"
 	err = cfg.MulesoftConfig.ValidateCfg()
 	assert.Nil(t, err)
 }
