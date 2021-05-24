@@ -41,6 +41,11 @@ func init() {
 func run() error {
 	cfg := config.GetConfig()
 	client := anypoint.NewClient(cfg.MulesoftConfig)
+	err := client.Authenticate()
+	if err != nil {
+		return fmt.Errorf("failed to authenticate with mulesoft: %s", err)
+	}
+
 	sm, err := initSubscriptionManager(client, agent.GetCentralClient())
 	if err != nil {
 		return fmt.Errorf("Error while initing subscription manager %s", err)

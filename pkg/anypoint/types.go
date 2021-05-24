@@ -306,3 +306,10 @@ type Limits struct {
 	TimePeriodInMilliseconds int         `json:"timePeriodInMilliseconds,omitempty"`
 	Visible                  bool        `json:"visible,omitempty"`
 }
+
+// ClientAuthCredentials the credentials to authenticate with an Environment or Business Group.
+type ClientAuthCredentials struct {
+	ClientID     string `json:"client_id"`
+	ClientSecret string `json:"client_secret"`
+	GrantType    string `json:"grant_type"`
+}

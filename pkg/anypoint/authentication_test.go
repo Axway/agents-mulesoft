@@ -5,8 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/mock"
-
 	"github.com/stretchr/testify/assert"
 )
 
@@ -25,64 +23,50 @@ func TestAuth(t *testing.T) {
 	for i := range tests {
 		tc := tests[i]
 		t.Run(tc.name, func(t *testing.T) {
-			c := &authClient{}
-			user := &User{
-				Organization: Organization{
-					ID: "1",
-				},
+			c := &authClient{
+				token:    "",
+				user:     nil,
+				duration: 0,
+				err:      fmt.Errorf("no token here"),
 			}
 
-			c.On("GetAccessToken").Return(tc.token, user, time.Duration(10), tc.err)
-
-			auth, err := NewAuth(c)
+			auth := NewAuth(c)
+			err := auth.Start()
 			assert.Equal(t, tc.err, err)
-			if tc.err == nil {
-				assert.NotNil(t, auth)
-				org := auth.GetOrgID()
-				token := auth.GetToken()
-				assert.Equal(t, "1", org)
-				assert.Equal(t, tc.token, token)
-				auth.Stop()
-
-			} else {
-				assert.Nil(t, auth)
-			}
-
+			assert.NotNil(t, auth)
+			org := auth.GetOrgID()
+			token := auth.GetToken()
+			assert.Equal(t, "", org)
+			assert.Equal(t, tc.token, token)
+			go auth.Stop()
+			<-auth.stopChan
 		})
 	}
 
 }
 
-func Test_startRefreshToken(t *testing.T) {
-
-	client := &authClientRefreshErr{
-		stop: make(chan bool),
-	}
-	a := &auth{
-		client: client,
-	}
-	a.startRefreshToken(1000)
-	done := <-client.stop
-	assert.True(t, done)
+func Test_Start(t *testing.T) {
+	client := &tokenClient{}
+	a := NewAuth(client)
+	go a.Start()
+	a.Stop()
+	assert.True(t, a.done)
 }
 
-type authClientRefreshErr struct {
-	stop chan bool
+type tokenClient struct {
 }
 
-func (a authClientRefreshErr) GetAccessToken() (string, *User, time.Duration, error) {
-	a.stop <- true
-	return "", &User{}, 0, fmt.Errorf("auth error")
+func (a tokenClient) GetAccessToken() (string, *User, time.Duration, error) {
+	return "123", &User{}, 1000, nil
 }
 
 type authClient struct {
-	mock.Mock
+	token    string
+	user     *User
+	duration time.Duration
+	err      error
 }
 
 func (a *authClient) GetAccessToken() (string, *User, time.Duration, error) {
-	args := a.Called()
-	token := args.String(0)
-	user := args.Get(1)
-	duration := args.Get(2)
-	return token, user.(*User), duration.(time.Duration), args.Error(3)
+	return a.token, a.user, a.duration, a.err
 }

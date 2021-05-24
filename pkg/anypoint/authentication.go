@@ -6,37 +6,40 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
-// Auth represents the authentication information.
+// Auth gets a token and starts a refresh interval.
 type Auth interface {
+	Start() error
 	Stop()
 	GetToken() string
 	GetOrgID() string
 }
 
-// auth represents the authentication information.
 type auth struct {
 	token    string
 	user     *User
-	client   AuthClient
+	client   TokenClient
 	stopChan chan struct{}
+	done     bool
 }
 
-// NewAuth creates a new authentication token
-func NewAuth(client AuthClient) (Auth, error) {
-	a := &auth{
+// NewAuth gets an access token
+func NewAuth(client TokenClient) *auth {
+	return &auth{
 		stopChan: make(chan struct{}),
+		client:   client,
 	}
-	token, user, lifetime, err := client.GetAccessToken()
-	if err != nil {
-		return nil, err
-	}
+}
 
+// Start gets a token and starts a loop to refresh the token
+func (a *auth) Start() error {
+	token, user, lifetime, err := a.client.GetAccessToken()
+	if err != nil {
+		return err
+	}
 	a.token = token
 	a.user = user
-	a.client = client
 	a.startRefreshToken(lifetime)
-
-	return a, nil
+	return nil
 }
 
 // Stop terminates the background access token refresh.
@@ -79,6 +82,7 @@ func (a *auth) startRefreshToken(lifetime time.Duration) {
 			case <-a.stopChan:
 				log.Debug("stopping access token refresh")
 				timer.Stop()
+				a.done = true
 				break
 			}
 		}

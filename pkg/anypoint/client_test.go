@@ -122,6 +122,8 @@ func TestClient(t *testing.T) {
 	ma := &MockAuth{
 		ch: make(chan bool),
 	}
+	err := client.Authenticate()
+	assert.Nil(t, err)
 	client.auth = ma
 	status := client.healthcheck("check")
 	assert.Equal(t, hc.OK, status.Result)
@@ -134,7 +136,7 @@ func TestClient(t *testing.T) {
 		Body:        nil,
 	}
 	// test that invoke can throw an error when communication to the gateway cannot be established
-	_, _, err := client.invoke(req)
+	_, _, err = client.invoke(req)
 	assert.NotNil(t, err)
 
 	// test that invoke can throw an error when the endpoint returns a non success response
@@ -172,11 +174,44 @@ func TestClient(t *testing.T) {
 	logrus.Info(i, contentType)
 	assert.NotEmpty(t, i)
 	assert.Empty(t, contentType)
-	events, err := client.GetAnalyticsWindow("2021-05-19T14:30:20-07:00","2021-05-19T14:30:22-07:00")
+	events, err := client.GetAnalyticsWindow("2021-05-19T14:30:20-07:00", "2021-05-19T14:30:22-07:00")
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(events))
 
 	go client.auth.Stop()
 	done := <-ma.ch
 	assert.True(t, done)
+}
+
+func TestGetTokenByClientID(t *testing.T) {
+	cfg := &config.MulesoftConfig{
+		AnypointExchangeURL: "",
+		CachePath:           "/tmp",
+		ClientID:            "3b32513dbb",
+		ClientSecret:        "47Ca8d0",
+		Environment:         "Sandbox",
+		OrgName:             "master",
+		Password:            "",
+		PollInterval:        10,
+		ProxyURL:            "",
+		SessionLifetime:     60,
+		Username:            "",
+	}
+
+	mcb := &MockClientBase{}
+
+	mcb.Reqs = map[string]*api.Response{
+		"/accounts/oauth2/token": {
+			Code:    200,
+			Body:    []byte(`{"access_token":"abc123"}`),
+			Headers: nil,
+		},
+	}
+
+	client := NewClient(cfg, SetClient(mcb))
+	ma := &MockAuth{
+		ch: make(chan bool),
+	}
+	client.auth = ma
+
 }

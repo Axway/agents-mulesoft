@@ -27,29 +27,30 @@ type Page struct {
 	PageSize int
 }
 
-// Client interface to gateway.
+// Client interface for Mulesoft
 type Client interface {
-	OnConfigChange(mulesoftConfig *config.MulesoftConfig)
+	Authenticate() error
+	CreateClientApplication(string, *AppRequestBody) (*Application, error)
+	CreateContract(int64, *Contract) (*Contract, error)
+	DeleteClientApplication(appId int64) error
 	GetAccessToken() (string, *User, time.Duration, error)
 	GetEnvironmentByName(name string) (*Environment, error)
-	ListAssets(page *Page) ([]Asset, error)
-	GetPolicies(apiID int64) (Policies, error)
 	GetExchangeAsset(groupID, assetID, assetVersion string) (*ExchangeAsset, error)
 	GetExchangeAssetIcon(icon string) (string, string, error)
 	GetExchangeFileContent(link, packaging, mainFile string) ([]byte, error)
-	CreateClientApplication(string, *AppRequestBody) (*Application, error)
-	CreateContract(int64, *Contract) (*Contract, error)
+	GetPolicies(apiID int64) (Policies, error)
 	GetSLATiers(int642 int64) (*Tiers, error)
-	DeleteClientApplication(appId int64) error
+	ListAssets(page *Page) ([]Asset, error)
+	OnConfigChange(mulesoftConfig *config.MulesoftConfig)
 }
 
 type AnalyticsClient interface {
 	GetAnalyticsWindow(string, string) ([]AnalyticsEvent, error)
-	OnConfigChange(mulesoftConfig *config.MulesoftConfig)
 	GetClientApplication(appId string) (*Application, error)
+	OnConfigChange(mulesoftConfig *config.MulesoftConfig)
 }
 
-type AuthClient interface {
+type TokenClient interface {
 	GetAccessToken() (string, *User, time.Duration, error)
 }
 
@@ -59,33 +60,67 @@ type ListAssetClient interface {
 
 // AnypointClient is the client for interacting with Mulesoft Anypoint.
 type AnypointClient struct {
-	baseURL     string
-	username    string
-	password    string
-	lifetime    time.Duration
-	apiClient   coreapi.Client
-	auth        Auth
-	environment *Environment
-	orgName     string
+	apiClient       coreapi.Client
+	auth            Auth
+	baseURL         string
+	clientID        string
+	clientSecret    string
+	environment     *Environment
+	environmentName string
+	lifetime        time.Duration
+	orgName         string
+	password        string
+	username        string
 }
 
+// ClientOptions callback for overriding the default config of the client
 type ClientOptions func(*AnypointClient)
 
 // NewClient creates a new client for interacting with Mulesoft.
 func NewClient(mulesoftConfig *config.MulesoftConfig, options ...ClientOptions) *AnypointClient {
-	client := &AnypointClient{}
+	client := &AnypointClient{
+		apiClient:       nil,
+		auth:            nil,
+		baseURL:         mulesoftConfig.AnypointExchangeURL,
+		clientID:        mulesoftConfig.ClientID,
+		clientSecret:    mulesoftConfig.ClientSecret,
+		environmentName: mulesoftConfig.Environment,
+		environment:     nil,
+		lifetime:        mulesoftConfig.SessionLifetime,
+		orgName:         mulesoftConfig.OrgName,
+		password:        mulesoftConfig.Password,
+		username:        mulesoftConfig.Username,
+	}
+
 	// Create a new client before invoking additional options, which may want to override the client
 	client.apiClient = coreapi.NewClient(mulesoftConfig.TLS, mulesoftConfig.ProxyURL)
 
 	for _, o := range options {
 		o(client)
 	}
-	client.OnConfigChange(mulesoftConfig)
 
-	hc.RegisterHealthcheck("Mulesoft Anypoint Exchange", HealthCheckEndpoint, client.healthcheck)
 	// TODO: handle error
+	hc.RegisterHealthcheck("Mulesoft Anypoint Exchange", HealthCheckEndpoint, client.healthcheck)
 
 	return client
+}
+
+// Authenticate authenticate with Mulesoft
+func (c *AnypointClient) Authenticate() error {
+	c.auth = NewAuth(c)
+	err := c.auth.Start()
+	if err != nil {
+		return err
+	}
+
+	c.environment, err = c.GetEnvironmentByName(c.environmentName)
+	if c.environment == nil {
+		return fmt.Errorf("environment for '%s' not found", c.environmentName)
+	}
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (c *AnypointClient) OnConfigChange(mulesoftConfig *config.MulesoftConfig) {
@@ -94,23 +129,16 @@ func (c *AnypointClient) OnConfigChange(mulesoftConfig *config.MulesoftConfig) {
 	}
 
 	c.baseURL = mulesoftConfig.AnypointExchangeURL
-	c.username = mulesoftConfig.Username
-	c.password = mulesoftConfig.Password
-	c.orgName = mulesoftConfig.OrgName
+	c.clientID = mulesoftConfig.ClientID
+	c.clientSecret = mulesoftConfig.ClientSecret
 	c.lifetime = mulesoftConfig.SessionLifetime
+	c.orgName = mulesoftConfig.OrgName
+	c.password = mulesoftConfig.Password
+	c.username = mulesoftConfig.Username
 
-	var err error
-	c.auth, err = NewAuth(c)
+	err := c.Authenticate()
 	if err != nil {
-		logrus.Fatalf("Failed to authenticate with Mulesoft: %s", err.Error())
-	}
-
-	c.environment, err = c.GetEnvironmentByName(mulesoftConfig.Environment)
-	if c.environment == nil {
-		logrus.Fatalf("Failed to connect to Mulesoft. Environment for '%s' not found", mulesoftConfig.Environment)
-	}
-	if err != nil {
-		logrus.Fatalf("Failed to connect to Mulesoft environment %s: %s", mulesoftConfig.Environment, err.Error())
+		logrus.Fatalf("failed to connect to mulesoft: %s", err)
 	}
 }
 
@@ -138,15 +166,56 @@ func (c *AnypointClient) healthcheck(name string) (status *hc.Status) {
 	return status
 }
 
-// GetAccessToken gets an access token
-func (c *AnypointClient) GetAccessToken() (string, *User, time.Duration, error) {
+func (c *AnypointClient) getTokenByClientID() (string, error) {
+	creds := &ClientAuthCredentials{
+		ClientID:     c.clientID,
+		ClientSecret: c.clientSecret,
+		GrantType:    "client_credentials",
+	}
+
+	buffer, err := json.Marshal(creds)
+	if err != nil {
+		return "", agenterrors.Wrap(ErrMarshallingBody, err.Error())
+	}
+
+	headers := map[string]string{
+		"Content-Type": "application/json",
+	}
+
+	request := coreapi.Request{
+		Method:  coreapi.POST,
+		URL:     c.baseURL + "/accounts/oauth2/token",
+		Headers: headers,
+		Body:    buffer,
+	}
+
+	response, err := c.apiClient.Send(request)
+	if err != nil {
+		return "", agenterrors.Wrap(ErrCommunicatingWithGateway, err.Error())
+	}
+	if response.Code != http.StatusOK {
+		return "", ErrAuthentication
+	}
+
+	respMap := make(map[string]interface{})
+	err = json.Unmarshal(response.Body, &respMap)
+	if err != nil {
+		return "", agenterrors.Wrap(ErrAuthentication, err.Error())
+	}
+	token := respMap["access_token"].(string)
+
+	return token, nil
+}
+
+// getTokenByUsername Gets a bearer token by the username and password
+func (c *AnypointClient) getTokenByUsername() (string, error) {
 	body := map[string]string{
 		"username": c.username,
 		"password": c.password,
 	}
 	buffer, err := json.Marshal(body)
 	if err != nil {
-		return "", nil, 0, agenterrors.Wrap(ErrMarshallingBody, err.Error())
+		return "", agenterrors.Wrap(ErrMarshallingBody, err.Error())
 	}
 
 	headers := map[string]string{
@@ -162,25 +231,39 @@ func (c *AnypointClient) GetAccessToken() (string, *User, time.Duration, error) 
 
 	response, err := c.apiClient.Send(request)
 	if err != nil {
-		return "", nil, 0, agenterrors.Wrap(ErrCommunicatingWithGateway, err.Error())
+		return "", agenterrors.Wrap(ErrCommunicatingWithGateway, err.Error())
 	}
 	if response.Code != http.StatusOK {
-		return "", nil, 0, ErrAuthentication
+		return "", ErrAuthentication
 	}
 
 	respMap := make(map[string]interface{})
 	err = json.Unmarshal(response.Body, &respMap)
 	if err != nil {
-		return "", nil, 0, agenterrors.Wrap(ErrAuthentication, err.Error())
+		return "", agenterrors.Wrap(ErrAuthentication, err.Error())
 	}
 	token := respMap["access_token"].(string)
+
+	return token, nil
+}
+
+// GetAccessToken gets an access token
+func (c *AnypointClient) GetAccessToken() (string, *User, time.Duration, error) {
+	var token string
+	var err error
+	if c.clientSecret != "" && c.clientID != "" {
+		token, err = c.getTokenByClientID()
+	} else if c.username != "" && c.password != "" {
+		token, err = c.getTokenByUsername()
+	} else {
+		return "", nil, 0, fmt.Errorf("unable to authenticate due to misconfigured auth credentials")
+	}
 
 	user, err := c.getCurrentUser(token)
 	if err != nil {
 		return "", nil, 0, agenterrors.Wrap(ErrAuthentication, err.Error())
 	}
 
-	// Would be better to look up the lifetime.
 	return token, user, c.lifetime, nil
 }
 
@@ -432,6 +515,7 @@ func (c *AnypointClient) GetClientApplication(appId string) (*Application, error
 	err := c.invokeJSON(request, &application)
 	return &application, err
 }
+
 func (c *AnypointClient) CreateContract(appID int64, contract *Contract) (*Contract, error) {
 	var cnt Contract
 

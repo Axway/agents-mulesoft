@@ -1,6 +1,7 @@
 package traceability
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -33,6 +34,11 @@ func NewBeater(_ *beat.Beat, _ *common.Config) (beat.Beater, error) {
 	var err error
 	generator := transaction.NewEventGenerator()
 	client := anypoint.NewClient(agentConfig.MulesoftConfig)
+	err = client.Authenticate()
+	if err != nil {
+		return nil, fmt.Errorf("failed to authenticate with mulesoft: %s", err)
+	}
+
 	mapper := &EventMapper{
 		client: client,
 	}

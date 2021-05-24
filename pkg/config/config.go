@@ -15,21 +15,23 @@ var config *AgentConfig
 
 const (
 	pathAnypointExchangeURL   = "mulesoft.anypointExchangeUrl"
+	pathAuthLifetime          = "mulesoft.auth.lifetime"
+	pathAuthPassword          = "mulesoft.auth.password"
+	pathAuthUsername          = "mulesoft.auth.username"
+	pathCachePath             = "mulesoft.cachePath"
+	pathClientID              = "mulesoft.auth.clientID"
+	pathClientSecret          = "mulesoft.auth.clientSecret"
+	pathDiscoveryIgnoreTags   = "mulesoft.discoveryIgnoreTags"
+	pathDiscoveryTags         = "mulesoft.discoveryTags"
 	pathEnvironment           = "mulesoft.environment"
 	pathOrgName               = "mulesoft.orgName"
-	pathDiscoveryTags         = "mulesoft.discoveryTags"
-	pathDiscoveryIgnoreTags   = "mulesoft.discoveryIgnoreTags"
-	pathAuthUsername          = "mulesoft.auth.username"
-	pathAuthPassword          = "mulesoft.auth.password"
-	pathAuthLifetime          = "mulesoft.auth.lifetime"
-	pathSSLNextProtos         = "mulesoft.ssl.nextProtos"
-	pathSSLInsecureSkipVerify = "mulesoft.ssl.insecureSkipVerify"
-	pathSSLCipherSuites       = "mulesoft.ssl.cipherSuites"
-	pathSSLMinVersion         = "mulesoft.ssl.minVersion"
-	pathSSLMaxVersion         = "mulesoft.ssl.maxVersion"
 	pathPollInterval          = "mulesoft.pollInterval"
 	pathProxyURL              = "mulesoft.proxyUrl"
-	pathCachePath             = "mulesoft.cachePath"
+	pathSSLCipherSuites       = "mulesoft.ssl.cipherSuites"
+	pathSSLInsecureSkipVerify = "mulesoft.ssl.insecureSkipVerify"
+	pathSSLMaxVersion         = "mulesoft.ssl.maxVersion"
+	pathSSLMinVersion         = "mulesoft.ssl.minVersion"
+	pathSSLNextProtos         = "mulesoft.ssl.nextProtos"
 )
 
 // SetConfig sets the global AgentConfig reference.
@@ -54,6 +56,8 @@ type MulesoftConfig struct {
 	corecfg.IResourceConfigCallback
 	AnypointExchangeURL string            `config:"anypointExchangeUrl"`
 	CachePath           string            `config:"cachePath"`
+	ClientID            string            `config:"auth.clientID"`
+	ClientSecret        string            `config:"auth.clientSecret"`
 	DiscoveryIgnoreTags string            `config:"discoveryIgnoreTags"`
 	DiscoveryTags       string            `config:"discoveryTags"`
 	Environment         string            `config:"environment"`
@@ -72,12 +76,16 @@ func (c *MulesoftConfig) ValidateCfg() (err error) {
 		return errors.New("Invalid mulesoft configuration: anypointExchangeUrl is not configured")
 	}
 
-	if c.Username == "" {
-		return errors.New("Invalid mulesoft configuration: username is not configured")
-	}
+	// If the ClientSecret and ClientID are not there, then rely on authentication with the username and password.
+	if c.ClientSecret == "" && c.ClientID == "" {
 
-	if c.Password == "" {
-		return errors.New("Invalid mulesoft configuration: password is not configured")
+		if c.Username == "" {
+			return errors.New("Invalid mulesoft configuration: username is not configured")
+		}
+
+		if c.Password == "" {
+			return errors.New("Invalid mulesoft configuration: password is not configured")
+		}
 	}
 
 	if c.Environment == "" {
@@ -101,16 +109,18 @@ func (c *MulesoftConfig) ValidateCfg() (err error) {
 
 // AddConfigProperties - Adds the command properties needed for Mulesoft
 func AddConfigProperties(props properties.Properties) {
+	props.AddDurationProperty(pathAuthLifetime, 60*time.Minute, "Mulesoft session lifetime.")
+	props.AddDurationProperty(pathPollInterval, 20*time.Second, "The interval at which Mulesoft is checked for updates.")
 	props.AddStringProperty(pathAnypointExchangeURL, "https://anypoint.mulesoft.com", "Mulesoft Anypoint Exchange URL.")
+	props.AddStringProperty(pathAuthPassword, "", "Mulesoft password.")
+	props.AddStringProperty(pathAuthUsername, "", "Mulesoft username.")
+	props.AddStringProperty(pathCachePath, "/tmp", "Mulesoft Cache Path")
+	props.AddStringProperty(pathClientID, "", "The Client ID for the org or business group.")
+	props.AddStringProperty(pathClientSecret, "", "The Client Secret for the org or business group.")
+	props.AddStringProperty(pathDiscoveryIgnoreTags, "", "APIs containing any of these tags are ignored. Takes precedence over "+pathDiscoveryIgnoreTags+".")
+	props.AddStringProperty(pathDiscoveryTags, "", "APIs containing any of these tags are selected for discovery.")
 	props.AddStringProperty(pathEnvironment, "", "Mulesoft Anypoint environment.")
 	props.AddStringProperty(pathOrgName, "", "Mulesoft Anypoint Business Group.")
-	props.AddStringProperty(pathAuthUsername, "", "Mulesoft username.")
-	props.AddStringProperty(pathAuthPassword, "", "Mulesoft password.")
-	props.AddDurationProperty(pathAuthLifetime, 60*time.Minute, "Mulesoft session lifetime.")
-	props.AddStringProperty(pathDiscoveryTags, "", "APIs containing any of these tags are selected for discovery.")
-	props.AddStringProperty(pathDiscoveryIgnoreTags, "", "APIs containing any of these tags are ignored. Takes precedence over "+pathDiscoveryIgnoreTags+".")
-	props.AddStringProperty(pathCachePath, "/tmp", "Mulesoft Cache Path")
-	props.AddDurationProperty(pathPollInterval, 20*time.Second, "The interval at which Mulesoft is checked for updates.")
 
 	// ssl properties and command flags
 	props.AddStringSliceProperty(pathSSLNextProtos, []string{}, "List of supported application level protocols, comma separated.")
@@ -125,6 +135,8 @@ func NewMulesoftConfig(props properties.Properties) *MulesoftConfig {
 	return &MulesoftConfig{
 		AnypointExchangeURL: props.StringPropertyValue(pathAnypointExchangeURL),
 		CachePath:           props.StringPropertyValue(pathCachePath),
+		ClientID:            props.StringPropertyValue(pathClientID),
+		ClientSecret:        props.StringPropertyValue(pathClientSecret),
 		DiscoveryIgnoreTags: props.StringPropertyValue(pathDiscoveryIgnoreTags),
 		DiscoveryTags:       props.StringPropertyValue(pathDiscoveryTags),
 		Environment:         props.StringPropertyValue(pathEnvironment),

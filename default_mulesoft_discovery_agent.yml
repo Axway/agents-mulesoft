@@ -35,6 +35,11 @@ mulesoft:
   # Default value: empty. Meaning that no API is ignored
   #discoveryIgnoreTags: tags1, tags2
   auth:
+    # Set either a clientID & clientSecret pair, or the username & password. If both are set, clientID & secret will take precedence.
+    clientID: <CLIENT_ID>
+    clientSecret: <CLIENT_SECRET>
     username: <USERNAME>
     password: <PASSWORD>
+    lifetime:
+
 

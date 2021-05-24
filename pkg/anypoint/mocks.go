@@ -14,6 +14,10 @@ type MockAuth struct {
 	ch chan bool
 }
 
+func (m MockAuth) Start() error {
+	return nil
+}
+
 func (m MockAuth) Stop() {
 	m.ch <- true
 }
@@ -43,6 +47,10 @@ type MockAnypointClient struct {
 	mock.Mock
 	CreateContractAssertArgs          bool
 	CreateClientApplicationAssertArgs bool
+}
+
+func (m *MockAnypointClient) Authenticate() error {
+	return nil
 }
 
 func (m *MockAnypointClient) OnConfigChange(*config.MulesoftConfig) {
