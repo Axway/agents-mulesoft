@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Axway/agent-sdk/pkg/cache"
+
 	"github.com/Axway/agent-sdk/pkg/jobs"
 
 	"github.com/Axway/agent-sdk/pkg/util/log"
@@ -16,7 +18,10 @@ import (
 	"github.com/Axway/agents-mulesoft/pkg/config"
 )
 
-const healthCheckEndpoint = "ingestion"
+const (
+	healthCheckEndpoint = "ingestion"
+	CacheKeyTimeStamp   = "LAST_RUN"
+)
 
 type Emitter interface {
 	Start() error
@@ -28,6 +33,8 @@ type MuleEventEmitter struct {
 	client       anypoint.AnalyticsClient
 	eventChannel chan string
 	jobID        string
+	cache        cache.Cache
+	cachePath    string
 }
 
 // MuleEventEmitterJob wraps an Emitter and implements the Job interface so that it can be executed by the sdk.
@@ -40,18 +47,22 @@ type MuleEventEmitterJob struct {
 }
 
 // NewMuleEventEmitter - Creates a client to poll for events.
-func NewMuleEventEmitter(eventChannel chan string, client anypoint.AnalyticsClient) *MuleEventEmitter {
-	return &MuleEventEmitter{
+func NewMuleEventEmitter(cachePath string, eventChannel chan string, client anypoint.AnalyticsClient) *MuleEventEmitter {
+	me := &MuleEventEmitter{
 		eventChannel: eventChannel,
 		client:       client,
 	}
+	me.cachePath = formatCachePath(cachePath)
+	me.cache = cache.Load(me.cachePath)
+	return me
 }
 
 // Start retrieves analytics data from anypoint and sends them on the event channel for processing.
 func (me *MuleEventEmitter) Start() error {
 	oldTime := time.Now()
+	strStartTime, strEndTime := me.getLastRun()
 
-	events, err := me.client.GetAnalyticsWindow()
+	events, err := me.client.GetAnalyticsWindow(strStartTime, strEndTime)
 
 	currentTime := time.Now()
 	duration := currentTime.Sub(oldTime)
@@ -63,18 +74,48 @@ func (me *MuleEventEmitter) Start() error {
 		return err
 	}
 
+	var lastTime time.Time
+	lastTime, err = time.Parse(time.RFC3339, strStartTime)
+	if err != nil {
+		logrus.WithFields(logrus.Fields{"strStartTime": strStartTime}).Warn("Unable to Parse Last Time")
+	}
 	for _, event := range events {
+		// Results are not sorted. We want the most recent time to bubble up
+		if event.Timestamp.After(lastTime) {
+			lastTime = event.Timestamp
+		}
 		j, err := json.Marshal(event)
 		if err != nil {
 			log.Warnf("failed to marshal event: %s", err.Error())
 		}
 		me.eventChannel <- string(j)
 	}
+	// Add 1 second to the last time stamp if we found records from this pull.
+	// This will prevent duplicate records from being retrieved
+	if len(events) > 0 {
+		me.saveLastRun(lastTime.Add(time.Second * 1).Format(time.RFC3339))
+	}
+
 	return nil
+
+}
+func (me *MuleEventEmitter) getLastRun() (string, string) {
+	tStamp, _ := me.cache.Get(CacheKeyTimeStamp)
+	now := time.Now()
+	tNow := now.Format(time.RFC3339)
+	if tStamp == nil {
+		tStamp = tNow
+		me.saveLastRun(tNow)
+	}
+	return tStamp.(string), tNow
+}
+func (me *MuleEventEmitter) saveLastRun(lastTime string) {
+	me.cache.Set(CacheKeyTimeStamp, lastTime)
+	me.cache.Save(me.cachePath)
 }
 
 // OnConfigChange passes the new config to the client to handle config changes
-// since the MuleEventEmitter does not have any config value references.
+// since the MuleEventEmitter only has cache config value references and should not be changed
 func (me *MuleEventEmitter) OnConfigChange(gatewayCfg *config.AgentConfig) {
 	me.client.OnConfigChange(gatewayCfg.MulesoftConfig)
 }
@@ -156,4 +197,8 @@ func traceabilityHealthCheck(name string) *hc.Status {
 	return &hc.Status{
 		Result: hc.OK,
 	}
+}
+
+func formatCachePath(path string) string {
+	return fmt.Sprintf("%s/anypoint.cache", path)
 }

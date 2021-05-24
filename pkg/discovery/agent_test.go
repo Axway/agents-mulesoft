@@ -6,8 +6,6 @@ import (
 
 	"github.com/Axway/agents-mulesoft/pkg/subscription"
 
-	"github.com/Axway/agent-sdk/pkg/cache"
-
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
@@ -69,23 +67,6 @@ func TestAgent_Run(t *testing.T) {
 	assert.True(t, done)
 	done = <-pub.stopCh
 	assert.True(t, done)
-}
-
-func Test_validateAPI(t *testing.T) {
-	c := cache.New()
-	apiID := "1234"
-	stageName := "Sandbox"
-	sd := &ServiceDetail{
-		ID:    apiID,
-		Stage: stageName,
-	}
-	err := c.Set(formatCacheKey(apiID, stageName), sd)
-	if err != nil {
-		t.Error(err)
-	}
-	validator := validateAPI()
-	ok := validator(apiID, stageName)
-	assert.True(t, ok)
 }
 
 func newConfig() *config.AgentConfig {

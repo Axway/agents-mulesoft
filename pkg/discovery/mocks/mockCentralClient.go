@@ -14,37 +14,53 @@ type MockCentralClient struct {
 }
 
 func (m *MockCentralClient) SetTokenGetter(auth.PlatformTokenGetter) {}
+
 func (m *MockCentralClient) PublishService(apic.ServiceBody) (*v1alpha1.APIService, error) {
 	return nil, nil
 }
-func (m *MockCentralClient) RegisterSubscriptionWebhook() error { return nil }
+func (m *MockCentralClient) RegisterSubscriptionWebhook() error {
+	return nil
+}
+
 func (m *MockCentralClient) RegisterSubscriptionSchema(apic.SubscriptionSchema, bool) error {
 	args := m.Called()
 	return args.Error(0)
 }
+
 func (m *MockCentralClient) UpdateSubscriptionSchema(apic.SubscriptionSchema) error {
 	return nil
 }
+
 func (m *MockCentralClient) GetSubscriptionManager() apic.SubscriptionManager {
 	return &apic.MockSubscriptionManager{}
 }
+
 func (m *MockCentralClient) GetCatalogItemIDForConsumerInstance(string) (string, error) {
 	return "", nil
 }
-func (m *MockCentralClient) DeleteConsumerInstance(string) error { return nil }
+func (m *MockCentralClient) DeleteConsumerInstance(string) error {
+	return nil
+}
+
 func (m *MockCentralClient) UpdateConsumerInstanceSubscriptionDefinition(string, string) error {
 	return nil
 }
 func (m *MockCentralClient) GetConsumerInstanceByID(string) (*v1alpha1.ConsumerInstance, error) {
 	return nil, nil
 }
-func (m *MockCentralClient) GetUserEmailAddress(string) (string, error) { return "", nil }
+
+func (m *MockCentralClient) GetUserEmailAddress(string) (string, error) {
+	return "", nil
+}
+
 func (m *MockCentralClient) GetSubscriptionsForCatalogItem([]string, string) ([]apic.CentralSubscription, error) {
 	return nil, nil
 }
+
 func (m *MockCentralClient) GetSubscriptionDefinitionPropertiesForCatalogItem(string, string) (apic.SubscriptionSchema, error) {
 	return nil, nil
 }
+
 func (m *MockCentralClient) Healthcheck(string) *hc.Status {
 	return &hc.Status{Result: hc.OK}
 }
@@ -54,7 +70,10 @@ func (m *MockCentralClient) UpdateSubscriptionDefinitionPropertiesForCatalogItem
 	return nil
 }
 
-func (m *MockCentralClient) GetCatalogItemName(string) (string, error) { return "", nil }
+func (m *MockCentralClient) GetCatalogItemName(string) (string, error) {
+	return "", nil
+}
+
 func (m *MockCentralClient) ExecuteAPI(string, string, map[string]string, []byte) ([]byte, error) {
 	return nil, nil
 }
@@ -66,4 +85,14 @@ func (m *MockCentralClient) DeleteServiceByAPIID(string) error {
 
 func (m *MockCentralClient) GetConsumerInstancesByExternalAPIID(string) ([]*v1alpha1.ConsumerInstance, error) {
 	return nil, nil
+}
+
+func (m *MockCentralClient) GetUserName(string) (string, error) {
+	return "", nil
+}
+
+func (m *MockCentralClient) GetAPIRevisions(map[string]string, string) ([]v1alpha1.APIServiceRevision, error) {
+	args := m.Called()
+	revs := args.Get(0)
+	return revs.([]v1alpha1.APIServiceRevision), args.Error(1)
 }

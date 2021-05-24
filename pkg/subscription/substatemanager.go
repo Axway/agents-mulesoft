@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Axway/agents-mulesoft/pkg/common"
+
 	"github.com/Axway/agent-sdk/pkg/apic"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
@@ -63,17 +65,18 @@ func (ssm *SubStateManager) Unsubscribe(log logrus.FieldLogger, sub apic.Subscri
 
 func (ssm *SubStateManager) doSubscribe(log logrus.FieldLogger, sub apic.Subscription) (string, string, error) {
 	// Create a new application and create a new contract
-	apiID := sub.GetRemoteAPIID()
+	apiID := sub.GetRemoteAPIAttributes()[common.AttrAPIID]
+	stage := sub.GetRemoteAPIStage()
 	tier := sub.GetPropertyValue(anypoint.TierLabel)
 
 	application, err := ssm.createApp(apiID, sub)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to create Mulesoft application: %s", err)
+		return "", "", err
 	}
 
 	log.WithField("Client application", application.Name).Debug("Created a client application on Mulesoft")
 
-	muleAPI, err := getMuleAPI(apiID)
+	muleAPI, err := getMuleAPI(apiID, stage)
 	if err != nil {
 		return "", "", err
 	}
@@ -137,14 +140,13 @@ func parseTierID(tierValue string, logger logrus.FieldLogger) int64 {
 	tierID := strings.Split(tierValue, "-")[0]
 	i, err := strconv.ParseInt(tierID, 10, 64)
 	if err != nil {
-		logger.WithField("tierID", tierValue).Debug("cannot parse tier id")
 		return 0
 	}
 	return i
 }
 
-func getMuleAPI(apiID string) (*anypoint.API, error) {
-	api, err := cache.GetCache().GetBySecondaryKey(apiID)
+func getMuleAPI(apiID, stage string) (*anypoint.API, error) {
+	api, err := cache.GetCache().GetBySecondaryKey(common.FormatAPICacheKey(apiID, stage))
 	if err != nil {
 		return nil, err
 	}

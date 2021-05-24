@@ -1,7 +1,6 @@
 package discovery
 
 import (
-	"fmt"
 	"os"
 	"os/signal"
 	"strings"
@@ -13,7 +12,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/cache"
 	utilErrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
-	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 	"github.com/Axway/agents-mulesoft/pkg/config"
 )
@@ -26,11 +24,10 @@ type Repeater interface {
 
 // Agent links the mulesoft client and the gateway client.
 type Agent struct {
-	assetCache cache.Cache
-	client     anypoint.Client
-	stopAgent  chan bool
-	discovery  Repeater
-	publisher  Repeater
+	client    anypoint.Client
+	stopAgent chan bool
+	discovery Repeater
+	publisher Repeater
 }
 
 // NewAgent creates a new agent
@@ -44,17 +41,22 @@ func NewAgent(cfg *config.AgentConfig, client anypoint.Client, sm subscription.S
 		publishAPI:  coreAgent.PublishAPI,
 	}
 
+	assetCache := cache.GetCache()
+
 	svcHandler := &serviceHandler{
-		stage:               cfg.MulesoftConfig.Environment,
+		muleEnv:             cfg.MulesoftConfig.Environment,
 		discoveryTags:       cleanTags(cfg.MulesoftConfig.DiscoveryTags),
 		discoveryIgnoreTags: cleanTags(cfg.MulesoftConfig.DiscoveryIgnoreTags),
 		client:              client,
 		subscriptionManager: sm,
+		cache:               assetCache,
 	}
 
 	disc := &discovery{
 		apiChan:           apiChan,
+		cache:             assetCache,
 		client:            client,
+		centralClient:     coreAgent.GetCentralClient(),
 		discoveryPageSize: 50,
 		pollInterval:      cfg.MulesoftConfig.PollInterval,
 		stopDiscovery:     make(chan bool),
@@ -103,8 +105,6 @@ func (a *Agent) CheckHealth() error {
 
 // Run the agent loop
 func (a *Agent) Run() {
-	validator := validateAPI()
-	coreAgent.RegisterAPIValidator(validator)
 	coreAgent.OnConfigChange(a.onConfigChange)
 
 	go a.discovery.Loop()
@@ -127,21 +127,6 @@ func (a *Agent) Stop() {
 	close(a.stopAgent)
 }
 
-// validateAPI checks that the API still exists on the data plane. If it doesn't the agent
-// performs cleanup on the API Central environment. The cache is populated by the
-// discovery loop.
-func validateAPI() func(apiID, stageName string) bool {
-	return func(apiID, stageName string) bool {
-		asset, err := cache.GetCache().Get(formatCacheKey(apiID, stageName))
-		if err != nil {
-			log.Warnf("Unable to validate API: %s", err.Error())
-			// If we can't validate it exists then assume it does until known otherwise.
-			return true
-		}
-		return asset != nil
-	}
-}
-
 // cleanTags splits the CSV and trims off whitespace
 func cleanTags(tagCSV string) []string {
 	clean := []string{}
@@ -153,9 +138,4 @@ func cleanTags(tagCSV string) []string {
 		}
 	}
 	return clean
-}
-
-// formatCacheKey ensure consistent naming of asset cache key
-func formatCacheKey(apiID, stageName string) string {
-	return fmt.Sprintf("%s-%s", apiID, stageName)
 }

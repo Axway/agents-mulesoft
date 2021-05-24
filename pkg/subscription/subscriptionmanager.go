@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/Axway/agents-mulesoft/pkg/common"
+
 	"github.com/Axway/agents-mulesoft/pkg/config"
 
 	"github.com/Axway/agent-sdk/pkg/apic"
@@ -171,7 +173,7 @@ func logFields(sub apic.Subscription) logrus.Fields {
 		"subscriptionName":   sub.GetName(),
 		"subscriptionID":     sub.GetID(),
 		"catalogItemID":      sub.GetCatalogItemID(),
-		"remoteID":           sub.GetRemoteAPIID(),
+		"remoteID":           sub.GetRemoteAPIAttributes()[common.AttrAPIID],
 		"consumerInstanceID": sub.GetApicID(),
 		"currentState":       sub.GetState(),
 	}

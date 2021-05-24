@@ -12,8 +12,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/Axway/agent-sdk/pkg/cache"
-
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	agenterrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
@@ -21,10 +19,7 @@ import (
 	"github.com/Axway/agents-mulesoft/pkg/config"
 )
 
-const (
-	CacheKeyTimeStamp   = "LAST_RUN"
-	HealthCheckEndpoint = "mulesoft"
-)
+const HealthCheckEndpoint = "mulesoft"
 
 // Page describes the page query parameter
 type Page struct {
@@ -42,7 +37,6 @@ type Client interface {
 	GetExchangeAsset(groupID, assetID, assetVersion string) (*ExchangeAsset, error)
 	GetExchangeAssetIcon(icon string) (string, string, error)
 	GetExchangeFileContent(link, packaging, mainFile string) ([]byte, error)
-	GetAnalyticsWindow() ([]AnalyticsEvent, error)
 	CreateClientApplication(string, *AppRequestBody) (*Application, error)
 	CreateContract(int64, *Contract) (*Contract, error)
 	GetSLATiers(int642 int64) (*Tiers, error)
@@ -50,7 +44,7 @@ type Client interface {
 }
 
 type AnalyticsClient interface {
-	GetAnalyticsWindow() ([]AnalyticsEvent, error)
+	GetAnalyticsWindow(string, string) ([]AnalyticsEvent, error)
 	OnConfigChange(mulesoftConfig *config.MulesoftConfig)
 	GetClientApplication(appId string) (*Application, error)
 }
@@ -72,8 +66,7 @@ type AnypointClient struct {
 	apiClient   coreapi.Client
 	auth        Auth
 	environment *Environment
-	cache       cache.Cache
-	cachePath   string
+	orgName     string
 }
 
 type ClientOptions func(*AnypointClient)
@@ -81,7 +74,6 @@ type ClientOptions func(*AnypointClient)
 // NewClient creates a new client for interacting with Mulesoft.
 func NewClient(mulesoftConfig *config.MulesoftConfig, options ...ClientOptions) *AnypointClient {
 	client := &AnypointClient{}
-	client.cachePath = formatCachePath(mulesoftConfig.CachePath)
 	// Create a new client before invoking additional options, which may want to override the client
 	client.apiClient = coreapi.NewClient(mulesoftConfig.TLS, mulesoftConfig.ProxyURL)
 
@@ -104,9 +96,8 @@ func (c *AnypointClient) OnConfigChange(mulesoftConfig *config.MulesoftConfig) {
 	c.baseURL = mulesoftConfig.AnypointExchangeURL
 	c.username = mulesoftConfig.Username
 	c.password = mulesoftConfig.Password
+	c.orgName = mulesoftConfig.OrgName
 	c.lifetime = mulesoftConfig.SessionLifetime
-	c.cachePath = formatCachePath(mulesoftConfig.CachePath)
-	c.cache = cache.Load(c.cachePath)
 
 	var err error
 	c.auth, err = NewAuth(c)
@@ -214,6 +205,15 @@ func (c *AnypointClient) getCurrentUser(token string) (*User, error) {
 	err := c.invokeJSON(request, &user)
 	if err != nil {
 		return nil, err
+	}
+
+	//this sets the User.Organization.ID as the Org ID of the Business Unit specified in Config
+	for _, value := range user.User.MemberOfOrganizations {
+		if value.Name == c.orgName {
+			user.User.Organization.ID = value.ID
+			user.User.Organization.Name = value.Name
+		}
+
 	}
 
 	return &user.User, nil
@@ -334,8 +334,7 @@ func (c *AnypointClient) GetExchangeFileContent(link, packaging, mainFile string
 }
 
 // GetAnalyticsWindow lists the managed assets in Mulesoft: https://docs.qax.mulesoft.com/api-manager/2.x/analytics-event-api
-func (c *AnypointClient) GetAnalyticsWindow() ([]AnalyticsEvent, error) {
-	startDate, endDate := c.getLastRun()
+func (c *AnypointClient) GetAnalyticsWindow(startDate, endDate string) ([]AnalyticsEvent, error) {
 	query := map[string]string{
 		"format":    "json",
 		"startDate": startDate,
@@ -451,19 +450,6 @@ func (c *AnypointClient) CreateContract(appID int64, contract *Contract) (*Contr
 	return &cnt, nil
 }
 
-func (c *AnypointClient) getLastRun() (string, string) {
-	tStamp, _ := c.cache.Get(CacheKeyTimeStamp)
-	now := time.Now()
-	tNow := now.Format(time.RFC3339)
-	if tStamp == nil {
-		tStamp = tNow
-	}
-	c.cache.Set(CacheKeyTimeStamp, tNow)
-	c.cache.Save(c.cachePath)
-	return tStamp.(string), tNow
-
-}
-
 func (c *AnypointClient) invokeJSONGet(url string, page *Page, resp interface{}) error {
 	headers := map[string]string{
 		"Authorization": "Bearer " + c.auth.GetToken(),
@@ -521,12 +507,12 @@ func (c *AnypointClient) invokeDelete(request coreapi.Request) error {
 func (c *AnypointClient) invokeJSON(request coreapi.Request, resp interface{}) error {
 	body, _, err := c.invoke(request)
 	if err != nil {
-		return agenterrors.Wrap(ErrCommunicatingWithGateway, err.Error())
+		return err
 	}
 
 	err = json.Unmarshal(body, resp)
 	if err != nil {
-		return agenterrors.Wrap(ErrMarshallingBody, err.Error())
+		return err
 	}
 	return nil
 }
@@ -547,16 +533,12 @@ func (c *AnypointClient) invoke(request coreapi.Request) ([]byte, map[string][]s
 	if err != nil {
 		return nil, nil, agenterrors.Wrap(ErrCommunicatingWithGateway, err.Error())
 	}
-
 	if !(response.Code == http.StatusOK || response.Code == http.StatusCreated) {
-		return nil, nil, agenterrors.Wrap(ErrCommunicatingWithGateway, fmt.Sprint(response.Code))
+		res := NewErrorResponse(string(response.Body), response.Code)
+		return nil, nil, agenterrors.Wrap(ErrCommunicatingWithGateway, res.String())
 	}
 
 	return response.Body, response.Headers, nil
-}
-
-func formatCachePath(path string) string {
-	return fmt.Sprintf("%s/anypoint.cache", path)
 }
 
 // SetClient replaces the default apiClient with anything that implements the Client interface. Can be used for writing tests.

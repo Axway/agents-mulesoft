@@ -18,6 +18,7 @@ func TestClient(t *testing.T) {
 		AnypointExchangeURL: "",
 		CachePath:           "/tmp",
 		Environment:         "Sandbox",
+		OrgName:             "BusinessOrg1",
 		Password:            "abc",
 		PollInterval:        10,
 		ProxyURL:            "",
@@ -34,35 +35,45 @@ func TestClient(t *testing.T) {
 		"/accounts/api/me": {
 			Code: 200,
 			Body: []byte(`{
-					"user":{
-						"identityType": "idtype",
-						"id": "123",
-						"username": "name",
-						"firstName": "first",
-						"lastName": "last",
-						"email": "email",
-						"organization": {
-							"id": "333",
-							"name": "org1",
-							"domain": "abc.com"
-						}
-					}
+							"user": {
+								"identityType": "idtype",
+								"id": "123",
+								"username": "name",
+								"firstName": "first",
+								"lastName": "last",
+								"email": "email",
+								"organization": {
+									"id": "333",
+									"name": "org1",
+									"domain": "abc.com"
+								},
+								"memberOfOrganizations": [{
+										"id": "333",
+										"name": "org1"
+									},
+									{
+										"id": "444",
+										"name": "BusinessOrg1"
+									}
+								]
+						
+							}
 				}`),
 		},
-		"/accounts/api/organizations/333/environments": {
+		"/accounts/api/organizations/444/environments": {
 			Code: 200,
 			Body: []byte(`{
 					"data": [{
 						"id": "111",
 						"name": "Sandbox",
-						"organizationId": "333",
+						"organizationId": "444",
 						"type": "fake",
 						"clientId": "abc123"
 					}],
 					"total": 1
 				}`),
 		},
-		"/apimanager/api/v1/organizations/333/environments/111/apis": {
+		"/apimanager/api/v1/organizations/444/environments/111/apis": {
 			Code: 200,
 			Body: []byte(`{
 				"assets": [
@@ -73,7 +84,7 @@ func TestClient(t *testing.T) {
 				"total": 1
 			}`),
 		},
-		"/apimanager/api/v1/organizations/333/environments/111/apis/10/policies": {
+		"/apimanager/api/v1/organizations/444/environments/111/apis/10/policies": {
 			Code: 200,
 			Body: []byte(`{
 			"policies": [
@@ -93,7 +104,7 @@ func TestClient(t *testing.T) {
 			Code: 200,
 			Body: []byte(`content`),
 		},
-		"/analytics/1.0/333/environments/111/events": {
+		"/analytics/1.0/444/environments/111/events": {
 			Code: 200,
 			Body: []byte(`[{}]`),
 		},
@@ -138,6 +149,7 @@ func TestClient(t *testing.T) {
 	logrus.Info(token, user, duration, err)
 	assert.Equal(t, "abc123", token)
 	assert.Equal(t, "123", user.ID)
+	assert.Equal(t, "444", user.Organization.ID)
 	assert.Equal(t, time.Duration(60), duration)
 	assert.Equal(t, nil, err)
 	env, err := client.GetEnvironmentByName("/env1")
@@ -160,7 +172,7 @@ func TestClient(t *testing.T) {
 	logrus.Info(i, contentType)
 	assert.NotEmpty(t, i)
 	assert.Empty(t, contentType)
-	events, err := client.GetAnalyticsWindow()
+	events, err := client.GetAnalyticsWindow("2021-05-19T14:30:20-07:00","2021-05-19T14:30:22-07:00")
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(events))
 
