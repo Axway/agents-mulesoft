@@ -13,10 +13,24 @@ As well as access to Amplify Central it is assumed you have access to the [Mules
 - Credentials with access to the organization the agents will attach to.
 - Mulesoft environment name to discover from (e.g. Sandbox)
 
-
 ## Configuring the Discovery Agent
 
 The agents read their configuration from a YAML files. To set up your config file copy the content of `default_mulesoft_discovery_agent.yml` into a new file named `mulesoft_discovery_agent`, and replace the default values that reflect your environment.
+
+# Authenticate with Mulesoft
+
+There are two ways to authenticate with mulesoft. The first way is to provide your username and password to your Anypoint account in the `mulesoft_traceability_agent.yml` file within the `auth` section.
+The second option is to provide the Client ID & Client Secret of the environment, or business group within the same config file within the `auth` section.
+
+```yaml
+auth:
+  # if using the username and password to authenticate fill out these fields in the mulesoft.auth section
+  username: <USERNAME>
+  password: <Password>
+  # if using the Client ID and Client Secret to authenticate fill out these fields in the mulesoft.auth section
+  clientID: <CLIENT_ID>
+  clientSecret: <CLIENT_SECRET>
+```
 
 ## Start the Discovery Agent
 
@@ -86,6 +100,8 @@ The agents read their configuration from a YAML files. To set up your config fil
 | MULESOFT_AUTH_LIFETIME                                             | mulesoft.auth.lifetime                                              | The session lifetime. The agent will automatically refresh the access token as it approaches the end of its lifetime                                                                                                                                                                                     | 60m                                                                  |
 | MULESOFT_AUTH_PASSWORD                                             | mulesoft.auth.password                                              | The password for the Mulesoft Anypoint username created for this agent                                                                                                                                                                                                                                   |                                                                      |
 | MULESOFT_AUTH_USERNAME                                             | mulesoft.auth.username                                              | The Mulesoft Anypoint username created for this agent                                                                                                                                                                                                                                                    |                                                                      |
+| MULESOFT_AUTH_CLIENTID                                             | mulesoft.auth.clientId                                              | The Mulesoft Anypoint Client ID for the provided business group or environment                                                                                                                                                                                                                           |                                                                      |
+| MULESOFT_AUTH_CLIENTSECRET                                         | mulesoft.auth.clientSecret                                          | The Mulesoft Anypoint Client Secret for the provided business group or environment                                                                                                                                                                                                                       |                                                                      |
 | MULESOFT_CACHEPATH                                                 | mulesoft.cachePath                                                  | Path entry to store stateful cache between agent invocations                                                                                                                                                                                                                                             | _/tmp_                                                               |
 | MULESOFT_DISCOVERYIGNORETAGS                                       | mulesoft.discoveryIgnoreTags                                        | Comma-separated black list of tags that, if any are present, will prevent an API being publised to Amplify Central. Take precedence over MULESOFT_DISCOVERYTAGS                                                                                                                                          | (empty tag list)                                                     |
 | MULESOFT_DISCOVERYTAGS                                             | mulesoft.discoveryTags                                              | Comma-separated list of tags that, if any are present, will allow an API to be publised to Amplify Central. All APIs are discovered if not tags are specified                                                                                                                                            | (empty tag list)                                                     |
