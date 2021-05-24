@@ -1,6 +1,7 @@
 package anypoint
 
 import (
+	"net/http"
 	"testing"
 	"time"
 
@@ -26,7 +27,7 @@ func TestClient(t *testing.T) {
 		Username:            "123",
 	}
 	mcb := &MockClientBase{}
-	mcb.Reqs = map[string]*api.Response{
+	mcb.Res = map[string]*api.Response{
 		"/accounts/login": {
 			Code:    200,
 			Body:    []byte(`{"access_token":"abc123"}`),
@@ -116,6 +117,10 @@ func TestClient(t *testing.T) {
 			Code: 200,
 			Body: []byte(`[]`),
 		},
+		"/apimanager/api/v1/organizations/444/environments/111/apis/1/tiers": {
+			Code: 200,
+			Body: []byte(`{"total":1, "tiers":[{"description":"hi","limits":[],"status":"status","name":"tier1"}]}`),
+		},
 	}
 
 	client := NewClient(cfg, SetClient(mcb))
@@ -154,29 +159,41 @@ func TestClient(t *testing.T) {
 	assert.Equal(t, "444", user.Organization.ID)
 	assert.Equal(t, time.Duration(60), duration)
 	assert.Equal(t, nil, err)
+
 	env, err := client.GetEnvironmentByName("/env1")
 	assert.Nil(t, err)
 	assert.Equal(t, "Sandbox", env.Name)
+
 	assets, err := client.ListAssets(&Page{
 		Offset:   0,
 		PageSize: 50,
 	})
 	assert.Equal(t, 1, len(assets))
 	assert.Nil(t, err)
+
 	py, err := client.GetPolicies(10)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(py.Policies))
+
 	a, err := client.GetExchangeAsset("1", "2", "3")
 	assert.Nil(t, err)
 	assert.Equal(t, "petstore", a.AssetID)
+
 	i, contentType, err := client.GetExchangeAssetIcon("/icon")
 	assert.Nil(t, err)
 	logrus.Info(i, contentType)
 	assert.NotEmpty(t, i)
 	assert.Empty(t, contentType)
+
 	events, err := client.GetAnalyticsWindow("2021-05-19T14:30:20-07:00", "2021-05-19T14:30:22-07:00")
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(events))
+
+	slaTiers, err := client.GetSLATiers(1)
+	assert.Nil(t, err)
+	assert.NotNil(t, slaTiers)
+	assert.Equal(t, 1, slaTiers.Total)
+	assert.Equal(t, 1, len(slaTiers.Tiers))
 
 	go client.auth.Stop()
 	done := <-ma.ch
@@ -200,7 +217,7 @@ func TestGetTokenByClientID(t *testing.T) {
 
 	mcb := &MockClientBase{}
 
-	mcb.Reqs = map[string]*api.Response{
+	mcb.Res = map[string]*api.Response{
 		"/accounts/oauth2/token": {
 			Code:    200,
 			Body:    []byte(`{"access_token":"abc123"}`),
@@ -214,4 +231,137 @@ func TestGetTokenByClientID(t *testing.T) {
 	}
 	client.auth = ma
 
+}
+
+func Test_invokeDelete(t *testing.T) {
+	cfg := &config.MulesoftConfig{
+		AnypointExchangeURL: "",
+		CachePath:           "/tmp",
+		Environment:         "Sandbox",
+		OrgName:             "BusinessOrg1",
+		Password:            "abc",
+		PollInterval:        10,
+		ProxyURL:            "",
+		SessionLifetime:     60,
+		Username:            "123",
+	}
+	mcb := &MockClientBase{}
+	mcb.Res = map[string]*api.Response{
+		"/api": {
+			Code: 204,
+			Body: nil,
+		},
+		"/500": {
+			Code: 500,
+			Body: nil,
+		},
+	}
+	client := NewClient(cfg, SetClient(mcb))
+
+	req1 := api.Request{
+		Method: http.MethodDelete,
+		URL:    "/api",
+	}
+	err := client.invokeDelete(req1)
+	assert.Nil(t, err)
+
+	req2 := api.Request{
+		Method: http.MethodDelete,
+		URL:    "/500",
+	}
+	err = client.invokeDelete(req2)
+	assert.NotNil(t, err)
+
+	req3 := api.Request{
+		Method: http.MethodDelete,
+		URL:    "/notfound",
+	}
+	err = client.invokeDelete(req3)
+	assert.NotNil(t, err)
+}
+
+func Test_GetAccessToken(t *testing.T) {
+	cfg := &config.MulesoftConfig{
+		AnypointExchangeURL: "",
+		CachePath:           "/tmp",
+		Environment:         "Sandbox",
+		OrgName:             "BusinessOrg1",
+		PollInterval:        10,
+		ProxyURL:            "",
+		SessionLifetime:     60,
+		ClientSecret:        "0987",
+		ClientID:            "1234",
+	}
+	mcb := &MockClientBase{}
+	mcb.Res = map[string]*api.Response{
+		"/accounts/oauth2/token": {
+			Code:    200,
+			Body:    []byte(`{"access_token":"abc123"}`),
+			Headers: nil,
+		},
+		"/accounts/api/me": {
+			Code: 200,
+			Body: []byte(`{
+							"user": {
+								"identityType": "idtype",
+								"id": "123",
+								"username": "name",
+								"firstName": "first",
+								"lastName": "last",
+								"email": "email",
+								"organization": {
+									"id": "333",
+									"name": "org1",
+									"domain": "abc.com"
+								},
+								"memberOfOrganizations": [{
+										"id": "333",
+										"name": "org1"
+									},
+									{
+										"id": "444",
+										"name": "BusinessOrg1"
+									}
+								]
+						
+							}
+				}`),
+		},
+		"/accounts/api/organizations/444/environments": {
+			Code: 200,
+			Body: []byte(`{
+					"data": [{
+						"id": "111",
+						"name": "Sandbox",
+						"organizationId": "444",
+						"type": "fake",
+						"clientId": "abc123"
+					}],
+					"total": 1
+				}`),
+		},
+	}
+	client := NewClient(cfg, SetClient(mcb))
+	token, user, duration, err := client.GetAccessToken()
+	assert.Nil(t, err)
+	assert.NotEmpty(t, token)
+	assert.NotNil(t, user)
+	assert.NotEmpty(t, duration)
+
+	delete(mcb.Res, "/accounts/oauth2/token")
+	_, _, _, err = client.GetAccessToken()
+	assert.NotNil(t, err)
+
+	mcb.Res["/accounts/oauth2/token"] = &api.Response{
+		Code:    500,
+		Body:    nil,
+		Headers: nil,
+	}
+	_, _, _, err = client.GetAccessToken()
+	assert.NotNil(t, err)
+
+	client.clientSecret = ""
+	client.clientID = ""
+	_, _, _, err = client.GetAccessToken()
+	assert.NotNil(t, err)
 }

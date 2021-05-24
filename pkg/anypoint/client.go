@@ -200,7 +200,7 @@ func (c *AnypointClient) getTokenByClientID() (string, error) {
 	respMap := make(map[string]interface{})
 	err = json.Unmarshal(response.Body, &respMap)
 	if err != nil {
-		return "", agenterrors.Wrap(ErrAuthentication, err.Error())
+		return "", agenterrors.Wrap(ErrParsingResponse, err.Error())
 	}
 	token := respMap["access_token"].(string)
 
@@ -240,7 +240,7 @@ func (c *AnypointClient) getTokenByUsername() (string, error) {
 	respMap := make(map[string]interface{})
 	err = json.Unmarshal(response.Body, &respMap)
 	if err != nil {
-		return "", agenterrors.Wrap(ErrAuthentication, err.Error())
+		return "", agenterrors.Wrap(ErrParsingResponse, err.Error())
 	}
 	token := respMap["access_token"].(string)
 
@@ -257,6 +257,10 @@ func (c *AnypointClient) GetAccessToken() (string, *User, time.Duration, error) 
 		token, err = c.getTokenByUsername()
 	} else {
 		return "", nil, 0, fmt.Errorf("unable to authenticate due to misconfigured auth credentials")
+	}
+
+	if err != nil {
+		return "", nil, 0, err
 	}
 
 	user, err := c.getCurrentUser(token)
@@ -583,7 +587,7 @@ func (c *AnypointClient) invokeDelete(request coreapi.Request) error {
 	}
 
 	if response.Code != http.StatusNoContent {
-		agenterrors.Wrap(ErrCommunicatingWithGateway, fmt.Sprint(response.Code))
+		return agenterrors.Wrap(ErrCommunicatingWithGateway, fmt.Sprint(response.Code))
 	}
 	return nil
 }
