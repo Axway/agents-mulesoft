@@ -17,8 +17,8 @@ mulesoft_traceability_agent:
     auth:
       clientId: "${CENTRAL_AUTH_CLIENTID}"
       keyPassword: ${CENTRAL_AUTH_KEYPASSWORD:""}
-      privateKey: "${CENTRAL_AUTH_PRIVATEKEY:}"
-      publicKey: "${CENTRAL_AUTH_PUBLICKEY:}"
+      privateKey: "${CENTRAL_AUTH_PRIVATEKEY}"
+      publicKey: "${CENTRAL_AUTH_PUBLICKEY}"
       realm: "${CENTRAL_AUTH_REALM:Broker}"
       url: "${CENTRAL_AUTH_URL:https://login.axway.com/auth}"
     ssl:
@@ -41,6 +41,9 @@ mulesoft_traceability_agent:
     auth:
       username: "${MULESOFT_AUTH_USERNAME}"
       password: "${MULESOFT_AUTH_PASSWORD}"
+      clientID: "${MULESOFT_AUTH_CLIENTID}"
+      clientSecret: "${MULESOFT_AUTH_CLIENTSECRET}"
+      lifetime: ${MULESOFT_AUTH_LIFETIME:60m}
 
 # Condor Ingestion service
 output.traceability:

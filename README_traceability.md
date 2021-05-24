@@ -18,24 +18,6 @@ As well as access to Amplify Central it is assumed you have access to the [Mules
 
 The agents read their configuration from a YAML file. To set up your config file copy the content of `default_mulesoft_traceability_agent.yml` into a new file named `mulesoft_traceability_agent`, and replace the default values that reflect your environment.
 
-The minimial configuration for the agent is:
-
-```
-central:
-  organizationID: <your organization id>
-  environment: <your amplify environment name>
-  auth:
-    clientID: <your service account client id>
-    privateKey: <path to your private_key.pem>
-    publicKey: <path to your public_key.pem>
-
-mulesoft:
- environment: <your Mulesoft environment>
- auth:
-  username: <your Mulesoft username>
-  password: <your Mulesoft password>
-```
-
 ## Start the Traceability Agent
 
 ```

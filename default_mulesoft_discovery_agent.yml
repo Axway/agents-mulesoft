@@ -1,31 +1,33 @@
 central:
-  organizationID: "<Amplify_ORG_ID>"
-  environment: <Amplify_CENTRAL_ENVIRONMENT_NAME>
+  agentName: ${CENTRAL_AGENTNAME:""}
+  deployment: "${CENTRAL_DEPLOYMENT:prod}"
+  environment: "${CENTRAL_ENVIRONMENT}"
+  organizationID: "${CENTRAL_ORGANIZATIONID}"
   mode: publishToEnvironmentAndCatalog
-  url: https://apicentral.axway.com
-  platformURL: https://platform.axway.com
-  pollInterval: 5s
+  url: "${CENTRAL_URL:https://apicentral.axway.com}"
+  platformURL: "${CENTRAL_PLATFORMURL:https://platform.axway.com}"
+  pollInterval: ${CENTRAL_POLLINTERVAL:20s}
   auth:
-    clientID: <Amplify_CENTRAL_DOSA_CLIENT_ID>
-    privateKey: <Amplify_CENTRAL_DOSA_PRIVATE_KEY_PATH>
-    publicKey: <Amplify_CENTRAL_DOSA_PUBLIC_KEY_PATH>
-    realm: Broker
-    timeout: 30s
-    url: https://login.axway.com/auth
+    clientId: "${CENTRAL_AUTH_CLIENTID}"
+    keyPassword: ${CENTRAL_AUTH_KEYPASSWORD:""}
+    privateKey: "${CENTRAL_AUTH_PRIVATEKEY}"
+    publicKey: "${CENTRAL_AUTH_PUBLICKEY}"
+    realm: "${CENTRAL_AUTH_REALM:Broker}"
+    url: "${CENTRAL_AUTH_URL:https://login.axway.com/auth}"
     # Uncomment the following line if you are using a proxy to access the Amplify platform (apicentral.axway.com / login.axway.com / platform.axway.com) on port 443
     # Configure the appropriate value (PROXY_USER / PROXY_PASSWORD are optional values)
     #proxyurl: <PROXY_SCHEME>://<PROXY_USER>:<PROXY_USER_PASSWORD>@<PROXY_URL>:<PROXY_PORT>
 
 log:
-  level: debug
-  format: json
-  output: stdout
-  path: logs
+  format: ${LOG_FORMAT:json}
+  level: ${LOG_LEVEL:info}
+  output: ${LOG_OUTPUT:stdout}
+  path: "${LOG_PATH:logs}"
 
 mulesoft:
-  anypointExchangeUrl: https://anypoint.mulesoft.com
+  anypointExchangeUrl: "${MULESOFT_ANYPOINTEXCHANGEURL}:https://anypoint.mulesoft.com"
   environment: "${MULESOFT_ENVIRONMENT}"
-  pollInterval: 20s
+  pollInterval: ${MULESOFT_POLLINTERVAL:20s}
   orgName: "${MULESOFT_ORGNAME}"
   # Comma-separated list of tags. Used to filter the APIs that have a particular tag in their configuration.
   # Default value: empty. Meaning that no matching is performed.
@@ -36,10 +38,10 @@ mulesoft:
   #discoveryIgnoreTags: tags1, tags2
   auth:
     # Set either a clientID & clientSecret pair, or the username & password. If both are set, clientID & secret will take precedence.
-    clientID: <CLIENT_ID>
-    clientSecret: <CLIENT_SECRET>
-    username: <USERNAME>
-    password: <PASSWORD>
-    lifetime:
+    username: "${MULESOFT_AUTH_USERNAME}"
+    password: "${MULESOFT_AUTH_PASSWORD}"
+    clientID: "${MULESOFT_AUTH_CLIENTID}"
+    clientSecret: "${MULESOFT_AUTH_CLIENTSECRET}"
+    lifetime: ${MULESOFT_AUTH_LIFETIME:60m}
 
 
