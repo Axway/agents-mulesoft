@@ -123,12 +123,15 @@ func TestClient(t *testing.T) {
 		},
 	}
 
-	client := NewClient(cfg, SetClient(mcb))
+	client, err := NewClient(cfg, mockRegisterHealth, SetClient(mcb))
+	assert.Nil(t, err)
+
 	ma := &MockAuth{
 		ch: make(chan bool),
 	}
-	err := client.Authenticate()
+	err = client.Authenticate()
 	assert.Nil(t, err)
+
 	client.auth = ma
 	status := client.healthcheck("check")
 	assert.Equal(t, hc.OK, status.Result)
@@ -225,12 +228,13 @@ func TestGetTokenByClientID(t *testing.T) {
 		},
 	}
 
-	client := NewClient(cfg, SetClient(mcb))
+	client, err := NewClient(cfg, mockRegisterHealth, SetClient(mcb))
+	assert.Nil(t, err)
+
 	ma := &MockAuth{
 		ch: make(chan bool),
 	}
 	client.auth = ma
-
 }
 
 func Test_invokeDelete(t *testing.T) {
@@ -256,13 +260,13 @@ func Test_invokeDelete(t *testing.T) {
 			Body: nil,
 		},
 	}
-	client := NewClient(cfg, SetClient(mcb))
+	client, err := NewClient(cfg, mockRegisterHealth, SetClient(mcb))
 
 	req1 := api.Request{
 		Method: http.MethodDelete,
 		URL:    "/api",
 	}
-	err := client.invokeDelete(req1)
+	err = client.invokeDelete(req1)
 	assert.Nil(t, err)
 
 	req2 := api.Request{
@@ -341,7 +345,9 @@ func Test_GetAccessToken(t *testing.T) {
 				}`),
 		},
 	}
-	client := NewClient(cfg, SetClient(mcb))
+	client, err := NewClient(cfg, mockRegisterHealth, SetClient(mcb))
+	assert.Nil(t, err)
+
 	token, user, duration, err := client.GetAccessToken()
 	assert.Nil(t, err)
 	assert.NotEmpty(t, token)
@@ -364,4 +370,8 @@ func Test_GetAccessToken(t *testing.T) {
 	client.clientID = ""
 	_, _, _, err = client.GetAccessToken()
 	assert.NotNil(t, err)
+}
+
+func mockRegisterHealth(name, endpoint string, check hc.CheckStatus) (string, error) {
+	return "", nil
 }

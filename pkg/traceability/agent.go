@@ -33,7 +33,11 @@ func NewBeater(_ *beat.Beat, _ *common.Config) (beat.Beater, error) {
 
 	var err error
 	generator := transaction.NewEventGenerator()
-	client := anypoint.NewClient(agentConfig.MulesoftConfig)
+	client, err := anypoint.NewClient(agentConfig.MulesoftConfig, hc.RegisterHealthcheck)
+	if err != nil {
+		return nil, err
+	}
+
 	err = client.Authenticate()
 	if err != nil {
 		return nil, fmt.Errorf("failed to authenticate with mulesoft: %s", err)

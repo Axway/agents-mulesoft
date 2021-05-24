@@ -3,6 +3,8 @@ package discovery
 import (
 	"fmt"
 
+	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
+
 	"github.com/Axway/agents-mulesoft/pkg/subscription/clientid"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
@@ -40,8 +42,12 @@ func init() {
 // run Callback that agent will call to process the execution
 func run() error {
 	cfg := config.GetConfig()
-	client := anypoint.NewClient(cfg.MulesoftConfig)
-	err := client.Authenticate()
+	client, err := anypoint.NewClient(cfg.MulesoftConfig, hc.RegisterHealthcheck)
+	if err != nil {
+		return err
+	}
+
+	err = client.Authenticate()
 	if err != nil {
 		return fmt.Errorf("failed to authenticate with mulesoft: %s", err)
 	}

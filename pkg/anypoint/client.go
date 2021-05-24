@@ -77,7 +77,7 @@ type AnypointClient struct {
 type ClientOptions func(*AnypointClient)
 
 // NewClient creates a new client for interacting with Mulesoft.
-func NewClient(mulesoftConfig *config.MulesoftConfig, options ...ClientOptions) *AnypointClient {
+func NewClient(mulesoftConfig *config.MulesoftConfig, registerHealth hc.RegisterHealth, options ...ClientOptions) (*AnypointClient, error) {
 	client := &AnypointClient{
 		apiClient:       nil,
 		auth:            nil,
@@ -99,10 +99,9 @@ func NewClient(mulesoftConfig *config.MulesoftConfig, options ...ClientOptions) 
 		o(client)
 	}
 
-	// TODO: handle error
-	hc.RegisterHealthcheck("Mulesoft Anypoint Exchange", HealthCheckEndpoint, client.healthcheck)
+	_, err := registerHealth("Mulesoft Anypoint Exchange", HealthCheckEndpoint, client.healthcheck)
 
-	return client
+	return client, err
 }
 
 // Authenticate authenticate with Mulesoft
