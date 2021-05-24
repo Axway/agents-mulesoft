@@ -44,6 +44,7 @@ func (a *auth) Start() error {
 
 // Stop terminates the background access token refresh.
 func (a *auth) Stop() {
+	a.done = true
 	a.stopChan <- struct{}{}
 }
 
@@ -73,7 +74,7 @@ func (a *auth) startRefreshToken(lifetime time.Duration) {
 				a.user = user
 
 				if lifetime <= 0 {
-					break
+					return
 				} else {
 					interval = time.Duration(float64(lifetime.Nanoseconds()) * threshold)
 					timer = time.NewTimer(interval)
@@ -82,8 +83,7 @@ func (a *auth) startRefreshToken(lifetime time.Duration) {
 			case <-a.stopChan:
 				log.Debug("stopping access token refresh")
 				timer.Stop()
-				a.done = true
-				break
+				return
 			}
 		}
 	}()
