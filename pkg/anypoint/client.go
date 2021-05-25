@@ -71,7 +71,7 @@ type AnypointClient struct {
 	username        string
 }
 
-// ClientOptions callback for overriding the default config of the client
+// ClientOptions callback for overriding the default config of the client.
 type ClientOptions func(*AnypointClient)
 
 // NewClient creates a new client for interacting with Mulesoft.
