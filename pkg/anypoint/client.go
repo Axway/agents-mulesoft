@@ -207,6 +207,7 @@ func (c *AnypointClient) getTokenByClientID() (string, error) {
 }
 
 // getTokenByUsername Gets a bearer token by the username and password
+// This is not being used by anything at the moment since some api's do not accept this token.
 func (c *AnypointClient) getTokenByUsername() (string, error) {
 	body := map[string]string{
 		"username": c.username,
@@ -250,9 +251,8 @@ func (c *AnypointClient) getTokenByUsername() (string, error) {
 func (c *AnypointClient) GetAccessToken() (string, *User, time.Duration, error) {
 	var token string
 	var err error
-	if c.clientSecret != "" && c.clientID != "" {
-		token, err = c.getTokenByClientID()
-	} else if c.username != "" && c.password != "" {
+
+	if c.username != "" && c.password != "" {
 		token, err = c.getTokenByUsername()
 	} else {
 		return "", nil, 0, fmt.Errorf("unable to authenticate due to misconfigured auth credentials")

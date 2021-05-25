@@ -348,14 +348,12 @@ func Test_GetAccessToken(t *testing.T) {
 	client, err := NewClient(cfg, mockRegisterHealth, SetClient(mcb))
 	assert.Nil(t, err)
 
-	token, user, duration, err := client.GetAccessToken()
+	token, err := client.getTokenByClientID()
 	assert.Nil(t, err)
 	assert.NotEmpty(t, token)
-	assert.NotNil(t, user)
-	assert.NotEmpty(t, duration)
 
 	delete(mcb.Res, "/accounts/oauth2/token")
-	_, _, _, err = client.GetAccessToken()
+	_, err = client.getTokenByClientID()
 	assert.NotNil(t, err)
 
 	mcb.Res["/accounts/oauth2/token"] = &api.Response{
@@ -363,12 +361,12 @@ func Test_GetAccessToken(t *testing.T) {
 		Body:    nil,
 		Headers: nil,
 	}
-	_, _, _, err = client.GetAccessToken()
+	_, err = client.getTokenByClientID()
 	assert.NotNil(t, err)
 
 	client.clientSecret = ""
 	client.clientID = ""
-	_, _, _, err = client.GetAccessToken()
+	_, err = client.getTokenByClientID()
 	assert.NotNil(t, err)
 }
 

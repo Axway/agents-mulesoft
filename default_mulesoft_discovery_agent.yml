@@ -40,8 +40,6 @@ mulesoft:
     # Set either a clientID & clientSecret pair, or the username & password. If both are set, clientID & secret will take precedence.
     username: "${MULESOFT_AUTH_USERNAME}"
     password: "${MULESOFT_AUTH_PASSWORD}"
-    clientID: "${MULESOFT_AUTH_CLIENTID}"
-    clientSecret: "${MULESOFT_AUTH_CLIENTSECRET}"
     lifetime: ${MULESOFT_AUTH_LIFETIME:60m}
 
 

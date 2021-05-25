@@ -22,6 +22,8 @@ func Test_initConfig(t *testing.T) {
 	cfg, ok := conf.(*config.AgentConfig)
 	assert.True(t, ok)
 	assert.IsType(t, &config.AgentConfig{}, cfg)
+	err = cfg.MulesoftConfig.ValidateCfg()
+	assert.NotNil(t, err)
 
 	cfg.MulesoftConfig.Username = "username"
 	cfg.MulesoftConfig.Password = "123"

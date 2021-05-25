@@ -19,8 +19,6 @@ const (
 	pathAuthPassword          = "mulesoft.auth.password"
 	pathAuthUsername          = "mulesoft.auth.username"
 	pathCachePath             = "mulesoft.cachePath"
-	pathClientID              = "mulesoft.auth.clientID"
-	pathClientSecret          = "mulesoft.auth.clientSecret"
 	pathDiscoveryIgnoreTags   = "mulesoft.discoveryIgnoreTags"
 	pathDiscoveryTags         = "mulesoft.discoveryTags"
 	pathEnvironment           = "mulesoft.environment"
@@ -76,16 +74,12 @@ func (c *MulesoftConfig) ValidateCfg() (err error) {
 		return errors.New("Invalid mulesoft configuration: anypointExchangeUrl is not configured")
 	}
 
-	// If the ClientSecret and ClientID are not there, then rely on authentication with the username and password.
-	if c.ClientSecret == "" && c.ClientID == "" {
+	if c.Username == "" {
+		return errors.New("Invalid mulesoft configuration: username is not configured")
+	}
 
-		if c.Username == "" {
-			return errors.New("Invalid mulesoft configuration: username is not configured")
-		}
-
-		if c.Password == "" {
-			return errors.New("Invalid mulesoft configuration: password is not configured")
-		}
+	if c.Password == "" {
+		return errors.New("Invalid mulesoft configuration: password is not configured")
 	}
 
 	if c.Environment == "" {
@@ -115,8 +109,6 @@ func AddConfigProperties(props properties.Properties) {
 	props.AddStringProperty(pathAuthPassword, "", "Mulesoft password.")
 	props.AddStringProperty(pathAuthUsername, "", "Mulesoft username.")
 	props.AddStringProperty(pathCachePath, "/tmp", "Mulesoft Cache Path")
-	props.AddStringProperty(pathClientID, "", "The Client ID for the org or business group.")
-	props.AddStringProperty(pathClientSecret, "", "The Client Secret for the org or business group.")
 	props.AddStringProperty(pathDiscoveryIgnoreTags, "", "APIs containing any of these tags are ignored. Takes precedence over "+pathDiscoveryIgnoreTags+".")
 	props.AddStringProperty(pathDiscoveryTags, "", "APIs containing any of these tags are selected for discovery.")
 	props.AddStringProperty(pathEnvironment, "", "Mulesoft Anypoint environment.")
@@ -135,8 +127,6 @@ func NewMulesoftConfig(props properties.Properties) *MulesoftConfig {
 	return &MulesoftConfig{
 		AnypointExchangeURL: props.StringPropertyValue(pathAnypointExchangeURL),
 		CachePath:           props.StringPropertyValue(pathCachePath),
-		ClientID:            props.StringPropertyValue(pathClientID),
-		ClientSecret:        props.StringPropertyValue(pathClientSecret),
 		DiscoveryIgnoreTags: props.StringPropertyValue(pathDiscoveryIgnoreTags),
 		DiscoveryTags:       props.StringPropertyValue(pathDiscoveryTags),
 		Environment:         props.StringPropertyValue(pathEnvironment),
