@@ -17,8 +17,6 @@ spec:
         app.kubernetes.io/name: discovery-agent
         app.kubernetes.io/instance: discovery
     spec:
-#      imagePullSecrets:
-#        - name: <Secret_Name>
       containers:
         - env:
             - name: CENTRAL_AUTH_CLIENTID
