@@ -19,8 +19,8 @@ The agents read their configuration from a YAML files. To set up your config fil
 
 # Authenticate with Mulesoft
 
-There are two ways to authenticate with mulesoft. The first way is to provide your username and password to your Anypoint account in the `mulesoft_traceability_agent.yml` file within the `auth` section.
-The second option is to provide the Client ID & Client Secret of the environment, or business group within the same config file within the `auth` section.
+There are two ways to authenticate with mulesoft. The first way is to provide your username and password to your Anypoint account in the `mulesoft_traceability_agent.yml` file within the `mulesoft.auth` section.
+The second option is to provide the Client ID & Client Secret of the environment, or business group within the same config file within the `mulesoft.auth` section.
 
 ```yaml
 auth:
