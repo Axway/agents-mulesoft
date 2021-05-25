@@ -126,14 +126,14 @@ Also, create a secret based on the credentials associated with the mulesoft acco
 apiVersion: v1
 kind: Secret
 metadata:
-  name: muleauth-traceability
+  name: muleauth
 type: Opaque
 stringData:
   username:
   password:
 ```
 ```bash
-kubectl apply -f muleauth-traceability.yaml
+kubectl apply -f mulesoft-auth.yaml
 ```
 Provide the environment Variables required by the manifest file. 
 ```bash

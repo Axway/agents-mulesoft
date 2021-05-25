@@ -46,12 +46,12 @@ spec:
             - name: MULESOFT_AUTH_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: muleauth-discovery
+                  name: muleauth
                   key: password
             - name: MULESOFT_AUTH_USERNAME
               valueFrom:
                 secretKeyRef:
-                  name: muleauth-discovery
+                  name: muleauth
                   key: username
             - name: MULESOFT_CACHEPATH
               value: /tmp
