@@ -1,8 +1,0 @@
-apiVersion: v1
-kind: Secret
-metadata:
-  name: muleauth-discovery
-type: Opaque
-stringData:
-  username:
-  password:
