@@ -20,15 +20,19 @@ The agents read their configuration from a YAML file. To set up your config file
 
 # Authenticate with Mulesoft
 
-To authenticate with Mulesoft you must provide the username and password to your Anypoint account in the `mulesoft_traceability_agent.yml` file within the `mulesoft.auth` section.
+To authenticate with Mulesoft you must provide the username and password to your Anypoint account in the `mulesoft_traceability_agent.yml` file within the `mulesoft_traceability_agent.mulesoft.auth` section.
 Client authentication is not supported for the Anypoint analytics API, and can only be done with the username and password. The documentation on how to authenticate with the analytics API can be found [here](https://anypoint.mulesoft.com/exchange/portals/anypoint-platform/f1e97bc6-315a-4490-82a7-23abe036327a.anypoint-platform/analytics-event-export-api/minor/1.0/console/documentation/%235/)
 
-```yaml
-auth:
-  # if using the username and password to authenticate fill out these fields in the mulesoft_traceability_agent.mulesoft.auth section
-  username: <USERNAME>
-  password: <Password>
+Along with your authentication credentials, you must specify the Business Group you wish to connect to within the `mulesoft_traceability_agent.mulesoft.orgName` field, and the Environment in the `mulesoft_traceability_agent.mulesoft.environment` field.
 
+```yaml
+mulesoft:
+  environment: Sandbox
+  orgName: "Master"
+  auth:
+    # if using the username and password to authenticate fill out these fields in the mulesoft.auth section
+    username: <USERNAME>
+    password: <Password>
 ```
 
 ## Start the Traceability Agent
