@@ -54,8 +54,6 @@ type MulesoftConfig struct {
 	corecfg.IResourceConfigCallback
 	AnypointExchangeURL string            `config:"anypointExchangeUrl"`
 	CachePath           string            `config:"cachePath"`
-	ClientID            string            `config:"auth.clientID"`
-	ClientSecret        string            `config:"auth.clientSecret"`
 	DiscoveryIgnoreTags string            `config:"discoveryIgnoreTags"`
 	DiscoveryTags       string            `config:"discoveryTags"`
 	Environment         string            `config:"environment"`

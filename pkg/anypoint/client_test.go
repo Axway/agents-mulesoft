@@ -207,8 +207,6 @@ func TestGetTokenByClientID(t *testing.T) {
 	cfg := &config.MulesoftConfig{
 		AnypointExchangeURL: "",
 		CachePath:           "/tmp",
-		ClientID:            "3b32513dbb",
-		ClientSecret:        "47Ca8d0",
 		Environment:         "Sandbox",
 		OrgName:             "master",
 		Password:            "",
@@ -281,92 +279,6 @@ func Test_invokeDelete(t *testing.T) {
 		URL:    "/notfound",
 	}
 	err = client.invokeDelete(req3)
-	assert.NotNil(t, err)
-}
-
-func Test_GetAccessToken(t *testing.T) {
-	cfg := &config.MulesoftConfig{
-		AnypointExchangeURL: "",
-		CachePath:           "/tmp",
-		Environment:         "Sandbox",
-		OrgName:             "BusinessOrg1",
-		PollInterval:        10,
-		ProxyURL:            "",
-		SessionLifetime:     60,
-		ClientSecret:        "0987",
-		ClientID:            "1234",
-	}
-	mcb := &MockClientBase{}
-	mcb.Res = map[string]*api.Response{
-		"/accounts/oauth2/token": {
-			Code:    200,
-			Body:    []byte(`{"access_token":"abc123"}`),
-			Headers: nil,
-		},
-		"/accounts/api/me": {
-			Code: 200,
-			Body: []byte(`{
-							"user": {
-								"identityType": "idtype",
-								"id": "123",
-								"username": "name",
-								"firstName": "first",
-								"lastName": "last",
-								"email": "email",
-								"organization": {
-									"id": "333",
-									"name": "org1",
-									"domain": "abc.com"
-								},
-								"memberOfOrganizations": [{
-										"id": "333",
-										"name": "org1"
-									},
-									{
-										"id": "444",
-										"name": "BusinessOrg1"
-									}
-								]
-						
-							}
-				}`),
-		},
-		"/accounts/api/organizations/444/environments": {
-			Code: 200,
-			Body: []byte(`{
-					"data": [{
-						"id": "111",
-						"name": "Sandbox",
-						"organizationId": "444",
-						"type": "fake",
-						"clientId": "abc123"
-					}],
-					"total": 1
-				}`),
-		},
-	}
-	client, err := NewClient(cfg, mockRegisterHealth, SetClient(mcb))
-	assert.Nil(t, err)
-
-	token, err := client.getTokenByClientID()
-	assert.Nil(t, err)
-	assert.NotEmpty(t, token)
-
-	delete(mcb.Res, "/accounts/oauth2/token")
-	_, err = client.getTokenByClientID()
-	assert.NotNil(t, err)
-
-	mcb.Res["/accounts/oauth2/token"] = &api.Response{
-		Code:    500,
-		Body:    nil,
-		Headers: nil,
-	}
-	_, err = client.getTokenByClientID()
-	assert.NotNil(t, err)
-
-	client.clientSecret = ""
-	client.clientID = ""
-	_, err = client.getTokenByClientID()
 	assert.NotNil(t, err)
 }
 

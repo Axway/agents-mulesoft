@@ -63,8 +63,6 @@ type AnypointClient struct {
 	apiClient       coreapi.Client
 	auth            Auth
 	baseURL         string
-	clientID        string
-	clientSecret    string
 	environment     *Environment
 	environmentName string
 	lifetime        time.Duration
@@ -82,8 +80,6 @@ func NewClient(mulesoftConfig *config.MulesoftConfig, registerHealth hc.Register
 		apiClient:       nil,
 		auth:            nil,
 		baseURL:         mulesoftConfig.AnypointExchangeURL,
-		clientID:        mulesoftConfig.ClientID,
-		clientSecret:    mulesoftConfig.ClientSecret,
 		environmentName: mulesoftConfig.Environment,
 		environment:     nil,
 		lifetime:        mulesoftConfig.SessionLifetime,
@@ -128,8 +124,6 @@ func (c *AnypointClient) OnConfigChange(mulesoftConfig *config.MulesoftConfig) {
 	}
 
 	c.baseURL = mulesoftConfig.AnypointExchangeURL
-	c.clientID = mulesoftConfig.ClientID
-	c.clientSecret = mulesoftConfig.ClientSecret
 	c.lifetime = mulesoftConfig.SessionLifetime
 	c.orgName = mulesoftConfig.OrgName
 	c.password = mulesoftConfig.Password
@@ -163,49 +157,6 @@ func (c *AnypointClient) healthcheck(name string) (status *hc.Status) {
 	}
 
 	return status
-}
-
-// getTokenByClientID gets a token by the environment client id and secret.
-// This is not being used by anything at the moment since some api's do not accept this token.
-func (c *AnypointClient) getTokenByClientID() (string, error) {
-	creds := &ClientAuthCredentials{
-		ClientID:     c.clientID,
-		ClientSecret: c.clientSecret,
-		GrantType:    "client_credentials",
-	}
-
-	buffer, err := json.Marshal(creds)
-	if err != nil {
-		return "", agenterrors.Wrap(ErrMarshallingBody, err.Error())
-	}
-
-	headers := map[string]string{
-		"Content-Type": "application/json",
-	}
-
-	request := coreapi.Request{
-		Method:  coreapi.POST,
-		URL:     c.baseURL + "/accounts/oauth2/token",
-		Headers: headers,
-		Body:    buffer,
-	}
-
-	response, err := c.apiClient.Send(request)
-	if err != nil {
-		return "", agenterrors.Wrap(ErrCommunicatingWithGateway, err.Error())
-	}
-	if response.Code != http.StatusOK {
-		return "", ErrAuthentication
-	}
-
-	respMap := make(map[string]interface{})
-	err = json.Unmarshal(response.Body, &respMap)
-	if err != nil {
-		return "", agenterrors.Wrap(ErrParsingResponse, err.Error())
-	}
-	token := respMap["access_token"].(string)
-
-	return token, nil
 }
 
 // getTokenByUsername Gets a bearer token by the username and password
