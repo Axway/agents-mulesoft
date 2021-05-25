@@ -165,6 +165,8 @@ func (c *AnypointClient) healthcheck(name string) (status *hc.Status) {
 	return status
 }
 
+// getTokenByClientID gets a token by the environment client id and secret.
+// This is not being used by anything at the moment since some api's do not accept this token.
 func (c *AnypointClient) getTokenByClientID() (string, error) {
 	creds := &ClientAuthCredentials{
 		ClientID:     c.clientID,
@@ -207,7 +209,6 @@ func (c *AnypointClient) getTokenByClientID() (string, error) {
 }
 
 // getTokenByUsername Gets a bearer token by the username and password
-// This is not being used by anything at the moment since some api's do not accept this token.
 func (c *AnypointClient) getTokenByUsername() (string, error) {
 	body := map[string]string{
 		"username": c.username,
