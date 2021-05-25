@@ -201,15 +201,8 @@ func (c *AnypointClient) getTokenByUsername() (string, error) {
 
 // GetAccessToken gets an access token
 func (c *AnypointClient) GetAccessToken() (string, *User, time.Duration, error) {
-	var token string
-	var err error
 
-	if c.username != "" && c.password != "" {
-		token, err = c.getTokenByUsername()
-	} else {
-		return "", nil, 0, fmt.Errorf("unable to authenticate due to misconfigured auth credentials")
-	}
-
+	token, err := c.getTokenByUsername()
 	if err != nil {
 		return "", nil, 0, err
 	}
