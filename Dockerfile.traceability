@@ -25,9 +25,12 @@ ENV APP_HOME /go/src/github.com/Axway/agents-mulesoft
 ENV APP_USER axway
 # Copy binary, user, config file and certs from previous build step
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
-COPY --from=builder $APP_HOME/default_mulesoft_traceability_agent.yml /mulesoft_traceability_agent.yml
-COPY --from=builder $APP_HOME/bin/traceability /traceability
+COPY --from=builder $APP_HOME/default_mulesoft_traceability_agent.yml /app/mulesoft_traceability_agent.yml
+COPY --from=builder $APP_HOME/bin/ /app/
 COPY --from=builder /etc/passwd /etc/passwd
+
+RUN chgrp -R 0 /app && chmod -R g=u /app && chown -R $APP_USER /app
+RUN chown 0 /app/mulesoft_traceability_agent.yml && chmod go-w /app/mulesoft_traceability_agent.yml
 
 RUN mkdir /keys /data && \
   apk add ca-certificates && apk update && update-ca-certificates \
@@ -38,4 +41,5 @@ RUN mkdir /keys /data && \
 USER $APP_USER
 VOLUME ["/keys", "/data"]
 HEALTHCHECK --retries=1 CMD curl --fail http://localhost:${STATUS_PORT:-8989}/status || exit 1
-ENTRYPOINT ["/traceability"]
+
+ENTRYPOINT ["/app/traceability","--path.config", "/app"]

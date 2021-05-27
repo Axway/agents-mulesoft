@@ -17,8 +17,6 @@ spec:
         app.kubernetes.io/name: discovery-agent
         app.kubernetes.io/instance: discovery
     spec:
-#      imagePullSecrets:
-#        - name: <Secret_Name>
       containers:
         - env:
             - name: CENTRAL_AUTH_CLIENTID
@@ -46,12 +44,12 @@ spec:
             - name: MULESOFT_AUTH_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: muleauth-discovery
+                  name: muleauth
                   key: password
             - name: MULESOFT_AUTH_USERNAME
               valueFrom:
                 secretKeyRef:
-                  name: muleauth-discovery
+                  name: muleauth
                   key: username
             - name: MULESOFT_CACHEPATH
               value: /tmp
