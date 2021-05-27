@@ -46,6 +46,8 @@ type serviceHandler struct {
 	cache               cache.Cache
 }
 
+type endpointsMap map[string][]string
+
 func (s *serviceHandler) OnConfigChange(cfg *config.MulesoftConfig) {
 	s.discoveryTags = cleanTags(cfg.DiscoveryTags)
 	s.discoveryIgnoreTags = cleanTags(cfg.DiscoveryIgnoreTags)
@@ -56,6 +58,8 @@ func (s *serviceHandler) OnConfigChange(cfg *config.MulesoftConfig) {
 // can resolve to multiple ServiceDetails.
 func (s *serviceHandler) ToServiceDetails(asset *anypoint.Asset) []*ServiceDetail {
 	serviceDetails := []*ServiceDetail{}
+	// key - the api service revision, formatted as 'assetID-productVersion-assetVersion'. value - the endpoints to set for that revision
+	endpoints := endpointsMap{}
 	logger := logrus.WithFields(logrus.Fields{
 		"assetName": asset.AssetID,
 		"assetID":   asset.ID,
@@ -70,7 +74,7 @@ func (s *serviceHandler) ToServiceDetails(asset *anypoint.Asset) []*ServiceDetai
 			continue
 		}
 
-		serviceDetail, err := s.getServiceDetail(asset, &api)
+		serviceDetail, err := s.getServiceDetail(asset, &api, endpoints)
 		if err != nil {
 			logger.Errorf("error getting the service details: %s", err.Error())
 			continue
@@ -79,17 +83,22 @@ func (s *serviceHandler) ToServiceDetails(asset *anypoint.Asset) []*ServiceDetai
 			serviceDetails = append(serviceDetails, serviceDetail)
 		}
 	}
+	for _, service := range serviceDetails {
+		addServiceEndpoint(service, endpoints, logger)
+	}
 	return serviceDetails
 }
 
 // getServiceDetail gets the ServiceDetail for the API asset.
-func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.API) (*ServiceDetail, error) {
+func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.API, endpoints endpointsMap) (*ServiceDetail, error) {
+	// set the count to 0 for each one so it is not included when hashing the api.
 	api.ActiveContractsCount = 0
 	logger := logrus.WithFields(logrus.Fields{
 		"assetName":       asset.AssetID,
 		"assetID":         asset.ID,
 		"apiID":           api.ID,
 		"apiAssetVersion": api.AssetVersion,
+		"productVersion":  api.ProductVersion,
 	})
 
 	// Get the policies associated with the API
@@ -114,6 +123,13 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 	err = s.cache.SetWithSecondaryKey(checksum, secondaryKey, *api)
 	if err != nil {
 		logger.Error(err)
+	}
+
+	endpointKey := common.FormatEndpointKey(api.AssetID, api.ProductVersion, api.AssetVersion)
+	isInstance := saveEndpoint(endpoints, endpointKey, api.EndpointURI)
+	if isInstance {
+		logger.Debug("discovered as a new endpoint for an existing instance.")
+		return nil, nil
 	}
 
 	apiID := strconv.FormatInt(api.ID, 10)
@@ -184,6 +200,7 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 		APISpec:          modifiedSpec,
 		AuthPolicy:       authPolicy,
 		Description:      api.Description,
+		Endpoints:        make([]apic.EndpointDefinition, 0),
 		ID:               fmt.Sprint(asset.ID),
 		Image:            icon,
 		ImageContentType: iconContentType,
@@ -195,10 +212,10 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 			common.AttrChecksum:       checksum,
 			common.AttrProductVersion: api.ProductVersion,
 		},
-		Stage:            api.ProductVersion,
+		Stage:            api.AssetVersion,
 		Tags:             api.Tags,
 		Title:            asset.ExchangeAssetName,
-		Version:          api.ProductVersion,
+		Version:          api.AssetVersion,
 		SubscriptionName: subSchName,
 		Status:           status,
 	}, nil
@@ -533,4 +550,53 @@ func getMapFromInterface(item interface{}) map[string]interface{} {
 		return map[string]interface{}{}
 	}
 	return conf
+}
+
+// saveEndpoint saves an endpoint to the map. Returns true if the endpoint key is already in the map
+// which means the current API should not be processed as its own service or revision.
+// Instead, it should be added as an endpoint to an existing instance.
+func saveEndpoint(endpoints endpointsMap, endpointKey, endpointURI string) (isInstance bool) {
+	epList, ok := endpoints[endpointKey]
+	if ok {
+		isFound := false
+		for _, v := range epList {
+			if v == endpointURI {
+				isFound = true
+				break
+			}
+		}
+		if !isFound {
+			epList = append(epList, endpointURI)
+			endpoints[endpointKey] = epList
+			return true
+		}
+	} else {
+		endpoints[endpointKey] = []string{endpointURI}
+	}
+	return false
+}
+
+func addServiceEndpoint(service *ServiceDetail, endpoints endpointsMap, logger *logrus.Entry) {
+	attrs := service.ServiceAttributes
+	assetVersion := attrs[common.AttrAssetVersion]
+	productVersion := attrs[common.AttrProductVersion]
+	assetName := service.APIName
+	key := common.FormatEndpointKey(assetName, productVersion, assetVersion)
+
+	val, ok := endpoints[key]
+	if ok {
+		for _, ep := range val {
+			host, basePath, scheme, port, err := common.ParseEndpoint(ep)
+			if err != nil {
+				logger.Error(err)
+			}
+			def := apic.EndpointDefinition{
+				Host:     host,
+				Port:     port,
+				Protocol: scheme,
+				BasePath: basePath,
+			}
+			service.Endpoints = append(service.Endpoints, def)
+		}
+	}
 }

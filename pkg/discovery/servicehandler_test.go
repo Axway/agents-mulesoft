@@ -91,9 +91,9 @@ func TestServiceHandler(t *testing.T) {
 	assert.Equal(t, apic.Apikey, item.AuthPolicy)
 	assert.Equal(t, fmt.Sprint(asset.ID), item.ID)
 	assert.Equal(t, apic.Oas3, item.ResourceType)
-	assert.Equal(t, api.ProductVersion, item.Stage)
+	assert.Equal(t, api.AssetVersion, item.Stage)
 	assert.Equal(t, asset.ExchangeAssetName, item.Title)
-	assert.Equal(t, api.ProductVersion, item.Version)
+	assert.Equal(t, api.AssetVersion, item.Version)
 	assert.Equal(t, api.Tags, item.Tags)
 	assert.NotEmpty(t, item.ServiceAttributes[common.AttrChecksum])
 	assert.Equal(t, fmt.Sprint(api.ID), item.ServiceAttributes[common.AttrAPIID])
@@ -191,7 +191,8 @@ func TestServiceHandlerGetPolicyError(t *testing.T) {
 		cache:               cache.New(),
 		subscriptionManager: &mockSchemaHandler{},
 	}
-	sd, err := sh.getServiceDetail(&asset, &asset.APIs[0])
+	endpoints := endpointsMap{}
+	sd, err := sh.getServiceDetail(&asset, &asset.APIs[0], endpoints)
 
 	assert.Nil(t, sd)
 	assert.Equal(t, expectedErr, err)
@@ -212,7 +213,8 @@ func TestServiceHandlerGetExchangeAssetError(t *testing.T) {
 		subscriptionManager: &mockSchemaHandler{},
 		cache:               cache.New(),
 	}
-	sd, err := sh.getServiceDetail(&asset, &asset.APIs[0])
+	endpoints := endpointsMap{}
+	sd, err := sh.getServiceDetail(&asset, &asset.APIs[0], endpoints)
 
 	assert.Nil(t, sd)
 	assert.Equal(t, expectedErr, err)

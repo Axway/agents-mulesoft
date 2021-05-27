@@ -78,6 +78,7 @@ func BuildServiceBody(service *ServiceDetail) (apic.ServiceBody, error) {
 		SetImageContentType(service.ImageContentType).
 		SetResourceType(service.ResourceType).
 		SetServiceAttribute(service.ServiceAttributes).
+		SetServiceEndpoints(service.Endpoints).
 		SetStage(service.Stage).
 		SetState(service.State).
 		SetStatus(service.Status).

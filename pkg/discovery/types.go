@@ -1,6 +1,9 @@
 package discovery
 
-import "github.com/Axway/agents-mulesoft/pkg/anypoint"
+import (
+	"github.com/Axway/agent-sdk/pkg/apic"
+	"github.com/Axway/agents-mulesoft/pkg/anypoint"
+)
 
 // ServiceDetail is the information for the ex
 type ServiceDetail struct {
@@ -10,6 +13,7 @@ type ServiceDetail struct {
 	AuthPolicy        string
 	Description       string
 	Documentation     []byte
+	Endpoints         []apic.EndpointDefinition
 	ID                string
 	Image             string
 	ImageContentType  string
