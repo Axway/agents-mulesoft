@@ -88,7 +88,7 @@ type mockAnalyticsClient struct {
 	err    error
 }
 
-func (m mockAnalyticsClient) GetAnalyticsWindow(_,_ string) ([]anypoint.AnalyticsEvent, error) {
+func (m mockAnalyticsClient) GetAnalyticsWindow(_, _ string) ([]anypoint.AnalyticsEvent, error) {
 	return m.events, m.err
 }
 

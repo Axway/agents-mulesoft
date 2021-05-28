@@ -18,6 +18,9 @@ clean:
 lint:
 	@golint -set_exit_status ${GO_PKG_LIST}
 
+format:
+	@gofmt -w .
+	@goimports -w .
 
 update-sdk:
 	@echo "Updating SDK dependencies"
