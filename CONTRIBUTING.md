@@ -75,6 +75,8 @@ After cloning the MuleSoft Agents, run `make download` to download all the proje
 * `make lint` checks the code style.
 * `make format` formats your code.
 * `make test` runs all the unit tests with the `-race` flag to check for race conditions.
+* `make run-discovery` starts the discovery agent locally. 
+* `make run-trace` starts the traceability agent locally.
 * `make build-discovery` builds a binary for the discovery agent in `./bin/discovery`.
 * `make build-trace` builds a binary for the traceability agent in `./bin/traceability`.
 
@@ -102,6 +104,19 @@ Please make sure the following is done when you open a pull request.
 All of these steps can be taken care of after opening your pull request.
 
 Reviewers will automatically be added to your pull request. Assign the pull request to one of the core maintainers when you are ready to merge your branch. You may merge the branch once it has been approved.
+
+## Accepting pull requests
+
+As an Axway contributor who reviews incoming pull requests please ensure the following are met on each request.
+
+1. Labels are added to the pull request.
+2. It has been assigned to the project board.
+3. It has been added to the sprint milestone.
+4. It is linked to the issue.
+5. The description has a reference to what issue it will close, such as 'closes #100'.
+6. The description outlines what has changed.
+7. The title accurately reflects the new changes.
+8. The pipeline is passing.
 
 ## Board
 
