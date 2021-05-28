@@ -78,6 +78,41 @@ After cloning the MuleSoft Agents, run `make download` to download all the proje
 * `make build-discovery` builds a binary for the discovery agent in `./bin/discovery`.
 * `make build-trace` builds a binary for the traceability agent in `./bin/traceability`.
 
+## Starting local development
+
+The documentation to get started with the discovery agent can be found [here](./README_discovery.md).
+The documentation to get started with the traceability agent can be found [here](./README_traceability.md).
+
+After configuring your agent you can run it locally with the following commands
+
+* To run the discovery agent - `make run-discovery`
+* To run the traceability agent - `make run-trace`
+
+# Axway Contributors
+
+You may create your branches directly within the repo. You do not need to fork the project.
+
+Please make sure the following is done when you open a pull request.
+
+1. Labels are added to the pull request. These can be the same labels that are found on the issue.
+2. Assign the pull request to the 'Axway Mulesoft Agents' project. This is the board for tracking work in progress.
+3. Assign the pull request to a Milestone, which will typically be the current sprint.
+4. Link the pull request back to your issue.
+
+All of these steps can be taken care of after opening your pull request.
+
+Reviewers will automatically be added to your pull request. Assign the pull request to one of the core maintainers when you are ready to merge your branch. You may merge the branch once it has been approved.
+
+## Board
+
+The project board has three columns
+
+* To do - Issues you plan to work on during the sprint should be moved here.
+* In progress - Any issue or pull request that is actively being worked on.
+* Done - Any issue that has been completed, rejected, blocked, or closed.
+
+When you open a pull request and link it to the issue and the board, a task for a pull request will automatically be placed in the 'In progress' column. When the pull request is merged, the task for the pull request will automatically be moved to the 'Done' column, and it will be closed.
+
 # License
 
 By contributing to the Axway MuleSoft Agents, you agree that your contributions will be licensed under the Apache 2.0 license.
