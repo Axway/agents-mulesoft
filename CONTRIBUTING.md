@@ -18,17 +18,21 @@ Submit all changes directly to the master branch. We don’t use separate branch
 
 Code that lands in master must be compatible with the latest stable release. It may contain additional features, but no breaking changes. We should be able to release a new minor version from the tip of master at any time.
 
-# Bugs
+# Features, Enhancements & Bugs
+
+We use GitHub Issues for all of our feature requests, enhancements, and bugs.
 
 ## Where to Find Known Issues
 
-We use GitHub Issues for our bugs. We keep a close eye on this and try to make it clear when we have an internal fix in progress. Before filing a new task, try to make sure your problem doesn’t already exist.
+If you are experiencing an issue you can check our GitHub Issues. All issues related to known bugs will be labeled as 'bug'. We keep a close eye on this and try to make it clear when we have an internal fix in progress.
 
 ## Reporting New Issues
-Create an issue and attach the 'Bug' label.
+
+Before filing a new task, try to make sure your problem doesn’t already exist by looking through the known issues. If you are experiencing a problem that you think is not documented, create an issue and attach the 'Bug' label.
 
 ## Security Bugs
-Create an issue and attach the 'Security' label.
+
+If you have encountered a security vulnerability, then create an issue and attach the 'Security' label.
 
 # Contribution Prerequisites
 
