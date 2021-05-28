@@ -1,12 +1,11 @@
 package traceability
 
-
 import (
-"testing"
+	"testing"
 
-corecfg "github.com/Axway/agent-sdk/pkg/config"
-"github.com/Axway/agents-mulesoft/pkg/config"
-"github.com/stretchr/testify/assert"
+	corecfg "github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agents-mulesoft/pkg/config"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_initConfig(t *testing.T) {

@@ -1,11 +1,12 @@
 # Amplify Mulesoft Anypoint Traceability Agent
 
 ## Prerequisites
+
 Install the agent and provision Amplify Central access as described in [https://github.com/Axway/agents-mulesoft/blob/main/README.md](https://github.com/Axway/agents-mulesoft/blob/main/README.md).
 
 - Amplify organization id
 - Amplify Central environment name
-- Pubic/Private key pem files
+- Public/Private key pem files
 - Service account client id
 
 As well as access to Amplify Central it is assumed you have access to the [Mulesoft Anypoint Platform](https://anypoint.mulesoft.com/exchange). You need:
@@ -13,28 +14,9 @@ As well as access to Amplify Central it is assumed you have access to the [Mules
 - Credentials with access to the organization the agents will attach to.
 - Mulesoft environment name to discover from (e.g. Sandbox)
 
-
 ## Configuring the Traceability Agent
 
 The agents read their configuration from a YAML file. To set up your config file copy the content of `default_mulesoft_traceability_agent.yml` into a new file named `mulesoft_traceability_agent`, and replace the default values that reflect your environment.
-
-The minimial configuration for the agent is:
-
-```
-central:
-  organizationID: <your organization id>
-  environment: <your amplify environment name>
-  auth:
-    clientID: <your service account client id>
-    privateKey: <path to your private_key.pem>
-    publicKey: <path to your public_key.pem>
-
-mulesoft:
- environment: <your Mulesoft environment>
- auth:
-  username: <your Mulesoft username>
-  password: <your Mulesoft password>
-```
 
 ## Start the Traceability Agent
 

@@ -18,11 +18,19 @@ clean:
 lint:
 	@golint -set_exit_status ${GO_PKG_LIST}
 
+format:
+	@gofmt -w .
+	@goimports -w .
 
 update-sdk:
 	@echo "Updating SDK dependencies"
 	@export GOFLAGS="" && go get "github.com/Axway/agent-sdk@main"
 
+run-discovery:
+	@go run ./cmd/discovery/main.go
+
+run-trace:
+	@go run ./cmd/traceability/main.go
 
 build-discovery:
 	@go build -o bin/discovery ./cmd/discovery/main.go
