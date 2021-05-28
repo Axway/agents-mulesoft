@@ -60,7 +60,7 @@ Please make sure the following is done before submitting a pull request:
 4. Format your code with `make format`.
 5. Lint your code with `make lint`.
 6. If you haven’t already, complete the CLA.
-7. Make sure your pull request describes the issue you are fixing, or the feature you are adding.
+7. Make sure your pull request describes the issue you are fixing, or the feature you are adding. The description should also have a comment specifying which issue the pull request will resolve. For example, if the issue you are working on is #100, then please leave a comment saying 'Resolves #100'. This will cause the issue to be closed automatically when the pull request is closed.
 
 # Development Prerequisites
 
@@ -109,7 +109,7 @@ The project board has three columns
 
 * To do - Issues you plan to work on during the sprint should be moved here.
 * In progress - Any issue or pull request that is actively being worked on.
-* Done - Any issue that has been completed, rejected, blocked, or closed.
+* Done - Any issue or pull request that has been completed, rejected, blocked, or closed.
 
 When you open a pull request and link it to the issue and the board, a task for a pull request will automatically be placed in the 'In progress' column. When the pull request is merged, the task for the pull request will automatically be moved to the 'Done' column, and it will be closed.
 
