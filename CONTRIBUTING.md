@@ -16,7 +16,7 @@ Every significant change is documented in the changelog file.
 
 Submit all changes directly to the master branch. We don’t use separate branches for development or for upcoming releases.
 
-Code that lands in master must be compatible with the latest stable release. It may contain additional features, but no breaking changes. We should be able to release a new minor version from the tip of master at any time.
+Code merged to master must be compatible with the latest stable release. It may contain additional features, but no breaking changes. We should be able to release a new minor version from the tip of master at any time.
 
 # Features, Enhancements & Bugs
 
@@ -33,12 +33,6 @@ Before filing a new task, try to make sure your problem doesn’t already exist 
 ## Security Bugs
 
 If you have encountered a security vulnerability, then create an issue and attach the 'Security' label.
-
-# Contribution Prerequisites
-
-* You have Go 1.13 or newer installed
-* Install goimports - go get golang.org/x/tools/cmd/goimports
-* Install golint - go get -u golang.org/x/lint/golint
 
 # Proposing a Change
 
@@ -60,6 +54,12 @@ Please make sure the following is done before submitting a pull request:
 4. Format your code with `make format`.
 5. Lint your code with `make lint`.
 6. If you haven’t already, complete the CLA.
+
+# Development Prerequisites
+
+* You have Go 1.13 or newer installed
+* Install goimports - `go get golang.org/x/tools/cmd/goimports`
+* Install golint - `go get -u golang.org/x/lint/golint`
 
 # Development Workflow
 
