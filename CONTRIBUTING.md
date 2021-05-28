@@ -28,13 +28,13 @@ If you are experiencing an issue you can check our GitHub Issues. All issues rel
 
 ## Reporting New Issues
 
-Before filing a new task, try to make sure your problem does not already exist by looking through the known issues. If you are experiencing a problem that you think is not documented, create an issue and attach the 'Bug' label.
+Before filing a new task, try to make sure your problem does not already exist by looking through the known issues. If you are experiencing a problem that you think is not documented, create an issue and attach the 'bug' label.
 
-Before fixing a bug we need to reproduce and confirm it. In order to reproduce bugs, we require that you provide a reproducible scenario. Having a minimal reproducible scenario gives us important information without going back and forth to you with additional questions.
+Before fixing a bug we need to reproduce and confirm it. We require that you provide a reproducible scenario. Having a minimal reproducible scenario gives us important information without going back and forth to you with additional questions.
 
 ## Security Bugs
 
-If you have encountered a security vulnerability, then create an issue and attach the 'Security' label.
+If you have encountered a security vulnerability, then create an issue and attach the 'security' label.
 
 # Proposing a Change
 
