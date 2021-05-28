@@ -124,7 +124,7 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 		APIId:      apiID,
 	})
 
-	// If the API has a new SLA Tier policy, create a new subscription schema for it
+	// If the API has a new SLA Tier policy, create a new subscription schema for it.
 	if subSchName == "" && isSlaBased {
 		// Get details of the SLA tiers
 		tiers, err1 := s.client.GetSLATiers(api.ID)
