@@ -3,6 +3,7 @@ package discovery
 import (
 	coreAgent "github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/apic"
+	"github.com/Axway/agents-mulesoft/pkg/common"
 	"github.com/Axway/agents-mulesoft/pkg/config"
 	"github.com/sirupsen/logrus"
 )
@@ -77,6 +78,7 @@ func BuildServiceBody(service *ServiceDetail) (apic.ServiceBody, error) {
 		SetImage(service.Image).
 		SetImageContentType(service.ImageContentType).
 		SetResourceType(service.ResourceType).
+		SetAltRevisionPrefix(service.ServiceAttributes[common.AttrAssetVersion]).
 		SetServiceAttribute(service.ServiceAttributes).
 		SetStage(service.Stage).
 		SetState(service.State).

@@ -1,6 +1,7 @@
 package discovery
 
 import (
+	"github.com/Axway/agents-mulesoft/pkg/common"
 	"testing"
 
 	"github.com/Axway/agents-mulesoft/pkg/config"
@@ -21,7 +22,7 @@ var sd = &ServiceDetail{
 	Image:             "",
 	ImageContentType:  "",
 	ResourceType:      "oas3",
-	ServiceAttributes: map[string]string{"checksum": "110a1bc03b2e3d4875185b0b9f711e3ce2200e8fcc3743ad27dca5d34da9f64b"},
+	ServiceAttributes: map[string]string{"checksum": "110a1bc03b2e3d4875185b0b9f711e3ce2200e8fcc3743ad27dca5d34da9f64b", common.AttrAssetVersion: "1.1.1"},
 	Stage:             "Sandbox",
 	State:             "state",
 	Status:            "status",
@@ -73,6 +74,7 @@ func Test_buildServiceBody(t *testing.T) {
 	assert.Equal(t, sd.Title, apicSvc.NameToPush)
 	assert.Equal(t, sd.URL, apicSvc.URL)
 	assert.Equal(t, sd.Version, apicSvc.Version)
+	assert.Equal(t, apicSvc.AltRevisionPrefix, sd.ServiceAttributes[common.AttrAssetVersion])
 }
 
 type mockAPIPublisher struct {

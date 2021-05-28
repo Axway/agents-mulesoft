@@ -201,6 +201,7 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 		Version:          api.ProductVersion,
 		SubscriptionName: subSchName,
 		Status:           status,
+
 	}, nil
 }
 
