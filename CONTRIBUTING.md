@@ -28,7 +28,9 @@ If you are experiencing an issue you can check our GitHub Issues. All issues rel
 
 ## Reporting New Issues
 
-Before filing a new task, try to make sure your problem doesn’t already exist by looking through the known issues. If you are experiencing a problem that you think is not documented, create an issue and attach the 'Bug' label.
+Before filing a new task, try to make sure your problem does not already exist by looking through the known issues. If you are experiencing a problem that you think is not documented, create an issue and attach the 'Bug' label.
+
+Before fixing a bug we need to reproduce and confirm it. In order to reproduce bugs, we require that you provide a reproducible scenario. Having a minimal reproducible scenario gives us important information without going back and forth to you with additional questions.
 
 ## Security Bugs
 
@@ -40,11 +42,15 @@ If you intend to make any non-trivial changes to the implementation, we recommen
 
 If you’re only fixing a bug, it’s fine to submit a pull request right away, but we still recommend that you file an issue detailing what you’re fixing. This is helpful in case we don’t accept that specific fix but want to keep track of the issue.
 
+# Documentation
+
+When a change is made please update the documentation found in the `README.md` files accordingly so that the documentation reflects the code.
+
 # Submitting a pull request
 
 The core team is monitoring for pull requests. We will review your pull request and either merge it, request changes to it, or close it with an explanation. We’ll do our best to provide updates and feedback throughout the process.
 
-## Before submitting
+## Before Submitting
 
 Please make sure the following is done before submitting a pull request:
 
@@ -54,6 +60,7 @@ Please make sure the following is done before submitting a pull request:
 4. Format your code with `make format`.
 5. Lint your code with `make lint`.
 6. If you haven’t already, complete the CLA.
+7. Make sure your pull request describes the issue you are fixing, or the feature you are adding.
 
 # Development Prerequisites
 
@@ -73,7 +80,7 @@ After cloning the MuleSoft Agents, run `make download` to download all the proje
 
 # License
 
-By contributing to the Axway MuleSoft Agents, you agree that your contributions will be licensed under its Apache 2.0 license.
+By contributing to the Axway MuleSoft Agents, you agree that your contributions will be licensed under the Apache 2.0 license.
 
 
 
