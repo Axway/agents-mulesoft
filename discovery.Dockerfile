@@ -4,6 +4,7 @@ ENV APP_HOME /go/src/github.com/Axway/agents-mulesoft
 ENV APP_USER axway
 
 RUN mkdir -p $APP_HOME
+RUN mkdir -p /tmp
 WORKDIR $APP_HOME
 
 # Copy necessary files
@@ -11,7 +12,7 @@ COPY . .
 
 RUN make download
 #RUN make verify
-RUN CGO_ENABLED=0  GOOS=linux GOARCH=amd64  make build-trace
+RUN CGO_ENABLED=0  GOOS=linux GOARCH=amd64  make build-discovery
 
 # Create non-root user
 RUN addgroup $APP_USER && adduser --system $APP_USER --ingroup $APP_USER
@@ -20,26 +21,16 @@ RUN chown -R $APP_USER:$APP_USER $APP_HOME
 USER $APP_USER
 
 # Base image
-FROM alpine:3.12.3
+FROM scratch
 ENV APP_HOME /go/src/github.com/Axway/agents-mulesoft
 ENV APP_USER axway
 # Copy binary, user, config file and certs from previous build step
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
-COPY --from=builder $APP_HOME/default_mulesoft_traceability_agent.yml /app/mulesoft_traceability_agent.yml
-COPY --from=builder $APP_HOME/bin/ /app/
+COPY --from=builder $APP_HOME/default_mulesoft_discovery_agent.yml /mulesoft_discovery_agent.yml
+COPY --from=builder $APP_HOME/bin/discovery /discovery
 COPY --from=builder /etc/passwd /etc/passwd
-
-RUN chgrp -R 0 /app && chmod -R g=u /app && chown -R $APP_USER /app
-RUN chown 0 /app/mulesoft_traceability_agent.yml && chmod go-w /app/mulesoft_traceability_agent.yml
-
-RUN mkdir /keys /data && \
-  apk add ca-certificates && apk update && update-ca-certificates \
-  apk --no-cache add curl=7.69.1-r0 && \
-  chown -R $APP_USER /keys /data && \
-  find / -perm /6000 -type f -exec chmod a-s {} \; || true
+COPY --from=builder /tmp /tmp
 
 USER $APP_USER
-VOLUME ["/keys", "/data"]
 HEALTHCHECK --retries=1 CMD curl --fail http://localhost:${STATUS_PORT:-8989}/status || exit 1
-
-ENTRYPOINT ["/app/traceability","--path.config", "/app"]
+ENTRYPOINT ["/discovery"]
