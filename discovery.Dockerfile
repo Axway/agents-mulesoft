@@ -1,6 +1,6 @@
 # Build image
 FROM golang:1.16.4 as builder
-ENV APP_HOME /go/src/github.com/Axway/agents-mulesoft
+ENV APP_HOME /build
 ENV APP_USER axway
 
 RUN mkdir -p $APP_HOME
@@ -21,7 +21,7 @@ USER $APP_USER
 
 # Base image
 FROM scratch
-ENV APP_HOME /go/src/github.com/Axway/agents-mulesoft
+ENV APP_HOME /build
 ENV APP_USER axway
 # Copy binary, user, config file and certs from previous build step
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt

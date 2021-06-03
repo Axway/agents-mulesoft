@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:experimental
-
 # Build image
 FROM golang:1.16.4 as builder
 ENV APP_HOME /build
