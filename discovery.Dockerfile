@@ -4,7 +4,6 @@ ENV APP_HOME /go/src/github.com/Axway/agents-mulesoft
 ENV APP_USER axway
 
 RUN mkdir -p $APP_HOME
-RUN mkdir -p /tmp
 WORKDIR $APP_HOME
 
 # Copy necessary files
@@ -29,8 +28,8 @@ COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certifi
 COPY --from=builder $APP_HOME/default_mulesoft_discovery_agent.yml /mulesoft_discovery_agent.yml
 COPY --from=builder $APP_HOME/bin/discovery /discovery
 COPY --from=builder /etc/passwd /etc/passwd
-COPY --from=builder /tmp /tmp
 
 USER $APP_USER
+VOLUME ["/tmp"]
 HEALTHCHECK --retries=1 CMD curl --fail http://localhost:${STATUS_PORT:-8989}/status || exit 1
 ENTRYPOINT ["/discovery"]
