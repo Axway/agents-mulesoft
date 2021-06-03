@@ -1,6 +1,6 @@
 # Build image
 FROM golang:1.16.4 as builder
-ENV APP_HOME /go/src/github.com/Axway/agents-mulesoft
+ENV APP_HOME /build
 ENV APP_USER axway
 
 RUN mkdir -p $APP_HOME
@@ -20,8 +20,8 @@ RUN chown -R $APP_USER:$APP_USER $APP_HOME
 USER $APP_USER
 
 # Base image
-FROM alpine:3.12.3
-ENV APP_HOME /go/src/github.com/Axway/agents-mulesoft
+FROM scratch
+ENV APP_HOME /build
 ENV APP_USER axway
 # Copy binary, user, config file and certs from previous build step
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
@@ -30,5 +30,6 @@ COPY --from=builder $APP_HOME/bin/discovery /discovery
 COPY --from=builder /etc/passwd /etc/passwd
 
 USER $APP_USER
+VOLUME ["/tmp"]
 HEALTHCHECK --retries=1 CMD curl --fail http://localhost:${STATUS_PORT:-8989}/status || exit 1
 ENTRYPOINT ["/discovery"]
