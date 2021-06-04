@@ -1,6 +1,6 @@
-# Open Development
+# Contributing
 
-All work on this project happens directly on GitHub. Both core team members and external contributors send pull requests which go through the same review process.
+Welcome to the Axway MuleSoft Agents. Contributions are welcome from anyone. All work on this project happens directly on GitHub. Both core team members and external contributors send pull requests which go through the same review process.
 
 # Prerequisites
 
@@ -14,9 +14,11 @@ Every significant change is documented in the changelog file.
 
 # Branch Organization
 
-Submit all changes directly to the master branch. We don’t use separate branches for development or for upcoming releases.
+Submit all changes directly to the main branch. We don’t use separate branches for development or for upcoming releases.
 
-Code merged to master must be compatible with the latest stable release. It may contain additional features, but no breaking changes. We should be able to release a new minor version from the tip of master at any time.
+If you are merging a breaking change to main, then a new major release must be made.
+
+Patch and minor releases should be made for all other bug and feature enhancements that do not introduce a breaking change.
 
 # Features, Enhancements & Bugs
 
@@ -32,7 +34,11 @@ Before filing a new task, try to make sure your problem does not already exist b
 
 Before fixing a bug we need to reproduce and confirm it. We require that you provide a reproducible scenario. Having a minimal reproducible scenario gives us important information without going back and forth to you with additional questions.
 
-## Security Bugs
+Submit a feature request [here](https://github.com/Axway/agents-mulesoft/issues/new?assignees=&labels=enhancement&template=feature_request.md&title=)
+
+Report a bug [here](https://github.com/Axway/agents-mulesoft/issues/new?assignees=&labels=bug&template=bug_report.md&title=)
+
+## Security Issues
 
 If you have encountered a security vulnerability, then create an issue and attach the 'security' label.
 
@@ -54,7 +60,7 @@ The core team is monitoring for pull requests. We will review your pull request 
 
 Please make sure the following is done before submitting a pull request:
 
-1. Fork the repository and create your branch from master.
+1. Fork the repository and create your branch from main.
 2. If you’ve fixed a bug or added code that should be tested, then add tests.
 3. Ensure the test suite passes by running `make test`.
 4. Format your code with `make format`.
@@ -65,7 +71,7 @@ Please make sure the following is done before submitting a pull request:
 # Development Prerequisites
 
 * You have Go 1.13 or newer installed
-* Install goimports - `go get golang.org/x/tools/cmd/goimports`
+* Install goimports - `go get -u golang.org/x/tools/cmd/goimports`
 * Install golint - `go get -u golang.org/x/lint/golint`
 
 # Development Workflow
@@ -131,6 +137,3 @@ When you open a pull request and link it to the issue and the board, a task for 
 # License
 
 By contributing to the Axway MuleSoft Agents, you agree that your contributions will be licensed under the Apache 2.0 license.
-
-
-

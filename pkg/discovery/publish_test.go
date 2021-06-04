@@ -1,8 +1,9 @@
 package discovery
 
 import (
-	"github.com/Axway/agents-mulesoft/pkg/common"
 	"testing"
+
+	"github.com/Axway/agents-mulesoft/pkg/common"
 
 	"github.com/Axway/agents-mulesoft/pkg/config"
 
@@ -55,6 +56,7 @@ func TestPublish(t *testing.T) {
 
 func Test_buildServiceBody(t *testing.T) {
 	apicSvc, err := BuildServiceBody(sd)
+	attrs := sd.ServiceAttributes
 	assert.Nil(t, err)
 	assert.Equal(t, sd.APIName, apicSvc.APIName)
 	assert.Equal(t, sd.APISpec, apicSvc.SpecDefinition)
@@ -65,7 +67,7 @@ func Test_buildServiceBody(t *testing.T) {
 	assert.Equal(t, sd.Image, apicSvc.Image)
 	assert.Equal(t, sd.ImageContentType, apicSvc.ImageContentType)
 	assert.Equal(t, sd.ResourceType, apicSvc.ResourceType)
-	assert.Equal(t, sd.ServiceAttributes, apicSvc.ServiceAttributes)
+	assert.Equal(t, attrs, apicSvc.ServiceAttributes)
 	assert.Equal(t, sd.Stage, apicSvc.Stage)
 	assert.Equal(t, sd.State, apicSvc.State)
 	assert.Equal(t, sd.Status, apicSvc.Status)
@@ -74,7 +76,8 @@ func Test_buildServiceBody(t *testing.T) {
 	assert.Equal(t, sd.Title, apicSvc.NameToPush)
 	assert.Equal(t, sd.URL, apicSvc.URL)
 	assert.Equal(t, sd.Version, apicSvc.Version)
-	assert.Equal(t, apicSvc.AltRevisionPrefix, sd.ServiceAttributes[common.AttrAssetVersion])
+	assert.Equal(t, apicSvc.AltRevisionPrefix, common.FormatRevisionName(attrs[common.AttrAssetVersion], attrs[common.AttrAPIID]))
+
 }
 
 type mockAPIPublisher struct {
