@@ -14,3 +14,8 @@ const (
 func FormatAPICacheKey(apiID, stageName string) string {
 	return fmt.Sprintf("%s-%s", apiID, stageName)
 }
+
+// FormatRevisionName format for an API Service Revision
+func FormatRevisionName(assetVersion, apiID string) string {
+	return fmt.Sprintf("%s-%s", assetVersion, apiID)
+}

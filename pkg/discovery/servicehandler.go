@@ -195,13 +195,12 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 			common.AttrChecksum:       checksum,
 			common.AttrProductVersion: api.ProductVersion,
 		},
-		Stage:            api.ProductVersion,
+		Stage:            api.AssetVersion,
 		Tags:             api.Tags,
 		Title:            asset.ExchangeAssetName,
-		Version:          api.ProductVersion,
+		Version:          api.AssetVersion,
 		SubscriptionName: subSchName,
 		Status:           status,
-
 	}, nil
 }
 

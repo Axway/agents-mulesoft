@@ -78,7 +78,9 @@ func BuildServiceBody(service *ServiceDetail) (apic.ServiceBody, error) {
 		SetImage(service.Image).
 		SetImageContentType(service.ImageContentType).
 		SetResourceType(service.ResourceType).
-		SetAltRevisionPrefix(service.ServiceAttributes[common.AttrAssetVersion]).
+		SetAltRevisionPrefix(
+			common.FormatRevisionName(service.ServiceAttributes[common.AttrAssetVersion], service.ServiceAttributes[common.AttrAPIID]),
+		).
 		SetServiceAttribute(service.ServiceAttributes).
 		SetStage(service.Stage).
 		SetState(service.State).
