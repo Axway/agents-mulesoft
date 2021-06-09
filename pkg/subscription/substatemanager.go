@@ -66,7 +66,7 @@ func (ssm *SubStateManager) Unsubscribe(log logrus.FieldLogger, sub apic.Subscri
 func (ssm *SubStateManager) doSubscribe(log logrus.FieldLogger, sub apic.Subscription) (string, string, error) {
 	// Create a new application and create a new contract
 	apiID := sub.GetRemoteAPIAttributes()[common.AttrAPIID]
-	stage := sub.GetRemoteAPIStage()
+	stage := sub.GetRemoteAPIAttributes()[common.AttrProductVersion]
 	tier := sub.GetPropertyValue(anypoint.TierLabel)
 
 	application, err := ssm.createApp(apiID, sub)
