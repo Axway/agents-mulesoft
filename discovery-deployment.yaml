@@ -33,6 +33,8 @@ spec:
               value:
             - name: CENTRAL_ORGANIZATIONID
               value:
+            - name: CENTRAL_AGENTNAME
+              value:
             - name: LOG_LEVEL
               value: debug
             - name: LOG_OUTPUT

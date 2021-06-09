@@ -51,7 +51,6 @@ type AgentConfig struct {
 // MulesoftConfig - represents the config for the Mulesoft gateway
 type MulesoftConfig struct {
 	corecfg.IConfigValidator
-	corecfg.IResourceConfigCallback
 	AnypointExchangeURL string            `config:"anypointExchangeUrl"`
 	CachePath           string            `config:"cachePath"`
 	DiscoveryIgnoreTags string            `config:"discoveryIgnoreTags"`
