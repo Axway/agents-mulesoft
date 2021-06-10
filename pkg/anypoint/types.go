@@ -92,6 +92,7 @@ type API struct {
 	Pinned                    bool     `json:"pinned"`
 	ProductVersion            string   `json:"productVersion"`
 	Tags                      []string `json:"tags"`
+	LastActiveDate            string   `json:lastActiveDate`
 }
 
 // Policy -

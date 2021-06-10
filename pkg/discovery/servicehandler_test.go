@@ -220,67 +220,74 @@ func TestServiceHandlerGetExchangeAssetError(t *testing.T) {
 
 func TestShouldDiscoverAPIBasedOnTags(t *testing.T) {
 	tests := []struct {
-		name          string
-		discoveryTags []string
-		ignoreTags    []string
-		apiTags       []string
-		expected      bool
-		endpoint      string
+		name           string
+		discoveryTags  []string
+		ignoreTags     []string
+		apiTags        []string
+		expected       bool
+		endpoint       string
+		lastActiveDate string
 	}{
 		{
-			name:          "Should discover if matching discovery tag exists on API",
-			discoveryTags: []string{"discover"},
-			ignoreTags:    []string{},
-			apiTags:       []string{"discover"},
-			expected:      true,
-			endpoint:      "abc.com",
+			name:           "Should discover if matching discovery tag exists on API",
+			discoveryTags:  []string{"discover"},
+			ignoreTags:     []string{},
+			apiTags:        []string{"discover"},
+			expected:       true,
+			endpoint:       "abc.com",
+			lastActiveDate: "2021-06-10T21:03:15.706Z",
 		},
 		{
-			name:          "Should not discover if API has a tag to be ignored",
-			discoveryTags: []string{"discover"},
-			ignoreTags:    []string{"donotdiscover"},
-			apiTags:       []string{"donotdiscover"},
-			expected:      false,
-			endpoint:      "abc.com",
+			name:           "Should not discover if API has a tag to be ignored",
+			discoveryTags:  []string{"discover"},
+			ignoreTags:     []string{"donotdiscover"},
+			apiTags:        []string{"donotdiscover"},
+			expected:       false,
+			endpoint:       "abc.com",
+			lastActiveDate: "2021-06-10T21:03:15.706Z",
 		},
 		{
-			name:          "Should not discover if API does not have any tags that the agent's config has",
-			ignoreTags:    []string{"donotdiscover"},
-			discoveryTags: []string{"discover"},
-			apiTags:       []string{},
-			expected:      false,
-			endpoint:      "abc.com",
+			name:           "Should not discover if API does not have any tags that the agent's config has",
+			ignoreTags:     []string{"donotdiscover"},
+			discoveryTags:  []string{"discover"},
+			apiTags:        []string{},
+			expected:       false,
+			endpoint:       "abc.com",
+			lastActiveDate: "2021-06-10T21:03:15.706Z",
 		},
 		{
-			name:          "Should discover if API as well as agent's config have no discovery tags",
-			discoveryTags: []string{},
-			ignoreTags:    []string{},
-			apiTags:       []string{},
-			expected:      true,
-			endpoint:      "abc.com",
+			name:           "Should discover if API as well as agent's config have no discovery tags",
+			discoveryTags:  []string{},
+			ignoreTags:     []string{},
+			apiTags:        []string{},
+			expected:       true,
+			endpoint:       "abc.com",
+			lastActiveDate: "2021-06-10T21:03:15.706Z",
 		},
 		{
-			name:          "Should not discover if API has both - a tag to be discovered and a tag to be ignored",
-			discoveryTags: []string{"discover"},
-			ignoreTags:    []string{"donotdiscover"},
-			apiTags:       []string{"discover", "donotdiscover"},
-			expected:      false,
-			endpoint:      "abc.com",
+			name:           "Should not discover if API has both - a tag to be discovered and a tag to be ignored",
+			discoveryTags:  []string{"discover"},
+			ignoreTags:     []string{"donotdiscover"},
+			apiTags:        []string{"discover", "donotdiscover"},
+			expected:       false,
+			endpoint:       "abc.com",
+			lastActiveDate: "2021-06-10T21:03:15.706Z",
 		},
 		{
-			name:          "Should not discover if the endpoint is empty",
-			discoveryTags: []string{"discover"},
-			ignoreTags:    []string{"donotdiscover"},
-			apiTags:       []string{"discover"},
-			expected:      false,
-			endpoint:      "",
+			name:           "Should not discover if the endpoint is empty",
+			discoveryTags:  []string{"discover"},
+			ignoreTags:     []string{"donotdiscover"},
+			apiTags:        []string{"discover"},
+			expected:       false,
+			endpoint:       "",
+			lastActiveDate: "2021-06-10T21:03:15.706Z",
 		},
 	}
 
 	for i := range tests {
 		tc := tests[i]
 		t.Run(tc.name, func(t *testing.T) {
-			ok := shouldDiscoverAPI(tc.endpoint, tc.discoveryTags, tc.ignoreTags, tc.apiTags)
+			ok := shouldDiscoverAPI(tc.endpoint, tc.discoveryTags, tc.ignoreTags, tc.apiTags, tc.lastActiveDate)
 			assert.Equal(t, tc.expected, ok)
 		})
 	}
