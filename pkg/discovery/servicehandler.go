@@ -238,6 +238,7 @@ func (s *serviceHandler) createSubscriptionSchemaForSLATier(
 
 // shouldDiscoverAPI determines if the API should be pushed to Central or not
 func shouldDiscoverAPI(endpoint string, discoveryTags, ignoreTags, apiTags []string) bool {
+
 	if endpoint == "" {
 		// If the API has no exposed endpoint we're not going to discover it.
 		return false
