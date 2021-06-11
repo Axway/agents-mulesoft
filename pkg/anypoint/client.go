@@ -463,10 +463,6 @@ func (c *AnypointClient) invokeJSONGet(url string, page *Page, resp interface{},
 	}
 
 	query["masterOrganizationId"] = c.auth.GetOrgID()
-	// query := map[string]string{
-	// 	"masterOrganizationId": c.auth.GetOrgID(),
-	// }
-
 	if page != nil {
 		query["offset"] = fmt.Sprint(page.Offset)
 		query["limit"] = fmt.Sprint(page.PageSize)
