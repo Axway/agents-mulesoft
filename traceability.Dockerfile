@@ -13,7 +13,7 @@ RUN rm -rf bin
 
 RUN make download
 RUN make verify
-RUN CGO_ENABLED=0  GOOS=linux GOARCH=amd64  make build-trace
+RUN CGO_ENABLED=0  GOOS=linux GOARCH=amd64  make build-trace-docker
 
 # Create non-root user
 RUN addgroup $APP_USER && adduser --system $APP_USER --ingroup $APP_USER
