@@ -287,7 +287,7 @@ func TestShouldDiscoverAPIBasedOnTags(t *testing.T) {
 	for i := range tests {
 		tc := tests[i]
 		t.Run(tc.name, func(t *testing.T) {
-			ok := shouldDiscoverAPI(tc.endpoint, tc.discoveryTags, tc.ignoreTags, tc.apiTags, tc.lastActiveDate)
+			ok := shouldDiscoverAPI(tc.endpoint, tc.discoveryTags, tc.ignoreTags, tc.apiTags)
 			assert.Equal(t, tc.expected, ok)
 		})
 	}

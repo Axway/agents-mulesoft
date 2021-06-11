@@ -252,7 +252,10 @@ func (c *AnypointClient) GetEnvironmentByName(name string) (*Environment, error)
 func (c *AnypointClient) ListAssets(page *Page) ([]Asset, error) {
 	var assetResult AssetSearch
 	url := c.baseURL + "/apimanager/api/v1/organizations/" + c.auth.GetOrgID() + "/environments/" + c.environment.ID + "/apis"
-	err := c.invokeJSONGet(url, page, &assetResult)
+	query := map[string]string{
+		"filters": "active",
+	}
+	err := c.invokeJSONGet(url, page, &assetResult, query)
 
 	if err != nil {
 		return nil, err
@@ -265,7 +268,7 @@ func (c *AnypointClient) ListAssets(page *Page) ([]Asset, error) {
 func (c *AnypointClient) GetPolicies(apiID int64) (Policies, error) {
 	var policies Policies
 	url := fmt.Sprintf("%s/apimanager/api/v1/organizations/%s/environments/%s/apis/%d/policies", c.baseURL, c.auth.GetOrgID(), c.environment.ID, apiID)
-	err := c.invokeJSONGet(url, nil, &policies)
+	err := c.invokeJSONGet(url, nil, &policies, nil)
 
 	if err != nil {
 		return Policies{}, err
@@ -278,7 +281,7 @@ func (c *AnypointClient) GetPolicies(apiID int64) (Policies, error) {
 func (c *AnypointClient) GetExchangeAsset(groupID, assetID, assetVersion string) (*ExchangeAsset, error) {
 	var exchangeAsset ExchangeAsset
 	url := fmt.Sprintf("%s/exchange/api/v2/assets/%s/%s/%s", c.baseURL, groupID, assetID, assetVersion)
-	err := c.invokeJSONGet(url, nil, &exchangeAsset)
+	err := c.invokeJSONGet(url, nil, &exchangeAsset, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -450,14 +453,19 @@ func (c *AnypointClient) CreateContract(appID int64, contract *Contract) (*Contr
 	return &cnt, nil
 }
 
-func (c *AnypointClient) invokeJSONGet(url string, page *Page, resp interface{}) error {
+func (c *AnypointClient) invokeJSONGet(url string, page *Page, resp interface{}, query map[string]string) error {
 	headers := map[string]string{
 		"Authorization": "Bearer " + c.auth.GetToken(),
 	}
 
-	query := map[string]string{
-		"masterOrganizationId": c.auth.GetOrgID(),
+	if query == nil {
+		query = map[string]string{}
 	}
+
+	query["masterOrganizationId"] = c.auth.GetOrgID()
+	// query := map[string]string{
+	// 	"masterOrganizationId": c.auth.GetOrgID(),
+	// }
 
 	if page != nil {
 		query["offset"] = fmt.Sprint(page.Offset)

@@ -65,7 +65,7 @@ func (s *serviceHandler) ToServiceDetails(asset *anypoint.Asset) []*ServiceDetai
 			WithField("apiID", api.ID).
 			WithField("apiAssetVersion", api.AssetVersion)
 
-		if !shouldDiscoverAPI(api.EndpointURI, s.discoveryTags, s.discoveryIgnoreTags, api.Tags, api.LastActiveDate) {
+		if !shouldDiscoverAPI(api.EndpointURI, s.discoveryTags, s.discoveryIgnoreTags, api.Tags) {
 			logger.WithField("endpoint", api.EndpointURI).Debug("skipping discovery for api")
 			continue
 		}
@@ -237,12 +237,7 @@ func (s *serviceHandler) createSubscriptionSchemaForSLATier(
 }
 
 // shouldDiscoverAPI determines if the API should be pushed to Central or not
-func shouldDiscoverAPI(endpoint string, discoveryTags, ignoreTags, apiTags []string, lastActiveDate string) bool {
-
-	// If lastActiveDate is empty, API is unregistered
-	if lastActiveDate == "" {
-		return false
-	}
+func shouldDiscoverAPI(endpoint string, discoveryTags, ignoreTags, apiTags []string) bool {
 
 	if endpoint == "" {
 		// If the API has no exposed endpoint we're not going to discover it.
