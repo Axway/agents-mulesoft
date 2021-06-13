@@ -93,5 +93,72 @@ To configure the agents see:
 - [Mulesoft Discovery Agent Configuration](./README_discovery.md)
 - [Mulesoft Traceability Agent Configuration](./README_traceability.md)
 
+### Agent Status Reporting
+In order for the  environment status in Amplify Central / Topology to display the connected agent status, we have to create the necessary resources for the Agents. 
+Please note that you would need the Axway CLI to create these resources.
+Given below are the sample configuration for the agents:
+
+Discovery Agent:
+```
+group: management
+apiVersion: v1alpha1
+kind: DiscoveryAgent
+name: my-agent-name
+title: My DiscoveryAgent title
+metadata:
+  scope:
+    kind: Environment
+    name: my-amplify-central-environment
+attributes: {}
+finalizers: []
+tags:
+  - sample
+spec:
+  config:
+    additionalTags:
+      - DiscoveredByMulesoftAgent
+  logging:
+    level: debug
+  dataplaneType: my-dataplane-name
+```
+Traceability Agent:
+```
+group: management
+apiVersion: v1alpha1
+kind: TraceabilityAgent
+name: my-agent-name
+title: My beautiful TraceabilityAgent title
+metadata:
+  scope:
+    kind: Environment
+    name: my-amplify-central-environment
+attributes: {}
+finalizers: []
+tags:
+  - sample
+spec:
+  config:
+    excludeHeaders:
+      - Authorization
+    processHeaders: true
+  dataplaneType: my-dataplane-name
+```
+Once configured, save those files and please create those resources:
+```
+axway central apply -f disovery-agent-res.yaml
+---
+axway central apply -f traceability-agent-res.yaml
+```
+In order to link agent deployment with the appropriate agent resource, 
+you have to update the agent configuration file (env_vars). Use the `CENTRAL_AGENTNAME` variable and link the value to the resource name defined previously.
+
+Once the Agents successfully starts, the agent status (AMPLIFY Central / Topology) will change to `Running`. If there are no other agents linked to that environment, then the environment status will change from `Manual Sync` to `Connected`.
+So in the traceability-deployment.yaml and discovery-deployment.yaml, set the Env Variable:
+```
+- name: CENTRAL_AGENTNAME
+  value: my-agent-name
+```
+For more information on setting up the resources for Visualizing Agent Status reporting, please refer to:  [Visualizing Agent Resources](https://docs.axway.com/bundle/axway-open-docs/page/docs/central/env_gw_mgmt/environment_agent_resources/index.html)
+
 ## See Also
 Reference: [SDK Documentation - Building Discovery Agent](https://github.com/Axway/agent-sdk/blob/main/docs/discovery/index.md), [Mulesoft API Manager API](https://anypoint.mulesoft.com/exchange/portals/anypoint-platform/f1e97bc6-315a-4490-82a7-23abe036327a.anypoint-platform/api-manager-api/minor/1.0/console/method/%231156/)

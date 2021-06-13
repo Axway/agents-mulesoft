@@ -38,6 +38,9 @@ build-discovery:
 build-trace:
 	@go build -o bin/traceability ./cmd/traceability/main.go
 
+build-trace-docker:
+	@go build -o /app/traceability ./cmd/traceability/main.go
+
 test:
 	mkdir -p coverage
 	@go test -race -short -count=1 -coverprofile=coverage/coverage.cov ${GO_PKG_LIST}
