@@ -39,7 +39,8 @@ var mockSub = &apic.MockSubscription{
 		anypoint.TierLabel:   "666892-gold",
 	},
 	RemoteAPIAttributes: map[string]string{
-		common.AttrAPIID: "16810512",
+		common.AttrAPIID: "16810513",
+		common.AttrProductVersion: "1.0.5",
 	},
 	ReceivedValues:               map[string]interface{}{},
 	ReceivedAppName:              "",
