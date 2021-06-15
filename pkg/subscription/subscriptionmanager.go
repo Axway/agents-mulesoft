@@ -37,7 +37,7 @@ type StateManager interface {
 	Unsubscribe(log logrus.FieldLogger, subs apic.Subscription) error
 }
 
-// Manager handles the subscription aspects
+// Manager handles the subscription aspects.
 type Manager struct {
 	log      logrus.FieldLogger
 	handlers map[string]StateManager
