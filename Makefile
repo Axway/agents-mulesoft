@@ -33,10 +33,10 @@ run-trace:
 	@go run ./cmd/traceability/main.go
 
 build-discovery:
-	@go build -o bin/discovery ./cmd/discovery/main.go
+	@go build -o ${WORKSPACE}/bin/discovery ${WORKSPACE}/cmd/discovery/main.go
 
 build-trace:
-	@go build -o bin/traceability ./cmd/traceability/main.go
+	@go build -ldflags="-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildDataPlaneType=AgentSDK'" -o ${WORKSPACE}/bin/traceability ${WORKSPACE}/cmd/traceability/main.go
 
 build-trace-docker:
 	@go build -o /app/traceability ./cmd/traceability/main.go
