@@ -18,7 +18,7 @@ The settup process is:
 - Download and install the agents.
 - Create a Service Account in Amplify Central for the agents to use.
 - Create an Environment in Amplify Central for the agents to publish too.
-- Configure and run the agents.
+- Configure and run the agents
 
 ### Downloading the Agents
 Download and unzip the [latest release](https://github.com/Axway/agents-mulesoft/releases/latest) of the *discovery agent* and the *traceability agent*.
