@@ -127,7 +127,7 @@ func TestServiceHandlerSLAPolicy(t *testing.T) {
 	policies := anypoint.Policies{Policies: []anypoint.Policy{
 		{
 			Template: anypoint.Template{
-				AssetID: anypoint.SlaAuth,
+				AssetID: anypoint.SLAAuth,
 			},
 		},
 	}}
@@ -643,7 +643,7 @@ func Test_setOAS2policies(t *testing.T) {
 		},
 		{
 			name:          "should apply OAuth security policy with no scope",
-			configuration: map[string]interface{}{anypoint.TokenUrl: "www.test.com"},
+			configuration: map[string]interface{}{anypoint.TokenURL: "www.test.com"},
 			content: &openapi2.T{
 				Swagger: "2.0",
 				Info: openapi3.Info{
@@ -659,7 +659,7 @@ func Test_setOAS2policies(t *testing.T) {
 		},
 		{
 			name:          "should apply OAuth security policy with scopes",
-			configuration: map[string]interface{}{anypoint.TokenUrl: "www.test.com", anypoint.Scopes: "read,write"},
+			configuration: map[string]interface{}{anypoint.TokenURL: "www.test.com", anypoint.Scopes: "read,write"},
 			content: &openapi2.T{
 				Swagger: "2.0",
 				Info: openapi3.Info{
@@ -740,7 +740,7 @@ func Test_setOAS3policies(t *testing.T) {
 		},
 		{
 			name:          "should apply OAuth security policy with no scope",
-			configuration: map[string]interface{}{anypoint.TokenUrl: "www.test.com"},
+			configuration: map[string]interface{}{anypoint.TokenURL: "www.test.com"},
 			content: &openapi3.T{
 				OpenAPI: "3.0.1",
 				Info: &openapi3.Info{
@@ -753,7 +753,7 @@ func Test_setOAS3policies(t *testing.T) {
 		},
 		{
 			name:          "should apply OAuth security policy with scopes",
-			configuration: map[string]interface{}{anypoint.TokenUrl: "www.test.com", anypoint.Scopes: "read,write"},
+			configuration: map[string]interface{}{anypoint.TokenURL: "www.test.com", anypoint.Scopes: "read,write"},
 			content: &openapi3.T{
 				OpenAPI: "3.0.1",
 				Info: &openapi3.Info{

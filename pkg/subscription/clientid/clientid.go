@@ -46,7 +46,7 @@ func newClientID() *clientID {
 }
 
 func (c *clientID) IsApplicable(pd config.PolicyDetail) bool {
-	return pd.Policy == apic.Apikey && pd.IsSlaBased == false
+	return pd.Policy == apic.Apikey && pd.IsSLABased == false
 }
 
 func (c *clientID) Schema() apic.SubscriptionSchema {

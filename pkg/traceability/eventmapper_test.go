@@ -179,7 +179,7 @@ func Test_APIServiceNameAndTransactionProxyNameAreEqual(t *testing.T) {
 		err: nil,
 	}
 	em := &EventMapper{client: client}
-	le, err := em.createSummaryEvent(100, FormatTxnId(event.APIVersionID, event.MessageID), event, "123")
+	le, err := em.createSummaryEvent(100, FormatTxnID(event.APIVersionID, event.MessageID), event, "123")
 	assert.Nil(t, err)
 	transactionProxyName := le.TransactionSummary.Proxy.Name
 	transactionProxyID := le.TransactionSummary.Proxy.ID

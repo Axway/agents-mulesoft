@@ -2,6 +2,6 @@ package config
 
 type PolicyDetail struct {
 	Policy     string
-	IsSlaBased bool
+	IsSLABased bool
 	APIId      string
 }

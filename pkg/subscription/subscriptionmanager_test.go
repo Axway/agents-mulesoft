@@ -39,7 +39,7 @@ var mockSub = &apic.MockSubscription{
 		anypoint.TierLabel:   "666892-gold",
 	},
 	RemoteAPIAttributes: map[string]string{
-		common.AttrAPIID: "16810513",
+		common.AttrAPIID:          "16810513",
 		common.AttrProductVersion: "1.0.5",
 	},
 	ReceivedValues:               map[string]interface{}{},
@@ -215,7 +215,7 @@ func TestValidateSubscription(t *testing.T) {
 
 	name := manager.GetSubscriptionSchemaName(config.PolicyDetail{
 		Policy:     anypoint.ClientID,
-		IsSlaBased: false,
+		IsSLABased: false,
 		APIId:      "1",
 	})
 

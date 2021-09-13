@@ -20,14 +20,14 @@ func TestSlaTier(t *testing.T) {
 	assert.Equal(t, schema, contract.Schema())
 	pd := config.PolicyDetail{
 		Policy:     apic.Apikey,
-		IsSlaBased: true,
+		IsSLABased: true,
 		APIId:      name,
 	}
 	assert.True(t, contract.IsApplicable(pd))
 
 	pd = config.PolicyDetail{
 		Policy:     apic.Apikey,
-		IsSlaBased: false,
+		IsSLABased: false,
 		APIId:      name,
 	}
 	assert.False(t, contract.IsApplicable(pd))

@@ -34,7 +34,7 @@ func (em *EventMapper) ProcessMapping(event anypoint.AnalyticsEvent) ([]*transac
 	centralCfg := agent.GetCentralConfig()
 
 	eventTime := event.Timestamp.UnixNano() / 1000000
-	txID := FormatTxnId(event.APIVersionID, event.MessageID)
+	txID := FormatTxnID(event.APIVersionID, event.MessageID)
 	txEventID := event.MessageID
 	leg0ID := FormatLeg0(txEventID)
 	leg1ID := FormatLeg1(txEventID)
@@ -180,7 +180,7 @@ func getTransactionEventStatus(code int) transaction.TxEventStatus {
 	return transaction.TxEventStatusPass
 }
 
-func FormatTxnId(apiVersionID, messageID string) string {
+func FormatTxnID(apiVersionID, messageID string) string {
 	return fmt.Sprintf("%s-%s", apiVersionID, messageID)
 }
 

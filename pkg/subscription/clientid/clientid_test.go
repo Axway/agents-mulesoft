@@ -16,7 +16,7 @@ func TestClientID(t *testing.T) {
 	assert.NotEmpty(t, clientIDPolicy.Schema().GetProperty(anypoint.Description))
 	pd := config.PolicyDetail{
 		Policy:     apic.Apikey,
-		IsSlaBased: false,
+		IsSLABased: false,
 		APIId:      name,
 	}
 	assert.True(t, clientIDPolicy.IsApplicable(pd))
