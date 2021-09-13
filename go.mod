@@ -2,6 +2,8 @@ module github.com/Axway/agents-mulesoft
 
 go 1.13
 
+// replace github.com/Axway/agent-sdk => /home/ubuntu/go/src/github.com/Axway/agent-sdk
+
 require (
 	github.com/Axway/agent-sdk v1.1.4-0.20210909144843-d639adfb1c40
 	github.com/Shopify/sarama v1.26.4 // indirect
