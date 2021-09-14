@@ -97,7 +97,7 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 	if err != nil {
 		return nil, err
 	}
-	authPolicy, configuration, isSlaBased := getAuthPolicy(policies)
+	authPolicy, configuration, isSLABased := getAuthPolicy(policies)
 
 	// TODO can be refactored to not use authPolicy in checksum and use policy
 	isAlreadyPublished, checksum := isPublished(api, authPolicy, s.cache)
@@ -120,12 +120,12 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 
 	subSchName := s.subscriptionManager.GetSubscriptionSchemaName(config.PolicyDetail{
 		Policy:     authPolicy,
-		IsSlaBased: isSlaBased,
+		IsSLABased: isSLABased,
 		APIId:      apiID,
 	})
 
 	// If the API has a new SLA Tier policy, create a new subscription schema for it
-	if subSchName == "" && isSlaBased {
+	if subSchName == "" && isSLABased {
 		// Get details of the SLA tiers
 		tiers, err1 := s.client.GetSLATiers(api.ID)
 		if err1 != nil {
@@ -360,7 +360,7 @@ func getAuthPolicy(policies anypoint.Policies) (string, map[string]interface{}, 
 			return apic.Apikey, conf, false
 		}
 
-		if strings.Contains(policy.Template.AssetID, anypoint.SlaAuth) {
+		if strings.Contains(policy.Template.AssetID, anypoint.SLAAuth) {
 			conf := getMapFromInterface(policy.Configuration)
 			return apic.Apikey, conf, true
 		}
@@ -411,7 +411,7 @@ func setOAS2policies(swagger *openapi2.T, authPolicy string, configuration map[s
 		}
 
 		ss := openapi2.SecurityScheme{
-			Type:        anypoint.ApiKey,
+			Type:        anypoint.APIKey,
 			Name:        anypoint.Authorization,
 			In:          anypoint.Header,
 			Description: desc,
@@ -423,11 +423,11 @@ func setOAS2policies(swagger *openapi2.T, authPolicy string, configuration map[s
 		swagger.SecurityDefinitions = sd
 
 	case apic.Oauth:
-		var tokenUrl string
+		var tokenURL string
 		scopes := make(map[string]string)
 
-		if configuration[anypoint.TokenUrl] != nil {
-			tokenUrl = configuration[anypoint.TokenUrl].(string)
+		if configuration[anypoint.TokenURL] != nil {
+			tokenURL = configuration[anypoint.TokenURL].(string)
 		}
 
 		if configuration[anypoint.Scopes] != nil {
@@ -438,8 +438,8 @@ func setOAS2policies(swagger *openapi2.T, authPolicy string, configuration map[s
 			Description:      anypoint.DescOauth2,
 			Type:             anypoint.Oauth2,
 			Flow:             anypoint.AccessCode,
-			TokenURL:         tokenUrl,
-			AuthorizationURL: tokenUrl,
+			TokenURL:         tokenURL,
+			AuthorizationURL: tokenURL,
 			Scopes:           scopes,
 		}
 
@@ -464,7 +464,7 @@ func setOAS3policies(spec *openapi3.T, authPolicy string, configuration map[stri
 		}
 
 		ss := openapi3.SecurityScheme{
-			Type:        anypoint.ApiKey,
+			Type:        anypoint.APIKey,
 			Name:        anypoint.Authorization,
 			In:          anypoint.Header,
 			Description: desc}
@@ -475,14 +475,14 @@ func setOAS3policies(spec *openapi3.T, authPolicy string, configuration map[stri
 
 		spec.Components.SecuritySchemes = openapi3.SecuritySchemes{anypoint.ClientID: &ssr}
 	case apic.Oauth:
-		var tokenUrl string
+		var tokenURL string
 		scopes := make(map[string]string)
 
-		if configuration[anypoint.TokenUrl] != nil {
+		if configuration[anypoint.TokenURL] != nil {
 			var ok bool
-			tokenUrl, ok = configuration[anypoint.TokenUrl].(string)
+			tokenURL, ok = configuration[anypoint.TokenURL].(string)
 			if !ok {
-				return nil, fmt.Errorf("Unable to perform type assertion on %#v", configuration[anypoint.TokenUrl])
+				return nil, fmt.Errorf("Unable to perform type assertion on %#v", configuration[anypoint.TokenURL])
 			}
 		}
 
@@ -492,8 +492,8 @@ func setOAS3policies(spec *openapi3.T, authPolicy string, configuration map[stri
 		}
 
 		ac := openapi3.OAuthFlow{
-			TokenURL:         tokenUrl,
-			AuthorizationURL: tokenUrl,
+			TokenURL:         tokenURL,
+			AuthorizationURL: tokenURL,
 			Scopes:           scopes,
 		}
 		oAuthFlow := openapi3.OAuthFlows{
@@ -522,9 +522,9 @@ func isPublished(api *anypoint.API, authPolicy string, c cache.Cache) (bool, str
 	item, err := c.Get(checksum)
 	if err != nil || item == nil {
 		return false, checksum
-	} else {
-		return true, checksum
 	}
+
+	return true, checksum
 }
 
 func getMapFromInterface(item interface{}) map[string]interface{} {

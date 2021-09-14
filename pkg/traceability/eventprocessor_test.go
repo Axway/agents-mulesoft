@@ -3,6 +3,7 @@ package traceability
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -32,11 +33,6 @@ const (
 	EnvID          = "envid00"
 	TeamID         = "678"
 )
-
-func init() {
-	setupRedaction()
-	setupConfig()
-}
 
 func TestEventProcessor_ProcessRaw(t *testing.T) {
 	client := &mockAnalyticsClient{
@@ -116,7 +112,7 @@ func TestEventProcessor_ProcessRaw_Errors(t *testing.T) {
 
 func assertLegCommonFields(t *testing.T, muleEvent anypoint.AnalyticsEvent, logEvent *transaction.LogEvent, logType string) {
 	assert.Equal(t, "1.0", logEvent.Version)
-	assert.Equal(t, FormatTxnId(muleEvent.APIVersionID, muleEvent.MessageID), logEvent.TransactionID)
+	assert.Equal(t, FormatTxnID(muleEvent.APIVersionID, muleEvent.MessageID), logEvent.TransactionID)
 	assert.Equal(t, "", logEvent.Environment)
 	assert.Equal(t, APICDeployment, logEvent.APICDeployment)
 	assert.Equal(t, EnvID, logEvent.EnvironmentID)
@@ -167,7 +163,9 @@ responseHeader:
 }
 
 // eventGeneratorMock - mock event generator
-type eventGeneratorMock struct{}
+type eventGeneratorMock struct {
+	shouldUseTrafficForAggregation bool
+}
 
 func (c *eventGeneratorMock) CreateEvents(transaction.LogEvent, []transaction.LogEvent, time.Time, common.MapStr, common.MapStr, interface{}) (events []beat.Event, err error) {
 	return nil, nil
@@ -193,15 +191,34 @@ func (c *eventGeneratorMock) CreateEvent(
 	return
 }
 
+func (c *eventGeneratorMock) SetUseTrafficForAggregation(useTrafficForAggregation bool) {
+	c.shouldUseTrafficForAggregation = useTrafficForAggregation
+}
+
 func setupConfig() {
+	os.Setenv("CENTRAL_AUTH_PRIVATEKEY_DATA", "12345")
+	os.Setenv("CENTRAL_AUTH_PUBLICKEY_DATA", "12345")
+
 	agentConfig = &config.AgentConfig{
 		CentralConfig: &corecfg.CentralConfiguration{
-			CentralConfig:    nil,
-			IConfigValidator: nil,
-			AgentType:        corecfg.TraceabilityAgent,
-			TenantID:         TenantID,
-			APICDeployment:   APICDeployment,
-			Environment:      Environment,
+			AgentType:               corecfg.TraceabilityAgent,
+			URL:                     "http://foo.bar",
+			PlatformURL:             "http://foo.bar",
+			TenantID:                TenantID,
+			APICDeployment:          APICDeployment,
+			Environment:             Environment,
+			EnvironmentID:           EnvID,
+			UsageReporting:          corecfg.NewUsageReporting(),
+			ReportActivityFrequency: 1,
+			ClientTimeout:           1,
+			Auth: &corecfg.AuthConfiguration{
+				URL:        "https://login.axway.com/auth",
+				Realm:      "Broker",
+				ClientID:   "DOSA_123456789123456789",
+				PrivateKey: "/tmp/private_key.pem",
+				PublicKey:  "/tmp/public_key",
+				Timeout:    30 * time.Second,
+			},
 		},
 		MulesoftConfig: &config.MulesoftConfig{
 			PollInterval: 1 * time.Second,
@@ -213,7 +230,9 @@ func setupConfig() {
 	agent.Initialize(agentConfig.CentralConfig)
 }
 
-type eventGenMockErr struct{}
+type eventGenMockErr struct {
+	shouldUseTrafficForAggregation bool
+}
 
 func (c *eventGenMockErr) CreateEvents(transaction.LogEvent, []transaction.LogEvent, time.Time, common.MapStr, common.MapStr, interface{}) (events []beat.Event, err error) {
 	return nil, nil
@@ -227,6 +246,10 @@ func (c *eventGenMockErr) CreateEvent(
 	_ interface{},
 ) (event beat.Event, err error) {
 	return beat.Event{}, fmt.Errorf("create event error")
+}
+
+func (c *eventGenMockErr) SetUseTrafficForAggregation(useTrafficForAggregation bool) {
+	c.shouldUseTrafficForAggregation = useTrafficForAggregation
 }
 
 type eventMapperErr struct{}

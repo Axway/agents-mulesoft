@@ -15,7 +15,7 @@ type slaTier struct {
 }
 
 // newSlaTier Creates a new *slaTier
-func newSlaTier(name string, schema apic.SubscriptionSchema) *slaTier {
+func newSLATier(name string, schema apic.SubscriptionSchema) *slaTier {
 	return &slaTier{
 		name:   name,
 		schema: schema,
@@ -24,7 +24,7 @@ func newSlaTier(name string, schema apic.SubscriptionSchema) *slaTier {
 
 // NewSLATierContract creates a new subscribable contract for the sla-tier policy
 func NewSLATierContract(name string, schema apic.SubscriptionSchema, client anypoint.Client) *subscription.SubStateManager {
-	return subscription.NewSubStateManager(client, newSlaTier(name, schema))
+	return subscription.NewSubStateManager(client, newSLATier(name, schema))
 }
 
 func (s *slaTier) Name() string {
@@ -36,7 +36,7 @@ func (s *slaTier) Schema() apic.SubscriptionSchema {
 }
 
 func (s *slaTier) IsApplicable(pd config.PolicyDetail) bool {
-	if pd.IsSlaBased {
+	if pd.IsSLABased {
 		return pd.APIId == s.name && pd.Policy == apic.Apikey
 	}
 	return false

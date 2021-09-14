@@ -232,7 +232,7 @@ type AnalyticsEvent struct {
 // TODO move the errors to the SDK
 const (
 	AccessCode          = "accessCode"
-	ApiKey              = "apiKey"
+	APIKey              = "apiKey"
 	AppName             = "appName"
 	Authorization       = "authorization"
 	ClientID            = "client-id-enforcement"
@@ -248,9 +248,9 @@ const (
 	Header              = "header"
 	Oauth2              = "oauth2"
 	Scopes              = "scopes"
-	SlaAuth             = "sla-based"
+	SLAAuth             = "sla-based"
 	TierLabel           = "SLA Tier"
-	TokenUrl            = "tokenUrl"
+	TokenURL            = "tokenUrl"
 )
 
 type Application struct {

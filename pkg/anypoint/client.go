@@ -40,7 +40,7 @@ type Client interface {
 	CreateClientApplication(string, *AppRequestBody) (*Application, error)
 	CreateContract(int64, *Contract) (*Contract, error)
 	GetSLATiers(int642 int64) (*Tiers, error)
-	DeleteClientApplication(appId int64) error
+	DeleteClientApplication(appID int64) error
 }
 
 type AnalyticsClient interface {
@@ -360,13 +360,13 @@ func (c *AnypointClient) GetAnalyticsWindow(startDate, endDate string) ([]Analyt
 	return events, err
 }
 
-func (c *AnypointClient) GetSLATiers(apiId int64) (*Tiers, error) {
+func (c *AnypointClient) GetSLATiers(apiID int64) (*Tiers, error) {
 	var slatiers Tiers
 	headers := map[string]string{
 		"Authorization": "Bearer " + c.auth.GetToken(),
 	}
 	url := fmt.Sprintf("%s/apimanager/api/v1/organizations/%s/environments/%s/apis/%d/tiers",
-		c.baseURL, c.auth.GetOrgID(), c.environment.ID, apiId)
+		c.baseURL, c.auth.GetOrgID(), c.environment.ID, apiID)
 
 	request := coreapi.Request{
 		Method:      coreapi.GET,
@@ -399,8 +399,8 @@ func (c *AnypointClient) CreateClientApplication(apiInstanceID string, app *AppR
 	return &application, nil
 }
 
-func (c *AnypointClient) DeleteClientApplication(appId int64) error {
-	url := fmt.Sprintf("%s/exchange/api/v2/organizations/%s/applications/%v", c.baseURL, c.auth.GetOrgID(), appId)
+func (c *AnypointClient) DeleteClientApplication(appID int64) error {
+	url := fmt.Sprintf("%s/exchange/api/v2/organizations/%s/applications/%v", c.baseURL, c.auth.GetOrgID(), appID)
 
 	headers := map[string]string{
 		"Authorization": "Bearer " + c.auth.GetToken(),
@@ -417,10 +417,10 @@ func (c *AnypointClient) DeleteClientApplication(appId int64) error {
 	return c.invokeDelete(request)
 }
 
-func (c *AnypointClient) GetClientApplication(appId string) (*Application, error) {
+func (c *AnypointClient) GetClientApplication(appID string) (*Application, error) {
 
 	var application Application
-	url := fmt.Sprintf("%s/exchange/api/v2/organizations/%s/applications/%s", c.baseURL, c.auth.GetOrgID(), appId)
+	url := fmt.Sprintf("%s/exchange/api/v2/organizations/%s/applications/%s", c.baseURL, c.auth.GetOrgID(), appID)
 
 	headers := map[string]string{
 		"Authorization": "Bearer " + c.auth.GetToken(),

@@ -81,7 +81,7 @@ func (ssm *SubStateManager) doSubscribe(log logrus.FieldLogger, sub apic.Subscri
 		return "", "", err
 	}
 
-	tId := parseTierID(tier, log)
+	tID := parseTierID(tier, log)
 
 	// Need to fetch the exchange asset to get the version group
 	exchangeAsset, err := ssm.client.GetExchangeAsset(muleAPI.GroupID, muleAPI.AssetID, muleAPI.AssetVersion)
@@ -89,7 +89,7 @@ func (ssm *SubStateManager) doSubscribe(log logrus.FieldLogger, sub apic.Subscri
 		return "", "", err
 	}
 
-	_, err = ssm.createContract(apiID, application.ID, tId, muleAPI, exchangeAsset)
+	_, err = ssm.createContract(apiID, application.ID, tID, muleAPI, exchangeAsset)
 	if err != nil {
 		return "", "", fmt.Errorf("Error while creating a contract %s", err)
 	}
@@ -99,20 +99,20 @@ func (ssm *SubStateManager) doSubscribe(log logrus.FieldLogger, sub apic.Subscri
 	return application.ClientID, application.ClientSecret, nil
 }
 
-func (ssm *SubStateManager) createContract(apiID string, appId, tId int64, muleApi *anypoint.API, exchangeAsset *anypoint.ExchangeAsset) (*anypoint.Contract, error) {
+func (ssm *SubStateManager) createContract(apiID string, appID, tID int64, muleAPI *anypoint.API, exchangeAsset *anypoint.ExchangeAsset) (*anypoint.Contract, error) {
 	contract := &anypoint.Contract{
 		APIID:           apiID,
-		EnvironmentID:   muleApi.EnvironmentID,
+		EnvironmentID:   muleAPI.EnvironmentID,
 		AcceptedTerms:   true,
-		OrganizationID:  muleApi.OrganizationID,
-		GroupID:         muleApi.GroupID,
-		AssetID:         muleApi.AssetID,
-		Version:         muleApi.AssetVersion,
+		OrganizationID:  muleAPI.OrganizationID,
+		GroupID:         muleAPI.GroupID,
+		AssetID:         muleAPI.AssetID,
+		Version:         muleAPI.AssetVersion,
 		VersionGroup:    exchangeAsset.VersionGroup,
-		RequestedTierID: tId,
+		RequestedTierID: tID,
 	}
 
-	return ssm.client.CreateContract(appId, contract)
+	return ssm.client.CreateContract(appID, contract)
 }
 
 func (ssm *SubStateManager) createApp(apiID string, sub apic.Subscription) (*anypoint.Application, error) {
@@ -151,9 +151,9 @@ func getMuleAPI(apiID, stage string) (*anypoint.API, error) {
 		return nil, err
 	}
 
-	muleApi, ok := api.(anypoint.API)
+	muleAPI, ok := api.(anypoint.API)
 	if !ok {
 		return nil, fmt.Errorf("Unable to perform type assertion on %#v", api)
 	}
-	return &muleApi, nil
+	return &muleAPI, nil
 }

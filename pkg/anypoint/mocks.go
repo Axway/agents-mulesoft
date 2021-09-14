@@ -34,9 +34,9 @@ func (mc *MockClientBase) Send(request api.Request) (*api.Response, error) {
 	req, ok := mc.Reqs[request.URL]
 	if ok {
 		return req, nil
-	} else {
-		return nil, fmt.Errorf("no request found for %s", request.URL)
 	}
+
+	return nil, fmt.Errorf("no request found for %s", request.URL)
 }
 
 type MockAnypointClient struct {
@@ -134,7 +134,7 @@ func (m *MockAnypointClient) GetSLATiers(int642 int64) (*Tiers, error) {
 	}, nil
 }
 
-func (m *MockAnypointClient) DeleteClientApplication(appId int64) error {
+func (m *MockAnypointClient) DeleteClientApplication(appID int64) error {
 	args := m.Called()
 	return args.Error(0)
 }

@@ -58,12 +58,13 @@ var app = &anypoint.Application{
 	Name:         "foo",
 }
 
-func init() {
+func setupForTest() {
 	setupRedaction()
 	setupConfig()
 }
 
 func TestEventMapper_processMapping(t *testing.T) {
+	setupForTest()
 	client := &mockAnalyticsClient{
 		app: app,
 	}
@@ -178,7 +179,7 @@ func Test_APIServiceNameAndTransactionProxyNameAreEqual(t *testing.T) {
 		err: nil,
 	}
 	em := &EventMapper{client: client}
-	le, err := em.createSummaryEvent(100, FormatTxnId(event.APIVersionID, event.MessageID), event, "123")
+	le, err := em.createSummaryEvent(100, FormatTxnID(event.APIVersionID, event.MessageID), event, "123")
 	assert.Nil(t, err)
 	transactionProxyName := le.TransactionSummary.Proxy.Name
 	transactionProxyID := le.TransactionSummary.Proxy.ID

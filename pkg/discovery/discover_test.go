@@ -71,7 +71,7 @@ func TestDiscovery_Loop(t *testing.T) {
 	msh := &mockServiceHandler{}
 	msh.On("ToServiceDetails").Return([]*ServiceDetail{sd})
 	centralClient := &mocks.MockCentralClient{}
-	centralClient.On("GetAPIRevisions").Return([]v1alpha1.APIServiceRevision{}, nil)
+	centralClient.On("GetAPIRevisions").Return([]*v1alpha1.APIServiceRevision{}, nil)
 
 	disc := &discovery{
 		apiChan:           apiChan,
@@ -127,7 +127,7 @@ func Test_discoverAPIs(t *testing.T) {
 			msh.On("ToServiceDetails").Return([]*ServiceDetail{sd})
 
 			centralClient := &mocks.MockCentralClient{}
-			centralClient.On("GetAPIRevisions").Return([]v1alpha1.APIServiceRevision{}, nil)
+			centralClient.On("GetAPIRevisions").Return([]*v1alpha1.APIServiceRevision{}, nil)
 
 			disc := &discovery{
 				apiChan:           apiChan,
@@ -170,7 +170,7 @@ func Test_getRevisions(t *testing.T) {
 			},
 		},
 	}
-	centralClient.On("GetAPIRevisions").Return([]v1alpha1.APIServiceRevision{rev}, nil)
+	centralClient.On("GetAPIRevisions").Return([]*v1alpha1.APIServiceRevision{&rev}, nil)
 
 	disc := &discovery{
 		apiChan:           apiChan,

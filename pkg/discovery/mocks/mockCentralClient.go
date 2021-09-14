@@ -2,6 +2,7 @@ package mocks
 
 import (
 	"github.com/Axway/agent-sdk/pkg/apic"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	"github.com/Axway/agent-sdk/pkg/config"
@@ -15,9 +16,13 @@ type MockCentralClient struct {
 
 func (m *MockCentralClient) SetTokenGetter(auth.PlatformTokenGetter) {}
 
-func (m *MockCentralClient) PublishService(apic.ServiceBody) (*v1alpha1.APIService, error) {
+func (m *MockCentralClient) PublishService(*apic.ServiceBody) (*v1alpha1.APIService, error) {
 	return nil, nil
 }
+
+func (m *MockCentralClient) SetConfig(cfg config.CentralConfig) {
+}
+
 func (m *MockCentralClient) RegisterSubscriptionWebhook() error {
 	return nil
 }
@@ -38,6 +43,7 @@ func (m *MockCentralClient) GetSubscriptionManager() apic.SubscriptionManager {
 func (m *MockCentralClient) GetCatalogItemIDForConsumerInstance(string) (string, error) {
 	return "", nil
 }
+
 func (m *MockCentralClient) DeleteConsumerInstance(string) error {
 	return nil
 }
@@ -91,8 +97,28 @@ func (m *MockCentralClient) GetUserName(string) (string, error) {
 	return "", nil
 }
 
-func (m *MockCentralClient) GetAPIRevisions(map[string]string, string) ([]v1alpha1.APIServiceRevision, error) {
+func (m *MockCentralClient) GetAPIRevisions(queryParams map[string]string, stage string) ([]*v1alpha1.APIServiceRevision, error) {
 	args := m.Called()
 	revs := args.Get(0)
-	return revs.([]v1alpha1.APIServiceRevision), args.Error(1)
+	return revs.([]*v1alpha1.APIServiceRevision), args.Error(1)
+}
+
+func (m *MockCentralClient) DeleteAPIServiceInstance(instanceName string) error {
+	return nil
+}
+
+func (m *MockCentralClient) GetAPIServiceRevisions(queryParams map[string]string, URL, stage string) ([]*v1alpha1.APIServiceRevision, error) {
+	return nil, nil
+}
+
+func (m *MockCentralClient) GetAPIServiceInstances(queryParams map[string]string, URL string) ([]*v1alpha1.APIServiceInstance, error) {
+	return nil, nil
+}
+
+func (m *MockCentralClient) GetAPIV1ResourceInstances(queryParams map[string]string, URL string) ([]*v1.ResourceInstance, error) {
+	return nil, nil
+}
+
+func (m *MockCentralClient) GetAPIV1ResourceInstancesWithPageSize(queryParams map[string]string, URL string, pageSize int) ([]*v1.ResourceInstance, error) {
+	return nil, nil
 }
