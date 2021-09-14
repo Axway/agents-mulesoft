@@ -34,11 +34,6 @@ const (
 	TeamID         = "678"
 )
 
-// func init() {
-// 	setupRedaction()
-// 	setupConfig()
-// }
-
 func TestEventProcessor_ProcessRaw(t *testing.T) {
 	client := &mockAnalyticsClient{
 		app: app,
