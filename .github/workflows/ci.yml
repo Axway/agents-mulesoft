@@ -31,9 +31,9 @@ jobs:
       uses: goreleaser/goreleaser-action@v2.5.0
       with:
         workdir: ./cmd/discovery
-        args: release -f .goreleaser.yml --snapshot --skip-publish --rm-dist
+        args: release -f ../../.goreleaser.yml --snapshot --skip-publish --rm-dist
     - name: Traceability Release (Snapshot)
       uses: goreleaser/goreleaser-action@v2.5.0
       with:
         workdir: ./cmd/traceability
-        args: release -f .goreleaser.yml --snapshot --skip-publish --rm-dist
+        args: release -f ../../.goreleaser.yml --snapshot --skip-publish --rm-dist
