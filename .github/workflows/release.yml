@@ -18,7 +18,7 @@ jobs:
     - name: Discovery Release
       uses: goreleaser/goreleaser-action@v2.5.0
       with:
-        workdir: ./mulesoft_discovery_agent
+        workdir: ./cmd/discovery
         args: release -f .goreleaser.yml
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -35,7 +35,7 @@ jobs:
     - name: Traceability Release
       uses: goreleaser/goreleaser-action@v2.5.0
       with:
-        workdir: ./mulesoft_traceability_agent
+        workdir: ./cmd/traceability
         args: release -f .goreleaser.yml
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
