@@ -51,7 +51,8 @@ builds:
       - darwin
 
 archives:
-  - name_template: "mulesoft_discovery_agent_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+  - id: discovery_agent_archives
+    name_template: "mulesoft_discovery_agent_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     replacements:
       darwin: Darwin
       linux: Linux
@@ -62,7 +63,8 @@ archives:
     files:
       - mulesoft_discovery_agent.yml
       - README.md
-  - name_template: "mulesoft_traceability_agent_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+  - id: traceability_agent_archives
+    name_template: "mulesoft_traceability_agent_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     replacements:
       darwin: Darwin
       linux: Linux
