@@ -28,7 +28,7 @@ builds:
 
   - id: mulesoft_traceability_agent
     binary: mulesoft_traceability_agent
-    main: ./cmd/traceability/main.go
+    main: ./main.go
     flags:
       - -tags=static_all
       - -a
