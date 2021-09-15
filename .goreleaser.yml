@@ -9,7 +9,7 @@ before:
 builds:
   - id: mulesoft_discovery_agent
     binary: mulesoft_discovery_agent
-    main: ./cmd/discovery/main.go
+    main: ./main.go
     flags:
       - -tags=static_all
       - -a
