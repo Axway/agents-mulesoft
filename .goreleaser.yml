@@ -19,7 +19,6 @@ builds:
       - -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildCommitSha={{.Commit}}'
       - -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildAgentName=MulesoftDiscoveryAgent'
       - -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildAgentDescription=Mulesoft Discovery Agent'
-      - -X 'github.com/Axway/agent-sdk/pkg/cmd.SDKBuildVersion={{.Env.sdkVersion}}'
     env:
       - CGO_ENABLED=0
     goos:
@@ -40,7 +39,6 @@ builds:
       - -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildAgentName=MulesoftTraceabilityAgent'
       - -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildAgentDescription=Mulesoft Traceability Agent'
       - -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildDataPlaneType=Mulesoft'
-      - -X 'github.com/Axway/agent-sdk/pkg/cmd.SDKBuildVersion={{.Env.sdkVersion}}'
     env:
       - CGO_ENABLED=0
     goos:
