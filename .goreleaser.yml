@@ -10,7 +10,6 @@ builds:
   - id: mulesoft_discovery_agent
     binary: mulesoft_discovery_agent
     main: ./cmd/discovery/main.go
-    dir: .
     flags:
       - -tags=static_all
       - -a
@@ -31,7 +30,6 @@ builds:
   - id: mulesoft_traceability_agent
     binary: mulesoft_traceability_agent
     main: ./cmd/traceability/main.go
-    dir: .
     flags:
       - -tags=static_all
       - -a
