@@ -19,7 +19,7 @@ jobs:
       uses: goreleaser/goreleaser-action@v2.5.0
       with:
         workdir: ./mulesoft_discovery_agent
-        args: release
+        args: release -f .goreleaser.yml
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -36,6 +36,6 @@ jobs:
       uses: goreleaser/goreleaser-action@v2.5.0
       with:
         workdir: ./mulesoft_traceability_agent
-        args: release
+        args: release -f .goreleaser.yml
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
