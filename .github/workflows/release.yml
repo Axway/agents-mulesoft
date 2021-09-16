@@ -6,7 +6,7 @@ on:
       - v*.*.*
 
 jobs:
-  discovery:
+  discoveryw:
     runs-on: ubuntu-latest
     name: Release discoveryyyy
     defaults:
@@ -27,7 +27,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  traceability:
+  traceability5:
     runs-on: ubuntu-latest
     name: Release traceabilityzzzz
     defaults:
@@ -35,7 +35,7 @@ jobs:
         working-directory: .
     steps:
     - uses: actions/checkout@v2
-    - name: Unshallow Fetch
+    - name: Unshallow Fetchaaa
       run: git fetch --prune --unshallow
     - uses: actions/setup-go@v2
       with:
