@@ -56,9 +56,9 @@ archives:
       386: i386
       amd64: x86_64
     wrap_in_directory: discovery_agent
-    # files:
-      # - default_mulesoft_discovery_agent.yml
-      # - README.md
+    files:
+      - default_mulesoft_discovery_agent.yml
+      - README_discovery.md
   # - id: traceability_agent_archives
   #   name_template: "mulesoft_traceability_agent_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
   #   replacements:

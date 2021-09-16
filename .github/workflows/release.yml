@@ -6,15 +6,15 @@ on:
       - v*.*.*
 
 jobs:
-  discoveryw:
+  discovery:
     runs-on: ubuntu-latest
-    name: Release discoveryyyy
+    name: Release discovery
     defaults:
       run:
         working-directory: .
     steps:
     - uses: actions/checkout@v2
-    - name: Unshallow Fetchxxx
+    - name: Unshallow Fetch
       run: git fetch --prune --unshallow
     - uses: actions/setup-go@v2
       with:
@@ -27,15 +27,15 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  traceability5:
+  traceability:
     runs-on: ubuntu-latest
-    name: Release traceabilityzzzz
+    name: Release traceability
     defaults:
       run:
         working-directory: .
     steps:
     - uses: actions/checkout@v2
-    - name: Unshallow Fetchaaa
+    - name: Unshallow Fetch
       run: git fetch --prune --unshallow
     - uses: actions/setup-go@v2
       with:
