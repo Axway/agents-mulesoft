@@ -10,7 +10,7 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
-    name: Build & release snapshots
+    name: Build, test, & release snapshots
     defaults:
       run:
         working-directory: .
