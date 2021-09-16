@@ -19,7 +19,7 @@ jobs:
       uses: goreleaser/goreleaser-action@v2.5.0
       with:
         workdir: ./cmd/discovery
-        args: release -f .goreleaser.yml
+        args: release -f ../../.goreleaser.yml
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -36,6 +36,6 @@ jobs:
       uses: goreleaser/goreleaser-action@v2.5.0
       with:
         workdir: ./cmd/traceability
-        args: release -f .goreleaser-ta.yml
+        args: release -f ../../.goreleaser-ta.yml
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
