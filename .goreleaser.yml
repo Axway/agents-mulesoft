@@ -60,8 +60,6 @@ archives:
     files:
       - default_mulesoft_discovery_agent.yml
       - ./README_discovery.md
-      - ./foo.md
-      - bar.md
   # - id: traceability_agent_archives
   #   name_template: "mulesoft_traceability_agent_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
   #   replacements:
