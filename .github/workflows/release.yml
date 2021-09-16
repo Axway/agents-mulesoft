@@ -23,7 +23,7 @@ jobs:
       uses: goreleaser/goreleaser-action@v2.5.0
       with:
         # workdir: ./cmd/discovery
-        # workdir: .
+        workdir: .
         # args: release -f ../../.goreleaser.yml
         args: release -f .goreleaser.yml
       env:
