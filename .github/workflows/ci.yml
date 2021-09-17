@@ -34,5 +34,4 @@ jobs:
     - name: Traceability Release (Snapshot)
       uses: goreleaser/goreleaser-action@v2.5.0
       with:
-        working-directory: ./cmd/traceability
         args: release -f .goreleaser-ta.yml --snapshot --skip-publish --rm-dist
