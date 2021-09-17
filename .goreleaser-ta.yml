@@ -9,7 +9,7 @@ before:
 builds:
   - id: mulesoft_traceability_agent
     binary: mulesoft_traceability_agent
-    main: ./main.go
+    main: ./cmd/traceability/main.go
     flags:
       - -tags=static_all
       - -a
