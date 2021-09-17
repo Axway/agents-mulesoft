@@ -19,7 +19,7 @@ builds:
       - -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildCommitSha={{.Commit}}'
       - -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildAgentName=MulesoftDiscoveryAgent'
       - -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildAgentDescription=Mulesoft Discovery Agent'
-			-	-X 'github.com/Axway/agent-sdk/pkg/cmd.SDKBuildVersion={{env.SdkVersion}}'
+      -	-X 'github.com/Axway/agent-sdk/pkg/cmd.SDKBuildVersion={{env.SdkVersion}}'
     env:
       - CGO_ENABLED=0
     goos:
