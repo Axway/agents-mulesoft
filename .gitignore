@@ -21,9 +21,3 @@ bin/
 .DS_Store
 .run/
 *.log
-
-mulesoft_traceability_agent.yml
-mulesoft_discovery_agent.yml
-node_modules
-/mulesoft_discovery_agent/
-/mulesoft_traceability_agent/
