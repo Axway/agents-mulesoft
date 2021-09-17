@@ -14,7 +14,7 @@ The traceability agent retrieves traffic and usage data from the Mulesoft API Ma
 
 ## Getting Started
 
-The settup process is:
+The setup process is:
 - Download and install the agents.
 - Create a Service Account in Amplify Central for the agents to use.
 - Create an Environment in Amplify Central for the agents to publish too.
