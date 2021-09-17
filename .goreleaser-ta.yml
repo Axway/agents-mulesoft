@@ -23,9 +23,9 @@ builds:
     env:
       - CGO_ENABLED=0
     goos:
-      - linux
+      # - linux
       - windows
-      - darwin
+      # - darwin
 
 archives:
   - id: traceability_agent_archives
