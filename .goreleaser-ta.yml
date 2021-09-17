@@ -38,7 +38,7 @@ archives:
       amd64: x86_64
     wrap_in_directory: traceability_agent
     files:
-      - default_mulesoft_traceability_agent.yml
+      - mulesoft_traceability_agent.yml
       - README_traceability.md
 
 checksum:

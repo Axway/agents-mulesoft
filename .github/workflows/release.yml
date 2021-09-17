@@ -22,7 +22,7 @@ jobs:
     - name: Discovery Release
       uses: goreleaser/goreleaser-action@v2.5.0
       with:
-        args: release -f .goreleaser.yml
+        args: release -f .goreleaser-da.yml
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
  
