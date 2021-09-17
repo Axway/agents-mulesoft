@@ -19,6 +19,9 @@ jobs:
     - uses: actions/setup-go@v2
       with:
         go-version: '^1.16.0'
+    - name: Get SDK version
+      # run: echo "go list -m github.com/Axway/agent-sdk | awk '{print $$2}' | awk -F'-' '{print substr($$1, 2)}'" >> $GITHUB_SDKVER
+      run: echo "SdkVersion=12345 >> $GITHUB_ENV
     - name: Discovery Release
       uses: goreleaser/goreleaser-action@v2.5.0
       with:
