@@ -4,7 +4,6 @@ before:
     - go mod download
     - go mod tidy
     - go mod vendor
-# - export sdkVersion=`go list -m github.com/Axway/agent-sdk | awk '{print $$2}' | awk -F'-' '{print substr($$1, 2)}'`
 
 builds:
   - id: mulesoft_traceability_agent
@@ -24,8 +23,8 @@ builds:
       - CGO_ENABLED=0
     goos:
       - linux
-      # - windows
-      # - darwin
+      - windows
+      - darwin
 
 archives:
   - id: traceability_agent_archives
