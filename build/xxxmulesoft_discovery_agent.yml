@@ -1,4 +1,4 @@
-central:
+centralxxxx:
   agentName: ${CENTRAL_AGENTNAME:""}
   organizationID: "<Amplify_ORG_ID>"
   environment: <Amplify_CENTRAL_ENVIRONMENT_NAME>
