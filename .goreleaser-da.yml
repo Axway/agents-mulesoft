@@ -36,7 +36,7 @@ archives:
       amd64: x86_64
     wrap_in_directory: discovery_agent
     files:
-      - mulesoft_discovery_agent.yml
+      - build/xxxmulesoft_discovery_agent.yml
       - README_discovery.md
       - README_subscription.md
 
