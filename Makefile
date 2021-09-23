@@ -22,9 +22,20 @@ format:
 	@gofmt -w .
 	@goimports -w .
 
+dep:
+	@echo "Resolving go package dependencies"
+	@go mod tidy
+	@echo "Package dependencies completed"
+
+dep-version:
+	@export version=$(sdk) && make update-sdk && make dep
+
+dep-sdk: 
+	@make sdk=main dep-version
+
 update-sdk:
 	@echo "Updating SDK dependencies"
-	@export GOFLAGS="" && go get "github.com/Axway/agent-sdk@main"
+	@export GOFLAGS="" && go get "github.com/Axway/agent-sdk@${version}"
 
 run-discovery:
 	@go run ./cmd/discovery/main.go
