@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/cache"
+	"github.com/Axway/agent-sdk/pkg/util"
 
 	"github.com/Axway/agent-sdk/pkg/jobs"
 
@@ -127,9 +128,12 @@ func NewMuleEventEmitterJob(
 	checkStatus hc.CheckStatus,
 	getStatus func(endpoint string) hc.StatusLevel,
 ) (*MuleEventEmitterJob, error) {
-	_, err := hc.RegisterHealthcheck("Data Ingestion Endpoint", healthCheckEndpoint, checkStatus)
-	if err != nil {
-		return nil, err
+	// don't start the healthchecker in test mode
+	if util.IsNotTest() {
+		_, err := hc.RegisterHealthcheck("Data Ingestion Endpoint", healthCheckEndpoint, checkStatus)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &MuleEventEmitterJob{

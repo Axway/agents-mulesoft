@@ -54,4 +54,4 @@ build-trace-docker:
 
 test:
 	mkdir -p coverage
-	@go test -short -count=1 -coverprofile=coverage/coverage.cov ${GO_PKG_LIST}
+	@go test -race -short -count=1 -coverprofile=coverage/coverage.cov ${GO_PKG_LIST}
