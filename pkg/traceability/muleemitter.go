@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/cache"
-	"github.com/Axway/agent-sdk/pkg/util"
 
 	"github.com/Axway/agent-sdk/pkg/jobs"
 
@@ -28,6 +27,8 @@ type Emitter interface {
 	Start() error
 	OnConfigChange(gatewayCfg *config.AgentConfig)
 }
+
+type healthChecker func(name, endpoint string, check hc.CheckStatus) (string, error)
 
 // MuleEventEmitter - Gathers analytics data for publishing to Central.
 type MuleEventEmitter struct {
@@ -127,13 +128,11 @@ func NewMuleEventEmitterJob(
 	pollInterval time.Duration,
 	checkStatus hc.CheckStatus,
 	getStatus func(endpoint string) hc.StatusLevel,
+	registerHC healthChecker,
 ) (*MuleEventEmitterJob, error) {
-	// don't start the healthchecker in test mode
-	if util.IsNotTest() {
-		_, err := hc.RegisterHealthcheck("Data Ingestion Endpoint", healthCheckEndpoint, checkStatus)
-		if err != nil {
-			return nil, err
-		}
+	_, err := registerHC("Data Ingestion Endpoint", healthCheckEndpoint, checkStatus)
+	if err != nil {
+		return nil, err
 	}
 
 	return &MuleEventEmitterJob{

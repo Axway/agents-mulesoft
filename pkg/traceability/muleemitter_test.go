@@ -59,7 +59,7 @@ func TestMuleEventEmitterJob(t *testing.T) {
 	}
 	emitter := NewMuleEventEmitter("/tmp", eventCh, client)
 
-	job, err := NewMuleEventEmitterJob(emitter, pollInterval, mockHealthCheck, getStatusSuccess)
+	job, err := NewMuleEventEmitterJob(emitter, pollInterval, mockHealthCheck, getStatusSuccess, mockRegisterHC)
 	assert.Nil(t, err)
 	assert.Equal(t, pollInterval, job.pollInterval)
 
@@ -95,4 +95,9 @@ func mockHealthCheck(string) *hc.Status {
 
 func getStatusSuccess(string) hc.StatusLevel {
 	return hc.OK
+}
+
+func mockRegisterHC(name, endpoint string, check hc.CheckStatus) (string, error) {
+	fmt.Println("Here")
+	return string(hc.OK), nil
 }
