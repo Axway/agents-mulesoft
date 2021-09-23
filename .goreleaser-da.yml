@@ -1,0 +1,54 @@
+# Documentation at http://goreleaser.com
+before:
+  hooks:
+    - go mod download
+    - go mod tidy
+    - go mod vendor
+
+builds:
+  - id: mulesoft_discovery_agent
+    binary: mulesoft_discovery_agent
+    main: ./cmd/discovery/main.go
+    flags:
+      - -tags=static_all
+      - -a
+    ldflags:
+      - -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildTime={{.Date}}'
+      - -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildVersion={{.Version}}'
+      - -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildCommitSha={{.Commit}}'
+      - -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildAgentName=MulesoftDiscoveryAgent'
+      - -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildAgentDescription=Mulesoft Discovery Agent'
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+
+archives:
+  - id: discovery_agent_archives
+    name_template: "mulesoft_discovery_agent_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    replacements:
+      darwin: Darwin
+      linux: Linux
+      windows: Windows
+      386: i386
+      amd64: x86_64
+    wrap_in_directory: discovery_agent
+    files:
+      - mulesoft_discovery_agent.yml
+      - README_discovery.md
+      - README_subscription.md
+
+checksum:
+  name_template: "discovery_checksums.txt"
+
+snapshot:
+  name_template: "{{ .Tag }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'

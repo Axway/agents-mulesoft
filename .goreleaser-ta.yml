@@ -4,10 +4,11 @@ before:
     - go mod download
     - go mod tidy
     - go mod vendor
+
 builds:
-  - id: mulesoft_discovery_agent
-    binary: mulesoft_discovery_agent
-    main: ./main.go
+  - id: mulesoft_traceability_agent
+    binary: mulesoft_traceability_agent
+    main: ./cmd/traceability/main.go
     flags:
       - -tags=static_all
       - -a
@@ -15,29 +16,36 @@ builds:
       - -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildTime={{.Date}}'
       - -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildVersion={{.Version}}'
       - -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildCommitSha={{.Commit}}'
-      - -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildAgentName=MulesoftDiscoveryAgent'
+      - -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildAgentName=MulesoftTraceabilityAgent'
+      - -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildAgentDescription=Mulesoft Traceability Agent'
+      - -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildDataPlaneType=Mulesoft'
     env:
       - CGO_ENABLED=0
     goos:
       - linux
       - windows
       - darwin
+
 archives:
-  - name_template: "mulesoft_discovery_agent_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+  - id: traceability_agent_archives
+    name_template: "mulesoft_traceability_agent_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     replacements:
       darwin: Darwin
       linux: Linux
       windows: Windows
       386: i386
       amd64: x86_64
-    wrap_in_directory: discovery_agent
+    wrap_in_directory: traceability_agent
     files:
-      - mulesoft_discovery_agent.yml
-      - README.md
+      - mulesoft_traceability_agent.yml
+      - README_traceability.md
+
 checksum:
-  name_template: "discovery_checksums.txt"
+  name_template: "traceability_checksums.txt"
+
 snapshot:
   name_template: "{{ .Tag }}-next"
+
 changelog:
   sort: asc
   filters:

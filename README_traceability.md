@@ -4,10 +4,10 @@
 
 Install the agent and provision Amplify Central access as described in [https://github.com/Axway/agents-mulesoft/blob/main/README.md](https://github.com/Axway/agents-mulesoft/blob/main/README.md).
 
-- Amplify organization id
-- Amplify Central environment name
-- Public/Private key pem files
-- Service account client id
+- Amplify organization id: the organization identifier. Refer to Platform home > Organization
+- Amplify Central environment name: the name of the environment the agent will report APIs to.
+- Service account client id: the service account client ID used by the agent to communicate with Amplify platform.
+- Public/Private key pem files: the public and private key associated to the service account the agent is using to communicate with Amplify platform.
 
 As well as access to Amplify Central it is assumed you have access to the [Mulesoft Anypoint Platform](https://anypoint.mulesoft.com/exchange). You need:
 
@@ -16,12 +16,16 @@ As well as access to Amplify Central it is assumed you have access to the [Mules
 
 ## Configuring the Traceability Agent
 
-The agents read their configuration from a YAML file. To set up your config file copy the content of `default_mulesoft_traceability_agent.yml` into a new file named `mulesoft_traceability_agent`, and replace the default values that reflect your environment.
+The agents read their configuration from a YAML files or optionally from an environment variables file. Within the release package, you will find the agent binary as well as the agent yaml configuration file. To set up your agent configuration, replace the values in `<valueToBeReplaced>` with the correct name that reflect your environment (organizationID, environment, public/private key file names and clientID).
 
 ## Start the Traceability Agent
 
-```
+```shell
+# starting the agent by providing the path of the configuration file
 ./mulesoft_traceability_agent --pathConfig <path to mulesoft_traceability_agent.yaml>
+
+# If binary and yaml files are in the same folder, you can start the agent using:
+./mulesoft_traceability_agent
 ```
 
 ## Configuration Variables
@@ -36,7 +40,7 @@ The agents read their configuration from a YAML file. To set up your config file
 | CENTRAL_AUTH_PRIVATEKEY        | central.auth.privateKey                                              |The private key file path from the commands above                                                                                                                                                                                                                                                        | _/keys/private_key.pem_                                              |
 | CENTRAL_AUTH_PUBLICKEY         | central.auth.publicKey                                               |The public key file path from the commands above                                                                                                                                                                                                                                                         | _/keys/public_key.pem_                                               |
 | CENTRAL_AUTH_REALM             | central.auth.realm                                                   |The Realm used to authenticate for AMPLIFY Central                                                                                                                                                                                                                                                       | _Broker_                                                             |
-| CENTRAL_AUTH_URL               | central.auth.url                                                     |The URL used to authenticate for AMPLIFY Central                                                                                                                                                                                                                                                         | _https://login.axway.com/auth_                                       |
+| CENTRAL_AUTH_URL               | central.auth.url                                                     |The URL used to authenticate for AMPLIFY Central                                                                                                                                                                                                                                                         | _<https://login.axway.com/auth>_                                       |
 | CENTRAL_DEPLOYMENT             | central.deployment                                                   |The AMPLIFY Central deployment environment (beano, dev, prod, preprod)                                                                                                                                                                                                                                   | _prod_                                                               |
 | CENTRAL_ENVIRONMENT            | central.environment                                                  |The Environment Name for the AMPLIFY Central Environment                                                                                                                                                                                                                                                 | **See Instructions below**                                           |
 | CENTRAL_ORGANIZATIONID         | central.platformURL                                                  |The Organization ID from AMPLIFY Central                                                                                                                                                                                                                                                                 | **Platform -> Click User -> Organization**                           |
@@ -45,12 +49,12 @@ The agents read their configuration from a YAML file. To set up your config file
 | CENTRAL_SSL_MAXVERSION         | central.ssl.maxVersion                                               |String value for the maximum SSL/TLS version that is acceptable. If empty, then the maximum version supported by this package is used, which is currently TLS 1.3. Allowed values are: TLS1.0, TLS1.1, TLS1.2, TLS1.3                                                                                    | Internally, this value defaults to empty                             |
 | CENTRAL_SSL_MINVERSION         | central.ssl.minVersion                                               |String value for the minimum SSL/TLS version that is acceptable. If zero, empty TLS 1.0 is taken as the minimum. Allowed values are: TLS1.0, TLS1.1, TLS1.2, TLS1.3                                                                                                                                      | Internally, the value defaults toTLS1.2                              |
 | CENTRAL_SSL_NEXTPROTOS         | central.ssl.nextProtos                                               |An array of strings. It is a list of supported application level protocols, in order of preference, based on the ALPN protocol list. Allowed values are: h2, htp/1.0, http/1.1, h2c                                                                                                                      | Internally empty. Default negotiation.                               |
-| CENTRAL_URL                    | central.URL                                                          |The URL to the AMPLIFY Central instance being used for this traceability agent                                                                                                                                                                                                                           | _https://apicentral.axway.com_                                       |
+| CENTRAL_URL                    | central.URL                                                          |The URL to the AMPLIFY Central instance being used for this traceability agent                                                                                                                                                                                                                           | _<https://apicentral.axway.com>_                                       |
 | LOG_FORMAT                     | log.format                                                           |The format to print log messages (json, line, package)                                                                                                                                                                                                                                                   | _json_                                                               |
 | LOG_LEVEL                      | log.level                                                            |The log level for output messages (debug, info, warn, error)                                                                                                                                                                                                                                             | _info_                                                               |
 | LOG_OUTPUT                     | log.output                                                           |The output for the log lines (stdout, file, both)                                                                                                                                                                                                                                                        | _stdout_                                                             |
 | LOG_PATH                       | log.path                                                             |The path (relative or absolute) to save logs files, if output type file or both                                                                                                                                                                                                                          | _logs_                                                               |
-| MULESOFT_ANYPOINTEXCHANGEURL   | mulesoft.anypointExchangeUrl                                        | Mulesoft Anypoint Exchange URL                                                                                                                                                                                                                                                                           | https://anypoint.mulesoft.com                                        |
+| MULESOFT_ANYPOINTEXCHANGEURL   | mulesoft.anypointExchangeUrl                                        | Mulesoft Anypoint Exchange URL                                                                                                                                                                                                                                                                           | <https://anypoint.mulesoft.com>                                        |
 | MULESOFT_AUTH_LIFETIME         | mulesoft.auth.lifetime                                              | The session lifetime. The agent will automatically refresh the access token as it approaches the end of its lifetime                                                                                                                                                                                     | 60m                                                                  |
 | MULESOFT_AUTH_PASSWORD         | mulesoft.auth.password                                              | The password for the Mulesoft Anypoint username created for this agent                                                                                                                                                                                                                                   |                                                                      |
 | MULESOFT_AUTH_USERNAME         | mulesoft.auth.username                                              | The Mulesoft Anypoint username created for this agent                                                                                                                                                                                                                                                    |                                                                      |
@@ -58,7 +62,7 @@ The agents read their configuration from a YAML file. To set up your config file
 | MULESOFT_ENVIRONMENT           | mulesoft.environment                                                | The Mulesoft Anypoint Exchange the agent connects to, e.g. Sandbox.                                                                                                                                                                                                                                      |                                                                      |
 | MULESOFT_ORGNAME               | mulesoft.orgName                                                    | The Mulesoft Anypoint Business Unit the agent connects to                                                                                                                                                                                                                                                |                                                                      |
 | MULESOFT_POLLINTERVAL          | mulesoft.pollInterval                                               | The frequency in which Mulesoft API Manager is polled for new endpoints.                                                                                                                                                                                                                                 | _30s_                                                                |
-| MULESOFT_PROXYURL              | mulesoft.proxyUrl                                                   | The url for the proxy for API Manager (e.g. http://username:password@hostname:port). If empty, no proxy is defined.                                                                                                                                                                                      | Internally, this value defaults to empty                             |
+| MULESOFT_PROXYURL              | mulesoft.proxyUrl                                                   | The url for the proxy for API Manager (e.g. <http://username:password@hostname:port>). If empty, no proxy is defined.                                                                                                                                                                                      | Internally, this value defaults to empty                             |
 | MULESOFT_SSL_CIPHERSUITES      | mulesoft.ssl.cipherSuites                                           | An array of strings. It is a list of supported cipher suites for TLS versions up to TLS 1.2. If CipherSuites is nil, a default list of secure cipher suites is used, with a preference order based on hardware performance. [See below](#supported-cipher-suites) for currently supported cipher suites. | [See below](#default-cipher-suites) for default cipher suite setting |
 | MULESOFT_SSL_INSECURESKIPVERIFY | mulesoft.ssl.insecureSkipVerify                                    | InsecureSkipVerify controls whether a client verifies the server's certificate chain and host name. If InsecureSkipVerify is true, TLS accepts any certificate presented by the server and any host name in that certificate. In this mode, TLS is susceptible to man-in-the-middle attacks.             | Internally defaulted to false                                        |
 | MULESOFT_SSL_MAXVERSION        | mulesoft.ssl.maxVersion                                             | String value for the maximum SSL/TLS version that is acceptable. If empty, then the maximum version supported by this package is used, which is currently TLS 1.3. Allowed values are: TLS1.0, TLS1.1, TLS1.2, TLS1.3                                                                                    | Internally, this value defaults to empty                             |
@@ -80,7 +84,7 @@ The agents read their configuration from a YAML file. To set up your config file
 | TRACEABILITY_REDACTION_RESPONSEHEADER_SHOW| output.traceability.redaction.response.show               |The redaction environment variable to set a Regex expression to show Response headers                                                                                                                                                                                                                    | Internally, this value defaults to empty                             |
 | TRACEABILITY_REDACTION_RESPONSEHEADER_SANITIZE| output.traceability.redaction.responseheader.sanitize |The redaction environment variable to set a Regex expression to sanitize Response headers                                                                                                                                                                                                                | Internally, this value defaults to empty                             |
 
-For the redaction based environment variables, please refer to [Setting up Redaction](https://axway-open-docs.netlify.app/docs/central/connected_agent_common_reference/trace_redaction/) 
+For the redaction based environment variables, please refer to [Setting up Redaction](https://axway-open-docs.netlify.app/docs/central/connected_agent_common_reference/trace_redaction/)
 
 ### Supported Cipher Suites
 
@@ -89,8 +93,6 @@ The allowed cipher suites string values are allowed: ECDHE-ECDSA-AES-128-CBC-SHA
 ### Default Cipher Suites
 
 The list of default cipher suites is: ECDHE-ECDSA-AES-256-GCM-SHA384, ECDHE-RSA-AES-256-GCM-SHA384, ECDHE-ECDSA-CHACHA20-POLY1305, ECDHE-RSA-CHACHA20-POLY1305, ECDHE-ECDSA-AES-128-GCM-SHA256, ECDHE-RSA-AES-128-GCM-SHA256, ECDHE-ECDSA-AES-128-CBC-SHA256, ECDHE-RSA-AES-128-CBC-SHA256
-
-
 
 ## Build Docker images
 
@@ -101,10 +103,13 @@ docker build -t mulesoft-traceability -f Dockerfile.traceability .
 ## Deploy in Kubernetes Cluster
 
 After making the public/private keys associated with the CENTRAL_AUTH_CLIENTID, make a resource of type secret from the files.
+
 ```bash
 kubectl create secret generic key-pair --from-file=publicKey=public_key.pem --from-file=privateKey=private_key.pem
 ```
+
 Also, create a secret based on the credentials associated with the mulesoft account  by populating the values in muleauth-traceability.yaml
+
 ```
 apiVersion: v1
 kind: Secret
@@ -115,10 +120,13 @@ stringData:
   username:
   password:
 ```
+
 ```bash
 kubectl apply -f mulesoft-auth.yaml
 ```
-Provide the environment Variables required by the manifest file. 
+
+Provide the environment Variables required by the manifest file.
+
 ```bash
 kubectl apply -f traceability-deployment.yaml
 ```
