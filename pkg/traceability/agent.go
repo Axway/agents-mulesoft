@@ -39,7 +39,7 @@ func NewBeater(_ *beat.Beat, _ *common.Config) (beat.Beater, error) {
 	processor := NewEventProcessor(agentConfig, generator, mapper)
 	emitter := NewMuleEventEmitter(agentConfig.MulesoftConfig.CachePath, eventChannel, client)
 
-	emitterJob, err := NewMuleEventEmitterJob(emitter, pollInterval, traceabilityHealthCheck, hc.GetStatus)
+	emitterJob, err := NewMuleEventEmitterJob(emitter, pollInterval, traceabilityHealthCheck, hc.GetStatus, hc.RegisterHealthcheck)
 	if err != nil {
 		return nil, err
 	}

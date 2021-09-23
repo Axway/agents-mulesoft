@@ -28,6 +28,8 @@ type Emitter interface {
 	OnConfigChange(gatewayCfg *config.AgentConfig)
 }
 
+type healthChecker func(name, endpoint string, check hc.CheckStatus) (string, error)
+
 // MuleEventEmitter - Gathers analytics data for publishing to Central.
 type MuleEventEmitter struct {
 	client       anypoint.AnalyticsClient
@@ -126,8 +128,9 @@ func NewMuleEventEmitterJob(
 	pollInterval time.Duration,
 	checkStatus hc.CheckStatus,
 	getStatus func(endpoint string) hc.StatusLevel,
+	registerHC healthChecker,
 ) (*MuleEventEmitterJob, error) {
-	_, err := hc.RegisterHealthcheck("Data Ingestion Endpoint", healthCheckEndpoint, checkStatus)
+	_, err := registerHC("Data Ingestion Endpoint", healthCheckEndpoint, checkStatus)
 	if err != nil {
 		return nil, err
 	}
