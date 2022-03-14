@@ -21,10 +21,9 @@ include:
     ref: master
     file:
       - '/.gitlab-ci-prepcsr.yml'
-      - '/.gitlab-ci-twistlock.yml'
-      - '/.gitlab-ci-iriusrisk.yml'
       - '/.gitlab-ci-fortify.yml'
       - "/.gitlab-ci-whitesource.yml"
+      - "/.gitlab-ci-csr.yml"
 
 stages:
   # - build
@@ -91,6 +90,16 @@ stages:
 #   needs:
 #     - "docker-build"
 
+
+run-csr:
+  dependencies:
+    - fetch-fortify
+    - whitesource
+
+update-csr:
+  dependencies:
+    - fetch-fortify
+    - whitesource:on-schedule
 
 # twistlock:
 #   interruptible: true
