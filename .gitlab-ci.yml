@@ -12,30 +12,25 @@ variables:
 
 
 include:
+  - project: "apigov/beano_cicd"
+    ref: master
+    # the order of these include files is important
+    file:
+      - "/gitlabci/csrjobs.yml"
   - project: 'scurity/gitlabci'
     ref: master
-    file: '/.gitlab-ci-prepcsr.yml'
-  - project: 'scurity/gitlabci'
-    ref: master
-    file: '/.gitlab-ci-twistlock.yml'
-  - project: 'scurity/gitlabci'
-    ref: master
-    file: '/.gitlab-ci-iriusrisk.yml'
-  - project: 'scurity/gitlabci'
-    ref: master
-    file: '/.gitlab-ci-fortify.yml'
-  - project: "scurity/gitlabci"
-    ref: master
-    file: "/.gitlab-ci-gosec.yml"
-  - project: "scurity/gitlabci"
-    ref: master
-    file: "/.gitlab-ci-whitesource.yml"
-
+    file:
+      - '/.gitlab-ci-prepcsr.yml'
+      - '/.gitlab-ci-twistlock.yml'
+      - '/.gitlab-ci-iriusrisk.yml'
+      - '/.gitlab-ci-fortify.yml'
+      - "/.gitlab-ci-whitesource.yml"
 
 stages:
-  - build
-  - push
+  # - build
+  # - push
   - security-scans
+  - security-review
 
 .add-ca-cert: &add-ca-cert |
   curl -s http://swf-artifactory.lab.phx.axway.int/artifactory/certs/Axway-CA.crt -o Axway-CA-new.crt
@@ -63,76 +58,62 @@ stages:
 #  docker login -u ${REPO_USER} -p ${REPO_TOKEN} ${REPO}
 
 
-docker-build:
-  stage: build
-  before_script:
-    - 'true'
-  variables:
-    REGISTRY_USER: ${REPO_USER}
-    REGISTRY_TOKEN: ${REPO_TOKEN}
-  script:
-    - apk add --no-cache git
-    - apk add --no-cache make
-    - make docker-build
-  except:
-    - schedules
+# docker-build:
+#   stage: build
+#   before_script:
+#     - 'true'
+#   variables:
+#     REGISTRY_USER: ${REPO_USER}
+#     REGISTRY_TOKEN: ${REPO_TOKEN}
+#   script:
+#     - apk add --no-cache git
+#     - apk add --no-cache make
+#     - make docker-build
+#   except:
+#     - schedules
 
-docker-push:
-  interruptible: true
-  stage: push
-  variables:
-    REGISTRY: ${ART_TEST_PUSH}
-    REGISTRY_USER: ${ARTIFACTORY_AMPC_XENON_DOCKER_USER}
-    REGISTRY_TOKEN: ${ARTIFACTORY_AMPC_XENON_DOCKER_PASSWORD}
-  script:
-    - apk add --no-cache git
-    - apk add --no-cache make
-    - docker login $REGISTRY -u $REGISTRY_USER -p $REGISTRY_TOKEN
-    - make push
-#  only:
-#    - tags
-  except:
-    - schedules
-  needs:
-    - "docker-build"
+# docker-push:
+#   interruptible: true
+#   stage: push
+#   variables:
+#     REGISTRY: ${ART_TEST_PUSH}
+#     REGISTRY_USER: ${ARTIFACTORY_AMPC_XENON_DOCKER_USER}
+#     REGISTRY_TOKEN: ${ARTIFACTORY_AMPC_XENON_DOCKER_PASSWORD}
+#   script:
+#     - apk add --no-cache git
+#     - apk add --no-cache make
+#     - docker login $REGISTRY -u $REGISTRY_USER -p $REGISTRY_TOKEN
+#     - make push
+# #  only:
+# #    - tags
+#   except:
+#     - schedules
+#   needs:
+#     - "docker-build"
 
 
-twistlock:
-  interruptible: true
-  before_script:
-    - apk add --no-cache git
-    - export LATEST_TAG=$(eval ${LATEST_TAG_CMD})
-    - export IMAGE_NAME="ampc-xenon-docker-release-phx.swf-artifactory.lab.phx.axway.int/agents-mulesoft/traceability-agent:0.0.4"
-  needs:
-   - "docker-push"
+# twistlock:
+#   interruptible: true
+#   before_script:
+#     - apk add --no-cache git
+#     - export LATEST_TAG=$(eval ${LATEST_TAG_CMD})
+#     - export IMAGE_NAME="ampc-xenon-docker-release-phx.swf-artifactory.lab.phx.axway.int/agents-mulesoft/traceability-agent:0.0.4"
+#   needs:
+#    - "docker-push"
 
-twistlock:on-schedule:
-  interruptible: true
-  before_script:
-    - apk add --no-cache git
-    - export LATEST_TAG=$(git tag -l --sort="version:refname" | tail -1)
-    - export IMAGE_NAME=" ampc-xenon-docker-release-phx.swf-artifactory.lab.phx.axway.int/agents-mulesoft/traceability-agent:0.0.4"
-    - docker pull ${IMAGE_NAME}
+# twistlock:on-schedule:
+#   interruptible: true
+#   before_script:
+#     - apk add --no-cache git
+#     - export LATEST_TAG=$(git tag -l --sort="version:refname" | tail -1)
+#     - export IMAGE_NAME=" ampc-xenon-docker-release-phx.swf-artifactory.lab.phx.axway.int/agents-mulesoft/traceability-agent:0.0.4"
+#     - docker pull ${IMAGE_NAME}
 
-gosec:
-  interruptible: true
-  retry: 0
-  before_script:
-    - export GOFLAGS=-mod=vendor
-
-gosec:on-schedule:
-  interruptible: true
-  retry: 0
-  before_script:
-    - export GOFLAGS=-mod=vendor
-    - export LATEST_TAG=$(git tag -l --sort="version:refname" | tail -1)
-    - git checkout ${LATEST_TAG}
-
-fetch-iriusrisk:
-  interruptible: true
-  only:
-    variables:
-      - $RUN_IRIUS_RISK == "true"
+# fetch-iriusrisk:
+#   interruptible: true
+#   only:
+#     variables:
+#       - $RUN_IRIUS_RISK == "true"
 #unit-tests:
 #  image: golang:1.14.3-stretch
 #  stage: test
