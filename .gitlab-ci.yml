@@ -1,0 +1,167 @@
+image: docker:dind
+
+variables:
+  PROJECT: 'agents-mulesoft'
+#  REPO: 'hub.docker.com'
+#  REPO_USER: 'chrisccoy'
+#  REPO_TOKEN: '5fc7f290-8d92-44b6-a027-6fd20bc9957f'
+  ART_TEST_PUSH: 'ampc-xenon-docker-release-phx.swf-artifactory.lab.phx.axway.int'
+  ART_TEST_PULL: 'axway.jfrog.io/ampc-xenon-docker-release'
+  ART_RELEASE_FOR_ON_PREM_PUSH: 'ampc-public-docker-release-phx.swf-artifactory.lab.phx.axway.int'
+  ART_RELEASE_FOR_ON_PREM_PULL: 'axway.jfrog.io/ampc-public-docker-release'
+
+
+include:
+  - project: 'scurity/gitlabci'
+    ref: master
+    file: '/.gitlab-ci-prepcsr.yml'
+  - project: 'scurity/gitlabci'
+    ref: master
+    file: '/.gitlab-ci-twistlock.yml'
+  - project: 'scurity/gitlabci'
+    ref: master
+    file: '/.gitlab-ci-iriusrisk.yml'
+  - project: 'scurity/gitlabci'
+    ref: master
+    file: '/.gitlab-ci-fortify.yml'
+  - project: "scurity/gitlabci"
+    ref: master
+    file: "/.gitlab-ci-gosec.yml"
+  - project: "scurity/gitlabci"
+    ref: master
+    file: "/.gitlab-ci-whitesource.yml"
+
+
+stages:
+  - build
+  - push
+  - security-scans
+
+.add-ca-cert: &add-ca-cert |
+  curl -s http://swf-artifactory.lab.phx.axway.int/artifactory/certs/Axway-CA.crt -o Axway-CA-new.crt
+  mv Axway-CA-new.crt /usr/local/share/ca-certificates/
+  update-ca-certificates
+
+.go-setup: &go-setup |
+  # Ensure the project is under the go path
+  cd $GOPATH/src
+  # attempt to install golint before cd'ing to project dir so no other deps are updated
+  go get -x golang.org/x/lint/golint
+  # show where it got installed
+  go list -f {{.Target}} golang.org/x/lint/golint
+  # Create path to the project. Should match location of repo (needed for imports)
+  mkdir -p git.ecd.axway.org/$CI_PROJECT_NAMESPACE
+  # cd into project directory
+  cd git.ecd.axway.org/$CI_PROJECT_NAMESPACE
+  # Link the project with the current directory
+  ln -s $CI_PROJECT_DIR
+  # cd into project
+  cd $CI_PROJECT_NAME
+  pwd
+
+#.docker-login: &docker-login |
+#  docker login -u ${REPO_USER} -p ${REPO_TOKEN} ${REPO}
+
+
+docker-build:
+  stage: build
+  before_script:
+    - 'true'
+  variables:
+    REGISTRY_USER: ${REPO_USER}
+    REGISTRY_TOKEN: ${REPO_TOKEN}
+  script:
+    - apk add --no-cache git
+    - apk add --no-cache make
+    - make docker-build
+  except:
+    - schedules
+
+docker-push:
+  interruptible: true
+  stage: push
+  variables:
+    REGISTRY: ${ART_TEST_PUSH}
+    REGISTRY_USER: ${ARTIFACTORY_AMPC_XENON_DOCKER_USER}
+    REGISTRY_TOKEN: ${ARTIFACTORY_AMPC_XENON_DOCKER_PASSWORD}
+  script:
+    - apk add --no-cache git
+    - apk add --no-cache make
+    - docker login $REGISTRY -u $REGISTRY_USER -p $REGISTRY_TOKEN
+    - make push
+#  only:
+#    - tags
+  except:
+    - schedules
+  needs:
+    - "docker-build"
+
+
+twistlock:
+  interruptible: true
+  before_script:
+    - apk add --no-cache git
+    - export LATEST_TAG=$(eval ${LATEST_TAG_CMD})
+    - export IMAGE_NAME="ampc-xenon-docker-release-phx.swf-artifactory.lab.phx.axway.int/agents-mulesoft/traceability-agent:0.0.4"
+  needs:
+   - "docker-push"
+
+twistlock:on-schedule:
+  interruptible: true
+  before_script:
+    - apk add --no-cache git
+    - export LATEST_TAG=$(git tag -l --sort="version:refname" | tail -1)
+    - export IMAGE_NAME=" ampc-xenon-docker-release-phx.swf-artifactory.lab.phx.axway.int/agents-mulesoft/traceability-agent:0.0.4"
+    - docker pull ${IMAGE_NAME}
+
+gosec:
+  interruptible: true
+  retry: 0
+  before_script:
+    - export GOFLAGS=-mod=vendor
+
+gosec:on-schedule:
+  interruptible: true
+  retry: 0
+  before_script:
+    - export GOFLAGS=-mod=vendor
+    - export LATEST_TAG=$(git tag -l --sort="version:refname" | tail -1)
+    - git checkout ${LATEST_TAG}
+
+fetch-iriusrisk:
+  interruptible: true
+  only:
+    variables:
+      - $RUN_IRIUS_RISK == "true"
+#unit-tests:
+#  image: golang:1.14.3-stretch
+#  stage: test
+##  before_script:
+# #   - *add-ca-cert
+#  script:
+#    - *go-setup
+#    - make test
+#  artifacts:
+#    paths:
+#      - coverage/coverage.cov
+#    expire_in: 1 week
+#  only:
+#    refs:
+#      - branches
+#      - master
+#  except:
+#    - schedules
+
+#lint-code:
+#  stage: test
+#  interruptible: true
+#  image: golang:1.14.3-stretch
+#  before_script:
+#    - *add-ca-cert
+#  script:
+#    - *go-setup
+#    - make lint
+#  except:
+#    - tags
+#    - schedules
+
