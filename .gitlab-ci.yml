@@ -103,8 +103,7 @@ stages:
 .dummy:
   stage: security-scans
   only:
-    refs:
-      - xxxx
+    - xxxx
   script:
     - ""
 
