@@ -15,7 +15,7 @@ variables:
   FORTIFY_BUILD_ID: "agents-mulesoft"
 
   # Whitesource
-  WS_PROJECT_ID: "agents_mulesoft"
+  WS_PROJECT_ID: "agents-mulesoft"
   WS_CONFIG_FILE: "whitesource.config"
 
 
@@ -116,7 +116,7 @@ whitesource:
   after_script:
     - echo "$WS_PROJECT_ID"
     - echo "$WS_CONFIG_FILE"
-    
+
 run-csr:
   dependencies:
     - fetch-fortify
