@@ -105,20 +105,11 @@ stages:
   script:
     - echo "foobar"
   only:
-    - xxxx
+    - xxxxx
   script:
     - ""
 
 fetch-iriusrisk:
-  extends: .dummy
-
-twistlock:
-  extends: .dummy
-
-twistlock:on-schedule:
-  extends: .dummy
-
-twistlock-master:
   extends: .dummy
 
 run-csr:
