@@ -102,8 +102,12 @@ stages:
 ####################
 .dummy:
   stage: security-scans
+  script:
+    - echo "foobar"
   only:
     - xxxx
+    refs:
+      - xxxx
   script:
     - ""
 
