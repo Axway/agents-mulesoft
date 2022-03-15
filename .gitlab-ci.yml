@@ -16,6 +16,7 @@ variables:
 
   # Whitesource
   WS_PROJECT_ID: "agents_mulesoft"
+  WS_CONFIG_FILE: "whitesource.config"
 
 
 include:
@@ -111,6 +112,11 @@ stages:
 fetch-iriusrisk:
   extends: .dummy
 
+whitesource:
+  after_script:
+    - echo "$WS_PROJECT_ID"
+    - echo "$WS_CONFIG_FILE"
+    
 run-csr:
   dependencies:
     - fetch-fortify
