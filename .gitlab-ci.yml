@@ -30,6 +30,7 @@ include:
       - '/.gitlab-ci-prepcsr.yml'
       - '/.gitlab-ci-fortify.yml'
       - "/.gitlab-ci-whitesource.yml"
+      - "/.gitlab-ci-twistlock.yml"
       - "/.gitlab-ci-csr.yml"
 
 stages:
