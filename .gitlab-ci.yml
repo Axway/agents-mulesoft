@@ -106,8 +106,6 @@ stages:
     - echo "foobar"
   only:
     - xxxx
-    refs:
-      - xxxx
   script:
     - ""
 
