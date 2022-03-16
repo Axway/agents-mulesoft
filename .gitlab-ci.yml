@@ -17,7 +17,7 @@ variables:
   # Whitesource
   WS_PROJECT_ID: "agents-mulesoft"
   WS_CONFIG_FILE: "whitesource.config"
-
+  WS_BRANCH: main
 
 include:
   - project: "apigov/beano_cicd"
