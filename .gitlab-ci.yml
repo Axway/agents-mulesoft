@@ -11,7 +11,7 @@ variables:
   # ART_RELEASE_FOR_ON_PREM_PULL: 'axway.jfrog.io/ampc-public-docker-release'
   
   # Fortify
-  # FORTIFY_PROJECT: "10566"
+  FORTIFY_PROJECT: "10715"
   FORTIFY_BUILD_ID: "agents-mulesoft"
 
   # Whitesource
