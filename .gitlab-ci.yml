@@ -13,7 +13,6 @@ variables:
   # Fortify
   FORTIFY_PROJECT: "10715"
   FORTIFY_BUILD_ID: "agents-mulesoft"
-  FORTIFY_BRANCH: "main"
 
   # Whitesource
   WS_PROJECT_ID: "agents-mulesoft"
@@ -114,9 +113,14 @@ fetch-iriusrisk:
   extends: .dummy
 
 whitesource:
-  after_script:
+    - echo "before wssched $CI_COMMIT_REF_NAME"
+  before_script:
     - echo "$WS_PROJECT_ID"
     - echo "$WS_CONFIG_FILE"
+
+whitesource:on-schedule:
+  before_script:
+    - echo "before wssched $CI_COMMIT_REF_NAME"
 
 run-csr:
   dependencies:
