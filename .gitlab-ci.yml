@@ -113,8 +113,8 @@ fetch-iriusrisk:
   extends: .dummy
 
 whitesource:
-    - echo "before wssched $CI_COMMIT_REF_NAME"
   before_script:
+    - echo "before wssched $CI_COMMIT_REF_NAME"
     - echo "$WS_PROJECT_ID"
     - echo "$WS_CONFIG_FILE"
 
