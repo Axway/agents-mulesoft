@@ -122,6 +122,49 @@ update-csr:
     - fetch-fortify
     - whitesource:on-schedule
 
+# sdk
+# twistlock:
+#   retry: 0
+#   tags:
+#     - twistlock
+#   before_script:
+#     - export IMAGE_VERSION=$(cat version)-${CI_COMMIT_SHA:0:8}
+#     - export IMAGE_NAME=${PROJECT}/${DOCKER_NAME}:${IMAGE_VERSION}
+
+# watchcontroller
+# twistlock:
+#   before_script:
+#     - apk add git
+#     - git config --global http.sslVerify false
+#     - export LATEST_TAG=$(git tag -l --sort="version:refname" | tail -1)
+#     - export IMAGE_NAME="${ARTIFACTORY_TEAM_DOCKER_DEV_REPO_URL}/${PROJECT}/${DOCKER_NAME}:${LATEST_TAG}-${CI_COMMIT_REF_NAME}-${CI_PIPELINE_ID}"
+#     - docker pull ${IMAGE_NAME}
+
+# inherits from beano_cicd/gitlabci/csrjobs.yml and scurity/gitlabci/.gitlab-ci-twistlock.yml
+# twistlock-master:
+#   before_script:
+#     - apk add git
+#     - git config --global http.sslVerify false
+#     - export LATEST_TAG=$(git tag -l --sort="version:refname" | tail -1)
+#     - export IMAGE_NAME="${ARTIFACTORY_TEAM_DOCKER_DEV_REPO_URL}/${PROJECT}/${DOCKER_NAME}:${LATEST_TAG}-${CI_COMMIT_REF_NAME}-${CI_PIPELINE_ID}"
+#     - docker pull ${IMAGE_NAME}
+
+#als
+# twistlock:
+#   interruptible: true
+#   before_script:
+#     - apk add --no-cache git
+#     - export LATEST_TAG=$(eval ${LATEST_TAG_CMD})
+#     - export IMAGE_NAME="${ART_BUILD_PUSH}/${APICENTRAL}/${PROJECT}:${LATEST_TAG}-${CI_COMMIT_REF_SLUG}"
+
+# twistlock:on-schedule:
+#   interruptible: true
+#   before_script:
+#     - apk add --no-cache git
+#     - export LATEST_TAG=$(git tag -l --sort="version:refname" | tail -1)
+#     - export IMAGE_NAME="${ART_RELEASE_FOR_ON_PREM_PULL}/${APICENTRAL}/${PROJECT}:${LATEST_TAG}"
+#     - docker pull ${IMAGE_NAME}
+
 # twistlock:
 #   interruptible: true
 #   before_script:
