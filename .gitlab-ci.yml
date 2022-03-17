@@ -21,12 +21,12 @@ variables:
 
 include:
   - project: "apigov/beano_cicd"
-    ref: master
+    ref: APIGOV-csr
     # the order of these include files is important
     file:
       - "/gitlabci/csrjobs.yml"
   - project: 'scurity/gitlabci'
-    ref: master
+    ref: APIGOV-csr
     file:
       - '/.gitlab-ci-prepcsr.yml'
       - '/.gitlab-ci-fortify.yml'
@@ -111,16 +111,6 @@ stages:
 
 fetch-iriusrisk:
   extends: .dummy
-
-whitesource:
-  before_script:
-    - echo "before wssched $CI_COMMIT_REF_NAME"
-    - echo "$WS_PROJECT_ID"
-    - echo "$WS_CONFIG_FILE"
-
-whitesource:on-schedule:
-  before_script:
-    - echo "before wssched $CI_COMMIT_REF_NAME"
 
 run-csr:
   dependencies:
