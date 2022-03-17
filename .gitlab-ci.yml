@@ -26,7 +26,7 @@ include:
     file:
       - "/gitlabci/csrjobs.yml"
   - project: 'scurity/gitlabci'
-    ref: APIGOV-csr
+    ref: master
     file:
       - '/.gitlab-ci-prepcsr.yml'
       - '/.gitlab-ci-fortify.yml'
