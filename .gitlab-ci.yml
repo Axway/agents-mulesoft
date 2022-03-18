@@ -31,7 +31,6 @@ include:
       - '/.gitlab-ci-prepcsr.yml'
       - '/.gitlab-ci-fortify.yml'
       - "/.gitlab-ci-whitesource.yml"
-      - "/.gitlab-ci-twistlock.yml"
       - "/.gitlab-ci-csr.yml"
 
 stages:
@@ -40,27 +39,27 @@ stages:
   - security-scans
   - security-review
 
-.add-ca-cert: &add-ca-cert |
-  curl -s http://swf-artifactory.lab.phx.axway.int/artifactory/certs/Axway-CA.crt -o Axway-CA-new.crt
-  mv Axway-CA-new.crt /usr/local/share/ca-certificates/
-  update-ca-certificates
+# .add-ca-cert: &add-ca-cert |
+#   curl -s http://swf-artifactory.lab.phx.axway.int/artifactory/certs/Axway-CA.crt -o Axway-CA-new.crt
+#   mv Axway-CA-new.crt /usr/local/share/ca-certificates/
+#   update-ca-certificates
 
-.go-setup: &go-setup |
-  # Ensure the project is under the go path
-  cd $GOPATH/src
-  # attempt to install golint before cd'ing to project dir so no other deps are updated
-  go get -x golang.org/x/lint/golint
-  # show where it got installed
-  go list -f {{.Target}} golang.org/x/lint/golint
-  # Create path to the project. Should match location of repo (needed for imports)
-  mkdir -p git.ecd.axway.org/$CI_PROJECT_NAMESPACE
-  # cd into project directory
-  cd git.ecd.axway.org/$CI_PROJECT_NAMESPACE
-  # Link the project with the current directory
-  ln -s $CI_PROJECT_DIR
-  # cd into project
-  cd $CI_PROJECT_NAME
-  pwd
+# .go-setup: &go-setup |
+#   # Ensure the project is under the go path
+#   cd $GOPATH/src
+#   # attempt to install golint before cd'ing to project dir so no other deps are updated
+#   go get -x golang.org/x/lint/golint
+#   # show where it got installed
+#   go list -f {{.Target}} golang.org/x/lint/golint
+#   # Create path to the project. Should match location of repo (needed for imports)
+#   mkdir -p git.ecd.axway.org/$CI_PROJECT_NAMESPACE
+#   # cd into project directory
+#   cd git.ecd.axway.org/$CI_PROJECT_NAMESPACE
+#   # Link the project with the current directory
+#   ln -s $CI_PROJECT_DIR
+#   # cd into project
+#   cd $CI_PROJECT_NAME
+#   pwd
 
 #.docker-login: &docker-login |
 #  docker login -u ${REPO_USER} -p ${REPO_TOKEN} ${REPO}
@@ -112,6 +111,19 @@ stages:
 fetch-iriusrisk:
   extends: .dummy
 
+twistlock:
+  extends: .dummy
+  # For some reason, twistlock always wants to run on branch pipelines unless this "only" section is here
+  only:
+    refs:
+      - xxxxx
+
+twistlock:on-schedule:
+  extends: .dummy
+
+twistlock-master:
+  extends: .dummy
+
 run-csr:
   dependencies:
     - fetch-fortify
@@ -122,71 +134,6 @@ update-csr:
     - fetch-fortify
     - whitesource:on-schedule
 
-# sdk
-# twistlock:
-#   retry: 0
-#   tags:
-#     - twistlock
-#   before_script:
-#     - export IMAGE_VERSION=$(cat version)-${CI_COMMIT_SHA:0:8}
-#     - export IMAGE_NAME=${PROJECT}/${DOCKER_NAME}:${IMAGE_VERSION}
-
-# watchcontroller
-# twistlock:
-#   before_script:
-#     - apk add git
-#     - git config --global http.sslVerify false
-#     - export LATEST_TAG=$(git tag -l --sort="version:refname" | tail -1)
-#     - export IMAGE_NAME="${ARTIFACTORY_TEAM_DOCKER_DEV_REPO_URL}/${PROJECT}/${DOCKER_NAME}:${LATEST_TAG}-${CI_COMMIT_REF_NAME}-${CI_PIPELINE_ID}"
-#     - docker pull ${IMAGE_NAME}
-
-# inherits from beano_cicd/gitlabci/csrjobs.yml and scurity/gitlabci/.gitlab-ci-twistlock.yml
-# twistlock-master:
-#   before_script:
-#     - apk add git
-#     - git config --global http.sslVerify false
-#     - export LATEST_TAG=$(git tag -l --sort="version:refname" | tail -1)
-#     - export IMAGE_NAME="${ARTIFACTORY_TEAM_DOCKER_DEV_REPO_URL}/${PROJECT}/${DOCKER_NAME}:${LATEST_TAG}-${CI_COMMIT_REF_NAME}-${CI_PIPELINE_ID}"
-#     - docker pull ${IMAGE_NAME}
-
-#als
-# twistlock:
-#   interruptible: true
-#   before_script:
-#     - apk add --no-cache git
-#     - export LATEST_TAG=$(eval ${LATEST_TAG_CMD})
-#     - export IMAGE_NAME="${ART_BUILD_PUSH}/${APICENTRAL}/${PROJECT}:${LATEST_TAG}-${CI_COMMIT_REF_SLUG}"
-
-# twistlock:on-schedule:
-#   interruptible: true
-#   before_script:
-#     - apk add --no-cache git
-#     - export LATEST_TAG=$(git tag -l --sort="version:refname" | tail -1)
-#     - export IMAGE_NAME="${ART_RELEASE_FOR_ON_PREM_PULL}/${APICENTRAL}/${PROJECT}:${LATEST_TAG}"
-#     - docker pull ${IMAGE_NAME}
-
-# twistlock:
-#   interruptible: true
-#   before_script:
-#     - apk add --no-cache git
-#     - export LATEST_TAG=$(eval ${LATEST_TAG_CMD})
-#     - export IMAGE_NAME="ampc-xenon-docker-release-phx.swf-artifactory.lab.phx.axway.int/agents-mulesoft/traceability-agent:0.0.4"
-#   needs:
-#    - "docker-push"
-
-# twistlock:on-schedule:
-#   interruptible: true
-#   before_script:
-#     - apk add --no-cache git
-#     - export LATEST_TAG=$(git tag -l --sort="version:refname" | tail -1)
-#     - export IMAGE_NAME=" ampc-xenon-docker-release-phx.swf-artifactory.lab.phx.axway.int/agents-mulesoft/traceability-agent:0.0.4"
-#     - docker pull ${IMAGE_NAME}
-
-# fetch-iriusrisk:
-#   interruptible: true
-#   only:
-#     variables:
-#       - $RUN_IRIUS_RISK == "true"
 #unit-tests:
 #  image: golang:1.14.3-stretch
 #  stage: test
