@@ -33,9 +33,3 @@ jobs:
         run: |
           git branch --show-current > commit_id
           make build-trace
-      - name: Release
-        uses: goreleaser/goreleaser-action@v2.5.0
-        with:
-          args: release -f .goreleaser-ta.yml --snapshot --skip-publish --rm-dist
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
