@@ -30,7 +30,7 @@ dep:
 dep-version:
 	@export version=$(sdk) && make update-sdk && make dep
 
-dep-sdk: 
+dep-sdk:
 	@make sdk=main dep-version
 
 update-sdk:
@@ -55,3 +55,11 @@ build-trace-docker:
 test:
 	mkdir -p coverage
 	@go test -race -short -count=1 -coverprofile=coverage/coverage.cov ${GO_PKG_LIST}
+
+docker-build-disc:
+	@docker build -t mulesoft_discovery_agent:latest -f ${WORKSPACE}/build/discovery.Dockerfile .
+	@echo "Docker build complete"
+
+docker-build-trace:
+	@docker build -t mulesoft_traceability_agent:latest -f ${WORKSPACE}/build/traceability.Dockerfile .
+	@echo "Docker build complete"

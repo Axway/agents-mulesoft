@@ -3,7 +3,6 @@ before:
   hooks:
     - go mod download
     - go mod tidy
-    - go mod vendor
 
 builds:
   - id: mulesoft_discovery_agent
@@ -36,7 +35,7 @@ archives:
       amd64: x86_64
     wrap_in_directory: discovery_agent
     files:
-      - mulesoft_discovery_agent.yml
+      - build/mulesoft_discovery_agent.yml
       - README_discovery.md
       - README_subscription.md
 

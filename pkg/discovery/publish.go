@@ -23,7 +23,7 @@ func (p *publisher) OnConfigChange(_ *config.MulesoftConfig) {
 	// noop
 }
 
-// publisher Publish event loop.
+// Loop publishes apis to central.
 func (p *publisher) Loop() {
 	for {
 		select {

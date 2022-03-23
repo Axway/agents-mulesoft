@@ -5,7 +5,7 @@ go 1.16
 // replace github.com/Axway/agent-sdk => /home/ubuntu/go/src/github.com/Axway/agent-sdk
 
 require (
-	github.com/Axway/agent-sdk v1.1.4-0.20210923144153-ab6813f439c0
+	github.com/Axway/agent-sdk v1.1.18-0.20220322223119-4c2f1f99b378
 	github.com/Shopify/sarama v1.26.4 // indirect
 	github.com/docker/docker v1.13.1 // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect
@@ -26,8 +26,8 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/afero v1.3.0 // indirect
 	github.com/spf13/cast v1.3.1 // indirect
-	github.com/stretchr/testify v1.6.1
-	github.com/tidwall/gjson v1.6.7
+	github.com/stretchr/testify v1.7.0
+	github.com/tidwall/gjson v1.13.0
 	gopkg.in/ini.v1 v1.57.0 // indirect
 	gopkg.in/jcmturner/gokrb5.v7 v7.5.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0

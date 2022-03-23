@@ -1,5 +1,5 @@
 # Build image
-FROM golang:1.16.4 as builder
+FROM golang:1.17.8 as builder
 ENV APP_HOME /build
 ENV APP_USER axway
 
@@ -7,7 +7,7 @@ RUN mkdir -p $APP_HOME /app
 
 WORKDIR $APP_HOME
 # Copy necessary files
-COPY . . 
+COPY . .
 
 RUN rm -rf bin
 
@@ -25,7 +25,6 @@ RUN mkdir /app/data && \
   find / -perm /6000 -type f -exec chmod a-s {} \; || true
 
 RUN chgrp -R 0 /app && chmod -R g=u /app && chown -R $APP_USER /app
-RUN chown 0 $APP_HOME/default_mulesoft_traceability_agent.yml && chmod go-w $APP_HOME/default_mulesoft_traceability_agent.yml
 
 # Base image
 FROM scratch
@@ -34,7 +33,7 @@ ENV APP_USER axway
 
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=builder /app /app
-COPY --from=builder $APP_HOME/default_mulesoft_traceability_agent.yml /app/mulesoft_traceability_agent.yml
+COPY --from=builder $APP_HOME/build/mulesoft_traceability_agent.yml /app/mulesoft_traceability_agent.yml
 COPY --from=builder /etc/passwd /etc/passwd
 COPY --from=builder /etc/group /etc/group
 

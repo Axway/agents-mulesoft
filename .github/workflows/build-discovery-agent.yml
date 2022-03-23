@@ -1,0 +1,45 @@
+name: Build Mulesoft Discovery Agent
+on:
+  push:
+    branches: [main, "APIGOV-*"]
+
+jobs:
+  test:
+    env:
+      GOFLAGS: "-mod=mod"
+    defaults:
+      run:
+        working-directory: ${{ env.GOPATH }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.17
+      - name: Test discovery agent
+        working-directory: .
+        run: go test -v ./...
+
+  build:
+    env:
+      GOFLAGS: "-mod=mod"
+    defaults:
+      run:
+        working-directory: ${{ env.GOPATH }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.17
+      - name: Build discovery agent
+        working-directory: .
+        run: |
+          git branch --show-current > commit_id
+          make build-discovery
+      - name: Release (Snapshot)
+        uses: goreleaser/goreleaser-action@v2.5.0
+        with:
+          args: release -f .goreleaser-da.yml --snapshot --skip-publish --rm-dist
