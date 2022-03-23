@@ -3,7 +3,6 @@ before:
   hooks:
     - go mod download
     - go mod tidy
-    - go mod vendor
 
 builds:
   - id: mulesoft_traceability_agent
