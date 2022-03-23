@@ -35,9 +35,12 @@ archives:
       amd64: x86_64
     wrap_in_directory: discovery_agent
     files:
-      - build/mulesoft_discovery_agent.yml
       - README_discovery.md
       - README_subscription.md
+      - src: build/mulesoft_discovery_agent.yml
+        dst: .
+        strip_parent: true
+
 
 checksum:
   name_template: "discovery_checksums.txt"
