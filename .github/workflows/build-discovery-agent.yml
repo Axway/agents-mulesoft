@@ -32,4 +32,4 @@ jobs:
         working-directory: .
         run: |
           git branch --show-current > commit_id
-          make build-discovery
+          pwd && ls -lah
