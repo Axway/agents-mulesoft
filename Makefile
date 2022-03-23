@@ -45,9 +45,11 @@ run-trace:
 
 build-discovery:
 	@go build -o bin/discovery ./cmd/discovery/main.go
+	@echo "discovery agent binary placed at bin/discovery"
 
 build-trace:
 	@go build -o bin/traceability ./cmd/traceability/main.go
+	@echo "traceability agent binary placed at bin/traceability"
 
 build-trace-docker:
 	@go build -o /app/traceability ./cmd/traceability/main.go
