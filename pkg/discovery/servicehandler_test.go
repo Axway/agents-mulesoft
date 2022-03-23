@@ -1,6 +1,7 @@
 package discovery
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -16,8 +17,9 @@ import (
 	"github.com/getkin/kin-openapi/openapi2"
 	"github.com/getkin/kin-openapi/openapi3"
 
+	"github.com/Axway/agents-mulesoft/pkg/discovery/mocks"
+
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	mc "github.com/Axway/agent-sdk/pkg/apic/mock"
 	"github.com/Axway/agents-mulesoft/pkg/subscription"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
@@ -115,7 +117,8 @@ func TestServiceHandler(t *testing.T) {
 }
 
 func TestServiceHandlerSLAPolicy(t *testing.T) {
-	cc := &mc.Client{}
+	cc := &mocks.MockCentralClient{}
+	cc.On("RegisterSubscriptionSchema").Return(nil)
 	agent.Initialize(&corecfg.CentralConfiguration{})
 	agent.InitializeForTest(cc)
 	content := `{"openapi":"3.0.1","servers":[{"url":"https://abc.com"}], "paths":{}, "info":{"title":"petstore3"}}`
@@ -126,19 +129,18 @@ func TestServiceHandlerSLAPolicy(t *testing.T) {
 			},
 		},
 	}}
-
-	mac := &anypoint.MockAnypointClient{}
-	mac.On("GetPolicies").Return(policies, nil)
-	mac.On("GetExchangeAsset").Return(&exchangeAsset, nil)
-	mac.On("GetExchangeFileContent").Return([]byte(content), nil)
-	mac.On("GetExchangeAssetIcon").Return("", "", nil)
+	mc := &anypoint.MockAnypointClient{}
+	mc.On("GetPolicies").Return(policies, nil)
+	mc.On("GetExchangeAsset").Return(&exchangeAsset, nil)
+	mc.On("GetExchangeFileContent").Return([]byte(content), nil)
+	mc.On("GetExchangeAssetIcon").Return("", "", nil)
 
 	msh := &mockSchemaHandler{}
 	sh := &serviceHandler{
 		muleEnv:             "Sandbox",
 		discoveryTags:       []string{"tag1"},
 		discoveryIgnoreTags: []string{"nah"},
-		client:              mac,
+		client:              mc,
 		subscriptionManager: msh,
 		cache:               cache.New(),
 	}
@@ -791,9 +793,9 @@ func (m *mockConsumerInstanceGetter) GetConsumerInstanceByID(string) (*v1alpha1.
 	return ci, args.Error(1)
 }
 
-func getSLATierInfo() (*anypoint.Tiers, *serviceHandler, *mc.Client) {
+func getSLATierInfo() (*anypoint.Tiers, *serviceHandler, *mocks.MockCentralClient) {
 	stage := "Sandbox"
-	mac := &anypoint.MockAnypointClient{}
+	mc := &anypoint.MockAnypointClient{}
 	tiers := anypoint.Tiers{
 		Total: 2,
 		Tiers: []anypoint.SLATier{{
@@ -821,16 +823,18 @@ func getSLATierInfo() (*anypoint.Tiers, *serviceHandler, *mc.Client) {
 		muleEnv:             stage,
 		discoveryTags:       []string{},
 		discoveryIgnoreTags: []string{},
-		client:              mac,
+		client:              mc,
 		subscriptionManager: sm,
 		cache:               cache.New(),
 	}
 
-	return &tiers, sh, &mc.Client{}
+	return &tiers, sh, &mocks.MockCentralClient{}
 }
 
 func TestCreateSubscriptionSchemaForSLATier(t *testing.T) {
 	tiers, sh, mcc := getSLATierInfo()
+
+	mcc.On("RegisterSubscriptionSchema").Return(nil)
 
 	_, err := sh.createSubscriptionSchemaForSLATier("1", tiers, mcc)
 	if err != nil {
@@ -841,6 +845,7 @@ func TestCreateSubscriptionSchemaForSLATier(t *testing.T) {
 func TestSLATierSchemaSubscriptionCreateFailure(t *testing.T) {
 	tiers, sh, mcc := getSLATierInfo()
 
+	mcc.On("RegisterSubscriptionSchema").Return(errors.New("Cannot register subscription schema"))
 	_, err := sh.createSubscriptionSchemaForSLATier("1", tiers, mcc)
 
 	assert.NotNil(t, err)

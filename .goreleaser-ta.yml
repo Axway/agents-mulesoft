@@ -38,8 +38,8 @@ archives:
     files:
       - README_traceability.md
       - src: build/mulesoft_traceability_agent.yml
-          dst: .
-          strip_parent: true
+        dst: .
+        strip_parent: true
 
 checksum:
   name_template: "traceability_checksums.txt"
