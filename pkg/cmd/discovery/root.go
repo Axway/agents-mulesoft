@@ -57,9 +57,6 @@ func run() error {
 		return fmt.Errorf("error while initing subscription manager %s", err)
 	}
 
-	// agent.RegisterProvisioner()
-	agent.NewAPIKeyCredentialRequestBuilder().Register()
-
 	discoveryAgent := discovery.NewAgent(cfg, client, sm)
 	err = discoveryAgent.CheckHealth()
 	if err != nil {
