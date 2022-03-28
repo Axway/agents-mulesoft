@@ -3,6 +3,7 @@ package discovery
 import (
 	coreAgent "github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/apic"
+	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agents-mulesoft/pkg/common"
 	"github.com/Axway/agents-mulesoft/pkg/config"
 	"github.com/sirupsen/logrus"
@@ -23,7 +24,7 @@ func (p *publisher) OnConfigChange(_ *config.MulesoftConfig) {
 	// noop
 }
 
-// publisher Publish event loop.
+// Loop publishes apis to central.
 func (p *publisher) Loop() {
 	for {
 		select {
@@ -67,6 +68,10 @@ func BuildServiceBody(service *ServiceDetail) (apic.ServiceBody, error) {
 			tags[tag] = true
 		}
 	}
+	prefix := common.FormatRevisionName(
+		service.AgentDetails[common.AttrAssetVersion],
+		service.AgentDetails[common.AttrAPIID],
+	)
 	return apic.NewServiceBodyBuilder().
 		SetAPIName(service.APIName).
 		SetAPISpec(service.APISpec).
@@ -78,9 +83,8 @@ func BuildServiceBody(service *ServiceDetail) (apic.ServiceBody, error) {
 		SetImage(service.Image).
 		SetImageContentType(service.ImageContentType).
 		SetResourceType(service.ResourceType).
-		SetAltRevisionPrefix(
-			common.FormatRevisionName(service.ServiceAttributes[common.AttrAssetVersion], service.ServiceAttributes[common.AttrAPIID]),
-		).
+		SetAltRevisionPrefix(prefix).
+		SetServiceAgentDetails(util.MapStringStringToMapStringInterface(service.AgentDetails)).
 		SetServiceAttribute(service.ServiceAttributes).
 		SetStage(service.Stage).
 		SetState(service.State).

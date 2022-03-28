@@ -1,9 +1,0 @@
-tasks:
-  - init: make build-discovery
-    command: ./bin/discovery
-  - init: make build-trace
-    command: ./bin/traceability
-
-vscode:
-  extensions:
-    - ms-vscode.go@0.14.3:ubq/hxMM96YNfNMjp5pfaQ==

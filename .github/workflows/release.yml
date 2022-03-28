@@ -1,4 +1,3 @@
-
 name: Release agents with goreleaser
 on:
   push:
@@ -13,19 +12,21 @@ jobs:
       run:
         working-directory: .
     steps:
-    - uses: actions/checkout@v2
-    - name: Unshallow Fetch
-      run: git fetch --prune --unshallow
-    - uses: actions/setup-go@v2
-      with:
-        go-version: '^1.16.0'
-    - name: Discovery Release
-      uses: goreleaser/goreleaser-action@v2.5.0
-      with:
-        args: release -f .goreleaser-da.yml
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
- 
+      - uses: actions/checkout@v2
+      - name: Unshallow Fetch
+        run: git fetch --prune --unshallow
+      - uses: actions/setup-go@v2
+        with:
+          go-version: 1.17
+      - name: Export SDK Version # exports the SDK_VERSION to be used by the goreleaser
+        run: echo "SDK_VERSION=$(make sdk-version)" >> $GITHUB_ENV
+      - name: Discovery Release
+        uses: goreleaser/goreleaser-action@v2.5.0
+        with:
+          args: release -f .goreleaser-da.yml
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   traceability:
     runs-on: ubuntu-latest
     name: Release traceability
@@ -33,15 +34,18 @@ jobs:
       run:
         working-directory: .
     steps:
-    - uses: actions/checkout@v2
-    - name: Unshallow Fetch
-      run: git fetch --prune --unshallow
-    - uses: actions/setup-go@v2
-      with:
-        go-version: '^1.16.0'
-    - name: Traceability Release
-      uses: goreleaser/goreleaser-action@v2.5.0
-      with:
-        args: release -f .goreleaser-ta.yml
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/checkout@v2
+      - name: Unshallow Fetch
+        run: git fetch --prune --unshallow
+      - uses: actions/setup-go@v2
+        with:
+          go-version: 1.17
+      - name: Export SDK Version
+        run: echo "SDK_VERSION=$(make sdk-version)" >> $GITHUB_ENV
+      - name: Traceability Release
+        uses: goreleaser/goreleaser-action@v2.5.0
+        with:
+          args: release -f .goreleaser-ta.yml
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

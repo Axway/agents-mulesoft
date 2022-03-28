@@ -51,7 +51,7 @@ func (ssm *SubStateManager) Unsubscribe(log logrus.FieldLogger, sub apic.Subscri
 
 	muleAppID, ok := appID.(int64)
 	if !ok {
-		return fmt.Errorf("Error while performing type assertion on %#v", appID)
+		return fmt.Errorf("error while performing type assertion on %#v", appID)
 	}
 
 	err = ssm.client.DeleteClientApplication(muleAppID)
@@ -91,7 +91,7 @@ func (ssm *SubStateManager) doSubscribe(log logrus.FieldLogger, sub apic.Subscri
 
 	_, err = ssm.createContract(apiID, application.ID, tID, muleAPI, exchangeAsset)
 	if err != nil {
-		return "", "", fmt.Errorf("Error while creating a contract %s", err)
+		return "", "", fmt.Errorf("error while creating a contract %s", err)
 	}
 
 	log.WithField("Client application", application.Name).Info("Created a new contract")
@@ -126,7 +126,7 @@ func (ssm *SubStateManager) createApp(apiID string, sub apic.Subscription) (*any
 
 	application, err := ssm.client.CreateClientApplication(apiID, appl)
 	if err != nil {
-		return nil, fmt.Errorf("Error creating client app: %s", err)
+		return nil, fmt.Errorf("error creating client app: %s", err)
 	}
 
 	err = cache.GetCache().Set(appName, application.ID)
@@ -153,7 +153,7 @@ func getMuleAPI(apiID, stage string) (*anypoint.API, error) {
 
 	muleAPI, ok := api.(anypoint.API)
 	if !ok {
-		return nil, fmt.Errorf("Unable to perform type assertion on %#v", api)
+		return nil, fmt.Errorf("failed to convert cached item to anypoint.API. Received type %T", api)
 	}
 	return &muleAPI, nil
 }

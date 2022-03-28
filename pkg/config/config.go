@@ -68,27 +68,27 @@ type MulesoftConfig struct {
 // ValidateCfg - Validates the gateway config
 func (c *MulesoftConfig) ValidateCfg() (err error) {
 	if c.AnypointExchangeURL == "" {
-		return errors.New("Invalid mulesoft configuration: anypointExchangeUrl is not configured")
+		return errors.New("invalid mulesoft configuration: anypointExchangeUrl is not configured")
 	}
 
 	if c.Username == "" {
-		return errors.New("Invalid mulesoft configuration: username is not configured")
+		return errors.New("invalid mulesoft configuration: username is not configured")
 	}
 
 	if c.Password == "" {
-		return errors.New("Invalid mulesoft configuration: password is not configured")
+		return errors.New("invalid mulesoft configuration: password is not configured")
 	}
 
 	if c.Environment == "" {
-		return errors.New("Invalid mulesoft configuration: environment is not configured")
+		return errors.New("invalid mulesoft configuration: environment is not configured")
 	}
 
 	if c.OrgName == "" {
-		return errors.New("Invalid mulesoft configuration: OrgName is not configured")
+		return errors.New("invalid mulesoft configuration: OrgName is not configured")
 	}
 
 	if c.PollInterval == 0 {
-		return errors.New("Invalid mulesoft configuration: pollInterval is invalid")
+		return errors.New("invalid mulesoft configuration: pollInterval is invalid")
 	}
 
 	if _, err := os.Stat(c.CachePath); os.IsNotExist(err) {

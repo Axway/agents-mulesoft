@@ -1,0 +1,36 @@
+name: Build Mulesoft Traceability Agent
+on:
+  push:
+    branches: [main, "APIGOV-*"]
+
+jobs:
+  test:
+    env:
+      GOFLAGS: "-mod=mod"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.17
+      - name: Test traceability agent
+        working-directory: .
+        run: go test -v ./...
+
+  build:
+    env:
+      GOFLAGS: "-mod=mod"
+      VERSION: ${{ github.ref }}
+      COMMIT_ID: ${{ github.sha }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.17
+      - name: Build traceability agent
+        working-directory: .
+        run: |
+          make build-trace

@@ -3,6 +3,8 @@ package discovery
 import (
 	"fmt"
 
+	"github.com/Axway/agent-sdk/pkg/migrate"
+	"github.com/Axway/agents-mulesoft/pkg/common"
 	"github.com/Axway/agents-mulesoft/pkg/subscription/clientid"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
@@ -34,6 +36,15 @@ func init() {
 		corecfg.DiscoveryAgent,     // Agent Type (Discovery or Traceability)
 	)
 	config.AddConfigProperties(RootCmd.GetProperties())
+
+	migrate.MatchAttr(
+		common.AttrAPIID,
+		common.AttrAssetID,
+		common.AttrAssetVersion,
+		common.AttrChecksum,
+		common.AttrProductVersion,
+	)
+
 	RootCmd.AddCommand(service.GenServiceCmd("pathConfig"))
 }
 
@@ -43,8 +54,11 @@ func run() error {
 	client := anypoint.NewClient(cfg.MulesoftConfig)
 	sm, err := initSubscriptionManager(client, agent.GetCentralClient())
 	if err != nil {
-		return fmt.Errorf("Error while initing subscription manager %s", err)
+		return fmt.Errorf("error while initing subscription manager %s", err)
 	}
+
+	// agent.RegisterProvisioner()
+	agent.NewAPIKeyCredentialRequestBuilder().Register()
 
 	discoveryAgent := discovery.NewAgent(cfg, client, sm)
 	err = discoveryAgent.CheckHealth()

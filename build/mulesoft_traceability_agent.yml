@@ -14,6 +14,8 @@ mulesoft_traceability_agent:
     reportActivityFrequency: ${CENTRAL_REPORTACTIVITYFREQUENCY:5m}
     team: ${CENTRAL_TEAM:""}
     url: "${CENTRAL_URL:https://apicentral.axway.com}"
+    grpc:
+      enabled: false
     auth:
       clientId: "${CENTRAL_AUTH_CLIENTID}"
       keyPassword: ${CENTRAL_AUTH_KEYPASSWORD:""}

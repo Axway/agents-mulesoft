@@ -229,28 +229,25 @@ type AnalyticsEvent struct {
 	ViolatedPolicyName string    `json:"Violated Policy Name"`
 }
 
-// TODO move the errors to the SDK
 const (
-	AccessCode          = "accessCode"
-	APIKey              = "apiKey"
-	AppName             = "appName"
-	Authorization       = "authorization"
-	ClientID            = "client-id-enforcement"
-	ClientIDProp        = "client_id"
-	ClientSecretProp    = "client_secret"
-	CredOrigin          = "credentialsOriginHasHttpBasicAuthenticationHeader"
-	DescClienCred       = "Provided as: client_id:<INSERT_VALID_CLIENTID_HERE> \n\n client_secret:<INSERT_VALID_SECRET_HERE>\n\n"
-	DescOauth2          = "This API supports OAuth 2.0 for authenticating all API requests"
-	Description         = "description"
-	ErrAuthNotSupported = "only Oauth and ClientID enforcement(ApiKey) security policies are supported"
-	ErrSpecNotSupported = "Invalid Spec Type, Only OAS specs are supported"
-	ExternalOauth       = "external-oauth2-access-token-enforcement"
-	Header              = "header"
-	Oauth2              = "oauth2"
-	Scopes              = "scopes"
-	SLAAuth             = "sla-based"
-	TierLabel           = "SLA Tier"
-	TokenURL            = "tokenUrl"
+	AccessCode       = "accessCode"
+	APIKey           = "apiKey"
+	AppName          = "appName"
+	Authorization    = "authorization"
+	ClientID         = "client-id-enforcement"
+	ClientIDProp     = "client_id"
+	ClientSecretProp = "client_secret"
+	CredOrigin       = "credentialsOriginHasHttpBasicAuthenticationHeader"
+	DescClienCred    = "Provided as: client_id:<INSERT_VALID_CLIENTID_HERE> \n\n client_secret:<INSERT_VALID_SECRET_HERE>\n\n"
+	DescOauth2       = "This API supports OAuth 2.0 for authenticating all API requests"
+	Description      = "description"
+	ExternalOauth    = "external-oauth2-access-token-enforcement"
+	Header           = "header"
+	Oauth2           = "oauth2"
+	Scopes           = "scopes"
+	SLAAuth          = "sla-based"
+	TierLabel        = "SLA Tier"
+	TokenURL         = "tokenUrl"
 )
 
 type Application struct {

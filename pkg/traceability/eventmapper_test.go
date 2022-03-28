@@ -158,7 +158,7 @@ func Test_APIServiceNameAndTransactionProxyNameAreEqual(t *testing.T) {
 		Image:             "",
 		ImageContentType:  "",
 		ResourceType:      "oas3",
-		ServiceAttributes: map[string]string{
+		AgentDetails: map[string]string{
 			"API ID": "16810512",
 		},
 		Stage:            "Sandbox",
@@ -184,12 +184,8 @@ func Test_APIServiceNameAndTransactionProxyNameAreEqual(t *testing.T) {
 	transactionProxyName := le.TransactionSummary.Proxy.Name
 	transactionProxyID := le.TransactionSummary.Proxy.ID
 	assert.Contains(t, transactionProxyName, apiServiceName)
-	// TODO: The remoteAPIID on the transaction is the API ID, which correlates to an API Service Revision.
-	// The UI does not have a way to filter by Revisions and only filters by API Services.
-	// Once filtering by revisions is supported, then we should assert that the transactionProxyID matchess the revision.
-	// For now, assert that the service body has an attribute for the api id found on the transaction.
+
 	assert.True(t, strings.Contains(transactionProxyID, body.ServiceAttributes[common.AttrAPIID]))
-	// assert.Equal(t, transaction.FormatProxyID(body.RestAPIID), transactionProxyID)
 	assert.Equal(t, event.ApplicationName, le.TransactionSummary.Application.Name)
 	assert.Equal(t, transaction.FormatApplicationID(event.Application), le.TransactionSummary.Application.ID)
 }

@@ -3,6 +3,7 @@ package discovery
 import (
 	"testing"
 
+	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agents-mulesoft/pkg/common"
 
 	"github.com/Axway/agents-mulesoft/pkg/config"
@@ -23,7 +24,7 @@ var sd = &ServiceDetail{
 	Image:             "",
 	ImageContentType:  "",
 	ResourceType:      "oas3",
-	ServiceAttributes: map[string]string{"checksum": "110a1bc03b2e3d4875185b0b9f711e3ce2200e8fcc3743ad27dca5d34da9f64b", common.AttrAssetVersion: "1.1.1"},
+	AgentDetails:      map[string]string{"checksum": "110a1bc03b2e3d4875185b0b9f711e3ce2200e8fcc3743ad27dca5d34da9f64b", common.AttrAssetVersion: "1.1.1"},
 	Stage:             "Sandbox",
 	State:             "state",
 	Status:            "status",
@@ -56,7 +57,7 @@ func TestPublish(t *testing.T) {
 
 func Test_buildServiceBody(t *testing.T) {
 	apicSvc, err := BuildServiceBody(sd)
-	attrs := sd.ServiceAttributes
+	details := sd.AgentDetails
 	assert.Nil(t, err)
 	assert.Equal(t, sd.APIName, apicSvc.APIName)
 	assert.Equal(t, sd.APISpec, apicSvc.SpecDefinition)
@@ -67,7 +68,7 @@ func Test_buildServiceBody(t *testing.T) {
 	assert.Equal(t, sd.Image, apicSvc.Image)
 	assert.Equal(t, sd.ImageContentType, apicSvc.ImageContentType)
 	assert.Equal(t, sd.ResourceType, apicSvc.ResourceType)
-	assert.Equal(t, attrs, apicSvc.ServiceAttributes)
+	assert.Equal(t, util.MapStringStringToMapStringInterface(details), apicSvc.ServiceAgentDetails)
 	assert.Equal(t, sd.Stage, apicSvc.Stage)
 	assert.Equal(t, sd.State, apicSvc.State)
 	assert.Equal(t, sd.Status, apicSvc.Status)
@@ -76,7 +77,7 @@ func Test_buildServiceBody(t *testing.T) {
 	assert.Equal(t, sd.Title, apicSvc.NameToPush)
 	assert.Equal(t, sd.URL, apicSvc.URL)
 	assert.Equal(t, sd.Version, apicSvc.Version)
-	assert.Equal(t, apicSvc.AltRevisionPrefix, common.FormatRevisionName(attrs[common.AttrAssetVersion], attrs[common.AttrAPIID]))
+	assert.Equal(t, apicSvc.AltRevisionPrefix, common.FormatRevisionName(details[common.AttrAssetVersion], details[common.AttrAPIID]))
 
 }
 

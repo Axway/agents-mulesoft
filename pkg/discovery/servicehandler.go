@@ -55,11 +55,12 @@ func (s *serviceHandler) OnConfigChange(cfg *config.MulesoftConfig) {
 // ToServiceDetails gathers the ServiceDetail for a single Mulesoft Asset. Each Asset has multiple versions and
 // can resolve to multiple ServiceDetails.
 func (s *serviceHandler) ToServiceDetails(asset *anypoint.Asset) []*ServiceDetail {
-	serviceDetails := []*ServiceDetail{}
+	var serviceDetails []*ServiceDetail
 	logger := logrus.WithFields(logrus.Fields{
 		"assetName": asset.AssetID,
 		"assetID":   asset.ID,
 	})
+
 	for _, api := range asset.APIs {
 		logger.
 			WithField("apiID", api.ID).
@@ -99,7 +100,6 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 	}
 	authPolicy, configuration, isSLABased := getAuthPolicy(policies)
 
-	// TODO can be refactored to not use authPolicy in checksum and use policy
 	isAlreadyPublished, checksum := isPublished(api, authPolicy, s.cache)
 	// If true, then the api is published and there were no changes detected
 	if isAlreadyPublished {
@@ -107,7 +107,6 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 		return nil, nil
 	}
 
-	// TODO Handle purging of cache
 	secondaryKey := common.FormatAPICacheKey(fmt.Sprint(api.ID), api.ProductVersion)
 	// Setting with the checksum allows a way to see if the item changed.
 	// Setting with the secondary key allows the subscription manager to find the api.
@@ -147,7 +146,6 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 	exchFile := getExchangeAssetSpecFile(exchangeAsset.Files)
 
 	if exchFile == nil {
-		// SDK needs a spec
 		logger.Debugf("no supported specification file found")
 		return nil, nil
 	}
@@ -180,15 +178,16 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 	}
 
 	return &ServiceDetail{
-		APIName:          api.AssetID,
-		APISpec:          modifiedSpec,
-		AuthPolicy:       authPolicy,
-		Description:      api.Description,
-		ID:               fmt.Sprint(asset.ID),
-		Image:            icon,
-		ImageContentType: iconContentType,
-		ResourceType:     specType,
-		ServiceAttributes: map[string]string{
+		APIName:           api.AssetID,
+		APISpec:           modifiedSpec,
+		AuthPolicy:        authPolicy,
+		Description:       api.Description,
+		ID:                fmt.Sprint(asset.ID),
+		Image:             icon,
+		ImageContentType:  iconContentType,
+		ResourceType:      specType,
+		ServiceAttributes: map[string]string{},
+		AgentDetails: map[string]string{
 			common.AttrAssetID:        fmt.Sprint(asset.ID),
 			common.AttrAPIID:          fmt.Sprint(api.ID),
 			common.AttrAssetVersion:   api.AssetVersion,
@@ -323,12 +322,11 @@ func specYAMLToJSON(specContent []byte) []byte {
 		return specContent
 	}
 
-	transcoded, err := yaml.YAMLToJSON(specContent)
+	bts, err := yaml.YAMLToJSON(specContent)
 	if err != nil {
-		// Not json encodeable, nothing more to be done
 		return specContent
 	}
-	return transcoded
+	return bts
 }
 
 // getSpecType determines the correct resource type for the asset.
@@ -375,7 +373,6 @@ func getAuthPolicy(policies anypoint.Policies) (string, map[string]interface{}, 
 }
 
 func setWSDLEndpoint(_ string, specContent []byte) ([]byte, error) {
-	// TODO
 	return specContent, nil
 }
 
@@ -398,7 +395,6 @@ func doesAPIContainAnyMatchingTag(tags, apiTags []string) bool {
 	return false
 }
 
-// TODO improve if fields are not complete, introduce per method swagger definitions, set up logic for multiple auth policies, use policy configurations
 func setOAS2policies(swagger *openapi2.T, authPolicy string, configuration map[string]interface{}) ([]byte, error) {
 	// remove existing security
 	swagger.SecurityDefinitions = make(map[string]*openapi2.SecurityScheme)
@@ -449,7 +445,6 @@ func setOAS2policies(swagger *openapi2.T, authPolicy string, configuration map[s
 
 		swagger.SecurityDefinitions = sd
 	}
-	// return sc, agenterrors.New(1161, anypoint.ErrAuthNotSupported)
 	return json.Marshal(swagger)
 }
 
@@ -482,13 +477,12 @@ func setOAS3policies(spec *openapi3.T, authPolicy string, configuration map[stri
 			var ok bool
 			tokenURL, ok = configuration[anypoint.TokenURL].(string)
 			if !ok {
-				return nil, fmt.Errorf("Unable to perform type assertion on %#v", configuration[anypoint.TokenURL])
+				return nil, fmt.Errorf("unable to perform type assertion on %#v", configuration[anypoint.TokenURL])
 			}
 		}
 
 		if configuration[anypoint.Scopes] != nil {
 			scopes[anypoint.Scopes] = configuration[anypoint.Scopes].(string)
-
 		}
 
 		ac := openapi3.OAuthFlow{
@@ -511,7 +505,6 @@ func setOAS3policies(spec *openapi3.T, authPolicy string, configuration map[stri
 		spec.Components.SecuritySchemes = openapi3.SecuritySchemes{anypoint.Oauth2: &ssr}
 	}
 
-	// return sc, agenterrors.New(1162, anypoint.ErrAuthNotSupported)
 	return json.Marshal(spec)
 }
 

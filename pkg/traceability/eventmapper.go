@@ -140,7 +140,6 @@ func (em *EventMapper) createSummaryEvent(
 		SetTransactionID(txID).
 		SetTimestamp(eventTime)
 
-	// TODO an enhancement can be made to use caching
 	if event.Application != "" {
 		app, err := em.client.GetClientApplication(event.Application)
 		if err != nil {
