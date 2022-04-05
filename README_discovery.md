@@ -1,4 +1,4 @@
-# Amplify Mulesoft Anypoint Discovery Agent
+# Amplify MuleSoft Anypoint Discovery Agent
 
 ## Prerequisites
 
