@@ -27,7 +27,7 @@ type Page struct {
 	PageSize int
 }
 
-// Client interface to gateway.
+// Client interface to gateway
 type Client interface {
 	CreateClientApplication(apiInstanceID string, app *AppRequestBody) (*Application, error)
 	CreateContract(int64, *Contract) (*Contract, error)
