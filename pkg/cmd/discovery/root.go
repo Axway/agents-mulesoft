@@ -82,7 +82,7 @@ func initConfig(centralConfig corecfg.CentralConfig) (interface{}, error) {
 
 func initSubscriptionManager(apc anypoint.Client, central apic.Client) (*subs.Manager, error) {
 	entry := logrus.NewEntry(log.Get())
-	muleSubClient := subs.NewMuleSubscriptionClient(apc, entry)
+	muleSubClient := subs.NewMuleSubscriptionClient(apc)
 	clientID := subs.NewClientIDContract()
 	sm := subs.NewManager(entry, muleSubClient, clientID)
 

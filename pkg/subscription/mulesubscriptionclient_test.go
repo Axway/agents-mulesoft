@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -35,7 +34,7 @@ func TestCreateApp(t *testing.T) {
 			}
 			client := &anypoint.MockAnypointClient{}
 			client.On("CreateClientApplication").Return(app1, tc.err)
-			subClient := NewMuleSubscriptionClient(client, logrus.StandardLogger())
+			subClient := NewMuleSubscriptionClient(client)
 
 			_, err := subClient.CreateApp(app1.Name, "apiID-123", app1.Description)
 			if tc.hasErr {
@@ -96,15 +95,13 @@ func TestCreateContract(t *testing.T) {
 			client.On("GetAPI").Return(api, tc.getAPIErr)
 			client.On("GetExchangeAsset").Return(asset, tc.getAssetErr)
 			client.On("CreateContract").Return(&anypoint.Contract{}, tc.createContractErr)
-			subClient := NewMuleSubscriptionClient(client, logrus.StandardLogger())
+			subClient := NewMuleSubscriptionClient(client)
 
 			apiIDStr := fmt.Sprintf("%d", api.ID)
 			var tID int64 = 7654
 			tIDStr := fmt.Sprintf("%d", tID)
 
-			contract, err := subClient.CreateContract(
-				apiIDStr, api.AssetVersion, tIDStr, 123,
-			)
+			contract, err := subClient.CreateContract(apiIDStr, tIDStr, 123)
 			if tc.hasErr {
 				assert.Error(t, err)
 			} else {
@@ -150,7 +147,7 @@ func TestDeleteApp(t *testing.T) {
 			}
 			client := &anypoint.MockAnypointClient{}
 			client.On("DeleteClientApplication").Return(tc.deleteAppErr)
-			subClient := NewMuleSubscriptionClient(client, logrus.StandardLogger())
+			subClient := NewMuleSubscriptionClient(client)
 
 			err := subClient.DeleteApp(app1.ID)
 			if tc.hasErr {
@@ -190,7 +187,7 @@ func TestDeleteContract(t *testing.T) {
 			client := &anypoint.MockAnypointClient{}
 			client.On("RevokeContract").Return(tc.revokeErr)
 			client.On("DeleteContract").Return(tc.delContractErr)
-			subClient := NewMuleSubscriptionClient(client, logrus.StandardLogger())
+			subClient := NewMuleSubscriptionClient(client)
 
 			err := subClient.DeleteContract("123", "456")
 			if tc.hasErr {

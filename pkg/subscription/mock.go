@@ -14,7 +14,7 @@ func (m *MockMuleSubscriptionClient) CreateApp(appName, apiID, description strin
 	return m.app, m.err
 }
 
-func (m *MockMuleSubscriptionClient) CreateContract(apiID, stage, tier string, appID int64) (*anypoint.Contract, error) {
+func (m *MockMuleSubscriptionClient) CreateContract(apiID, tier string, appID int64) (*anypoint.Contract, error) {
 	return m.contract, m.err
 }
 

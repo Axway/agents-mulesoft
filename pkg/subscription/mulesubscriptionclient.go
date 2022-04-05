@@ -4,13 +4,12 @@ import (
 	"fmt"
 
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
-	"github.com/sirupsen/logrus"
 )
 
 // MuleSubscriptionClient interface for managing mulesoft subscriptions
 type MuleSubscriptionClient interface {
 	CreateApp(appName, apiID, description string) (*anypoint.Application, error)
-	CreateContract(apiID, stage, tier string, appID int64) (*anypoint.Contract, error)
+	CreateContract(apiID, tier string, appID int64) (*anypoint.Contract, error)
 	DeleteApp(appID int64) error
 	DeleteContract(apiID, contractID string) error
 	GetApp(id string) (*anypoint.Application, error)
@@ -18,14 +17,12 @@ type MuleSubscriptionClient interface {
 
 type muleSubscription struct {
 	client anypoint.Client
-	log    logrus.FieldLogger
 }
 
 // NewMuleSubscriptionClient creates a MuleSubscriptionClient
-func NewMuleSubscriptionClient(client anypoint.Client, log logrus.FieldLogger) MuleSubscriptionClient {
+func NewMuleSubscriptionClient(client anypoint.Client) MuleSubscriptionClient {
 	return &muleSubscription{
 		client: client,
-		log:    log,
 	}
 }
 
@@ -36,9 +33,6 @@ func (c muleSubscription) GetApp(id string) (*anypoint.Application, error) {
 
 // CreateApp creates an app in Mulesoft
 func (c muleSubscription) CreateApp(appName, apiID, description string) (*anypoint.Application, error) {
-	c.log.WithField("appName", appName).
-		WithField("apiID", apiID).
-		Debugf("creating app")
 
 	body := &anypoint.AppRequestBody{
 		Name:        appName,
@@ -50,19 +44,11 @@ func (c muleSubscription) CreateApp(appName, apiID, description string) (*anypoi
 		return nil, fmt.Errorf("error creating client app: %s", err)
 	}
 
-	c.log.WithField("appName", application.Name).Debug("created a client application in Mulesoft")
-
 	return application, nil
 }
 
 // CreateContract creates a contract between an API and an app
-func (c muleSubscription) CreateContract(apiID, stage, tier string, appID int64) (*anypoint.Contract, error) {
-	c.log.WithField("apiID", apiID).
-		WithField("appID", appID).
-		WithField("stage", stage).
-		WithField("tier", tier).
-		Debugf("creating contract")
-
+func (c muleSubscription) CreateContract(apiID, tier string, appID int64) (*anypoint.Contract, error) {
 	api, err := c.client.GetAPI(apiID)
 	if err != nil {
 		return nil, err

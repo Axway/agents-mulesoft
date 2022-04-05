@@ -75,7 +75,7 @@ func (p provisioner) AccessRequestProvision(req prov.AccessRequest) prov.Request
 	accessData := req.GetAccessRequestData()
 	tier := util.ToString(accessData[common.SlaTier])
 
-	contract, err := p.client.CreateContract(apiID, stage, tier, appID64)
+	contract, err := p.client.CreateContract(apiID, tier, appID64)
 	if err != nil {
 		return p.failed(rs, fmt.Errorf("failed to create contract: %s", err))
 	}
@@ -105,7 +105,9 @@ func (p provisioner) ApplicationRequestDeprovision(req prov.ApplicationRequest) 
 		return p.failed(rs, fmt.Errorf("failed to delete app: %s", err))
 	}
 
-	p.log.Info("removed application")
+	p.log.
+		WithField("appName", req.GetManagedApplicationName()).
+		Info("removed application")
 	return rs.Success()
 }
 
@@ -126,7 +128,9 @@ func (p provisioner) ApplicationRequestProvision(req prov.ApplicationRequest) pr
 
 	rs.AddProperty(common.AppID, fmt.Sprintf("%d", app.ID))
 
-	p.log.Info("created application")
+	p.log.
+		WithField("appName", req.GetManagedApplicationName()).
+		Info("created application")
 
 	return rs.Success()
 }
