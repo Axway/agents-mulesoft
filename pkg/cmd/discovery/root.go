@@ -3,9 +3,10 @@ package discovery
 import (
 	"fmt"
 
+	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/migrate"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agents-mulesoft/pkg/common"
-	"github.com/Axway/agents-mulesoft/pkg/subscription/clientid"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 
@@ -13,8 +14,7 @@ import (
 	corecmd "github.com/Axway/agent-sdk/pkg/cmd"
 	"github.com/Axway/agent-sdk/pkg/cmd/service"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
-	"github.com/Axway/agent-sdk/pkg/util/log"
-	"github.com/Axway/agents-mulesoft/pkg/subscription"
+	subs "github.com/Axway/agents-mulesoft/pkg/subscription"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
@@ -51,10 +51,11 @@ func init() {
 // run Callback that agent will call to process the execution
 func run() error {
 	cfg := config.GetConfig()
+
 	client := anypoint.NewClient(cfg.MulesoftConfig)
 	sm, err := initSubscriptionManager(client, agent.GetCentralClient())
 	if err != nil {
-		return fmt.Errorf("error while initing subscription manager %s", err)
+		return fmt.Errorf("error while initializing the subscription manager %s", err)
 	}
 
 	discoveryAgent := discovery.NewAgent(cfg, client, sm)
@@ -79,17 +80,19 @@ func initConfig(centralConfig corecfg.CentralConfig) (interface{}, error) {
 	return conf, nil
 }
 
-func initSubscriptionManager(apc anypoint.Client, centralClient apic.Client) (*subscription.Manager, error) {
-	subManager := centralClient.GetSubscriptionManager()
-	sm := subscription.New(logrus.StandardLogger(), centralClient, clientid.NewClientIDContract(apc))
+func initSubscriptionManager(apc anypoint.Client, central apic.Client) (*subs.Manager, error) {
+	entry := logrus.NewEntry(log.Get())
+	muleSubClient := subs.NewMuleSubscriptionClient(apc, entry)
+	clientID := subs.NewClientIDContract()
+	sm := subs.NewManager(entry, muleSubClient, clientID)
 
-	// register schemas
-	for _, schema := range sm.Schemas() {
-		if err := centralClient.RegisterSubscriptionSchema(schema, true); err != nil {
-			return nil, fmt.Errorf("failed to register subscription schema %s: %w", schema.GetSubscriptionName(), err)
-		}
-		log.Infof("Schema registered: %s", schema.GetSubscriptionName())
+	schema := clientID.Schema()
+	err := central.RegisterSubscriptionSchema(schema, true)
+	if err != nil {
+		return nil, fmt.Errorf("failed to register subscription schema %s: %w", schema.GetSubscriptionName(), err)
 	}
+
+	subManager := central.GetSubscriptionManager()
 
 	// register validator and handlers
 	subManager.RegisterValidator(sm.ValidateSubscription)
@@ -99,5 +102,33 @@ func initSubscriptionManager(apc anypoint.Client, centralClient apic.Client) (*s
 	// start polling for subscriptions
 	subManager.Start()
 
+	agent.RegisterProvisioner(subs.NewProvisioner(muleSubClient, entry))
+	agent.NewAPIKeyAccessRequestBuilder().Register()
+	newCredentialReq().Register()
+
 	return sm, nil
+}
+
+func newCredentialReq() prov.CredentialRequestBuilder {
+	id := prov.NewSchemaPropertyBuilder().
+		SetName(common.ClientID).
+		SetLabel(common.ClientIDLabel).
+		SetRequired().
+		IsString().
+		IsEncrypted()
+
+	secret := prov.NewSchemaPropertyBuilder().
+		SetName(common.ClientSecret).
+		SetLabel(common.ClientSecretLabel).
+		SetRequired().
+		IsString().
+		IsEncrypted()
+
+	return agent.NewCredentialRequestBuilder().
+		SetName(prov.APIKeyCRD).
+		SetProvisionSchema(
+			prov.NewSchemaBuilder().
+				AddProperty(id).
+				AddProperty(secret),
+		)
 }

@@ -29,18 +29,22 @@ type Page struct {
 
 // Client interface to gateway.
 type Client interface {
-	OnConfigChange(mulesoftConfig *config.MulesoftConfig)
+	CreateClientApplication(apiInstanceID string, app *AppRequestBody) (*Application, error)
+	CreateContract(int64, *Contract) (*Contract, error)
+	DeleteClientApplication(appID int64) error
 	GetAccessToken() (string, *User, time.Duration, error)
+	GetAPI(id string) (*API, error)
+	GetClientApplication(appID string) (*Application, error)
 	GetEnvironmentByName(name string) (*Environment, error)
-	ListAssets(page *Page) ([]Asset, error)
-	GetPolicies(apiID int64) (Policies, error)
 	GetExchangeAsset(groupID, assetID, assetVersion string) (*ExchangeAsset, error)
 	GetExchangeAssetIcon(icon string) (string, string, error)
 	GetExchangeFileContent(link, packaging, mainFile string) ([]byte, error)
-	CreateClientApplication(string, *AppRequestBody) (*Application, error)
-	CreateContract(int64, *Contract) (*Contract, error)
+	GetPolicies(apiID int64) (Policies, error)
 	GetSLATiers(int642 int64) (*Tiers, error)
-	DeleteClientApplication(appID int64) error
+	ListAssets(page *Page) ([]Asset, error)
+	OnConfigChange(mulesoftConfig *config.MulesoftConfig)
+	DeleteContract(apiID string, contractID string) error
+	RevokeContract(apiID, contractID string) error
 }
 
 type AnalyticsClient interface {
@@ -261,6 +265,19 @@ func (c *AnypointClient) ListAssets(page *Page) ([]Asset, error) {
 	return assetResult.Assets, err
 }
 
+// GetAPI gets a single api by id
+func (c *AnypointClient) GetAPI(id string) (*API, error) {
+	url := c.baseURL + "/apimanager/api/v1/organizations/" + c.auth.GetOrgID() + "/environments/" + c.environment.ID + "/apis/" + id
+	res := &API{}
+	err := c.invokeJSONGet(url, nil, res, nil)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return res, err
+}
+
 // GetPolicies lists the API policies.
 func (c *AnypointClient) GetPolicies(apiID int64) (Policies, error) {
 	var policies Policies
@@ -414,7 +431,6 @@ func (c *AnypointClient) DeleteClientApplication(appID int64) error {
 }
 
 func (c *AnypointClient) GetClientApplication(appID string) (*Application, error) {
-
 	var application Application
 	url := fmt.Sprintf("%s/exchange/api/v2/organizations/%s/applications/%s", c.baseURL, c.auth.GetOrgID(), appID)
 
@@ -431,6 +447,60 @@ func (c *AnypointClient) GetClientApplication(appID string) (*Application, error
 	err := c.invokeJSON(request, &application)
 	return &application, err
 }
+
+func (c *AnypointClient) DeleteContract(apiID string, contractID string) error {
+	url := fmt.Sprintf(
+		"%s/apimanager/api/v1/organizations/%s/environments/%s/apis/%s/contracts/%s",
+		c.baseURL, c.auth.GetOrgID(), c.environment.ID, apiID, contractID,
+	)
+
+	headers := map[string]string{
+		"Authorization": "Bearer " + c.auth.GetToken(),
+	}
+
+	request := coreapi.Request{
+		Method:      coreapi.DELETE,
+		URL:         url,
+		QueryParams: nil,
+		Headers:     headers,
+		Body:        nil,
+	}
+
+	return c.invokeDelete(request)
+}
+
+func (c *AnypointClient) RevokeContract(apiID, contractID string) error {
+	res := map[string]interface{}{}
+
+	url := fmt.Sprintf(
+		"%s/apimanager/xapi/v1/organizations/%s/environments/%s/apis/%s/contracts/%s/revoke",
+		c.baseURL, c.auth.GetOrgID(), c.environment.ID, apiID, contractID,
+	)
+
+	err := c.invokeJSONPost(url, nil, nil, &res)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *AnypointClient) GetContract(apiID string, contractID string) (*Contract, error) {
+	var cnt Contract
+
+	url := fmt.Sprintf(
+		"%s/exchange/api/v1/organizations/%s/environments/%s/apis/%s/contracts/%s",
+		c.baseURL, c.auth.GetOrgID(), c.environment.ID, apiID, contractID,
+	)
+
+	err := c.invokeJSONGet(url, nil, &cnt, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return &cnt, nil
+}
+
 func (c *AnypointClient) CreateContract(appID int64, contract *Contract) (*Contract, error) {
 	var cnt Contract
 
@@ -499,7 +569,7 @@ func (c *AnypointClient) invokeDelete(request coreapi.Request) error {
 	}
 
 	if response.Code != http.StatusNoContent {
-		agenterrors.Wrap(ErrCommunicatingWithGateway, fmt.Sprint(response.Code))
+		return agenterrors.Wrap(ErrCommunicatingWithGateway, fmt.Sprint(response.Code))
 	}
 	return nil
 }

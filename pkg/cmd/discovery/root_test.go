@@ -46,7 +46,7 @@ func Test_initSubscriptionManager(t *testing.T) {
 
 	manager, err := initSubscriptionManager(mc, cc)
 	assert.NotNil(t, manager)
-	assert.Equal(t, 1, len(manager.Schemas()))
+
 	assert.Nil(t, err)
 
 	cc = &mocks.MockCentralClient{}

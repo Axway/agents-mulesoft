@@ -1,20 +1,20 @@
-package clientid
+package subscription
 
 import (
 	"testing"
 
 	"github.com/Axway/agent-sdk/pkg/apic"
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
-	"github.com/Axway/agents-mulesoft/pkg/config"
+	"github.com/Axway/agents-mulesoft/pkg/common"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestClientID(t *testing.T) {
-	clientIDPolicy := newClientID()
+	clientIDPolicy := NewClientIDContract()
 	assert.Equal(t, name, clientIDPolicy.Name())
 	assert.NotEmpty(t, clientIDPolicy.Schema().GetProperty(anypoint.AppName))
 	assert.NotEmpty(t, clientIDPolicy.Schema().GetProperty(anypoint.Description))
-	pd := config.PolicyDetail{
+	pd := common.PolicyDetail{
 		Policy:     apic.Apikey,
 		IsSLABased: false,
 		APIId:      name,

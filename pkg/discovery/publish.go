@@ -4,7 +4,6 @@ import (
 	coreAgent "github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	"github.com/Axway/agent-sdk/pkg/util"
-	"github.com/Axway/agents-mulesoft/pkg/common"
 	"github.com/Axway/agents-mulesoft/pkg/config"
 	"github.com/sirupsen/logrus"
 )
@@ -29,7 +28,7 @@ func (p *publisher) Loop() {
 	for {
 		select {
 		case serviceDetail := <-p.apiChan:
-			p.publish(serviceDetail)
+			go p.publish(serviceDetail)
 		case <-p.stopPublish:
 			logrus.Debug("stopping publish listener")
 			return
@@ -68,10 +67,7 @@ func BuildServiceBody(service *ServiceDetail) (apic.ServiceBody, error) {
 			tags[tag] = true
 		}
 	}
-	prefix := common.FormatRevisionName(
-		service.AgentDetails[common.AttrAssetVersion],
-		service.AgentDetails[common.AttrAPIID],
-	)
+
 	return apic.NewServiceBodyBuilder().
 		SetAPIName(service.APIName).
 		SetAPISpec(service.APISpec).
@@ -83,7 +79,6 @@ func BuildServiceBody(service *ServiceDetail) (apic.ServiceBody, error) {
 		SetImage(service.Image).
 		SetImageContentType(service.ImageContentType).
 		SetResourceType(service.ResourceType).
-		SetAltRevisionPrefix(prefix).
 		SetServiceAgentDetails(util.MapStringStringToMapStringInterface(service.AgentDetails)).
 		SetServiceAttribute(service.ServiceAttributes).
 		SetStage(service.Stage).
@@ -94,5 +89,6 @@ func BuildServiceBody(service *ServiceDetail) (apic.ServiceBody, error) {
 		SetTitle(service.Title).
 		SetURL(service.URL).
 		SetVersion(service.Version).
+		SetAccessRequestDefintionName(service.AccessRequestDefinition).
 		Build()
 }

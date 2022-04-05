@@ -78,7 +78,7 @@ func TestServiceHandler(t *testing.T) {
 		discoveryTags:       []string{"tag1"},
 		discoveryIgnoreTags: []string{"nah"},
 		client:              mc,
-		subscriptionManager: msh,
+		schemas:             msh,
 		cache:               cache.New(),
 	}
 
@@ -140,7 +140,7 @@ func TestServiceHandlerSLAPolicy(t *testing.T) {
 		discoveryTags:       []string{"tag1"},
 		discoveryIgnoreTags: []string{"nah"},
 		client:              mc,
-		subscriptionManager: msh,
+		schemas:             msh,
 		cache:               cache.New(),
 	}
 
@@ -167,7 +167,7 @@ func TestServiceHandlerDidNotDiscoverAPI(t *testing.T) {
 		discoveryIgnoreTags: []string{"nah"},
 		client:              mc,
 		cache:               cache.New(),
-		subscriptionManager: &mockSchemaHandler{},
+		schemas:             &mockSchemaHandler{},
 	}
 	details := sh.ToServiceDetails(&asset)
 	assert.Equal(t, 0, len(details))
@@ -186,7 +186,7 @@ func TestServiceHandlerGetPolicyError(t *testing.T) {
 		discoveryIgnoreTags: []string{},
 		client:              mc,
 		cache:               cache.New(),
-		subscriptionManager: &mockSchemaHandler{},
+		schemas:             &mockSchemaHandler{},
 	}
 	sd, err := sh.getServiceDetail(&asset, &asset.APIs[0])
 
@@ -206,7 +206,7 @@ func TestServiceHandlerGetExchangeAssetError(t *testing.T) {
 		discoveryTags:       []string{},
 		discoveryIgnoreTags: []string{},
 		client:              mc,
-		subscriptionManager: &mockSchemaHandler{},
+		schemas:             &mockSchemaHandler{},
 		cache:               cache.New(),
 	}
 	sd, err := sh.getServiceDetail(&asset, &asset.APIs[0])
@@ -284,7 +284,7 @@ func TestShouldDiscoverAPIBasedOnTags(t *testing.T) {
 	for i := range tests {
 		tc := tests[i]
 		t.Run(tc.name, func(t *testing.T) {
-			ok := shouldDiscoverAPI(tc.endpoint, tc.discoveryTags, tc.ignoreTags, tc.apiTags)
+			ok, _ := shouldDiscoverAPI(tc.endpoint, tc.discoveryTags, tc.ignoreTags, tc.apiTags)
 			assert.Equal(t, tc.expected, ok)
 		})
 	}
@@ -814,16 +814,15 @@ func getSLATierInfo() (*anypoint.Tiers, *serviceHandler, *mocks.MockCentralClien
 		}},
 	}
 
-	cig := &mockConsumerInstanceGetter{}
-
-	sm := subscription.New(logrus.StandardLogger(), cig)
+	msc := &subscription.MockMuleSubscriptionClient{}
+	sm := subscription.NewManager(logrus.StandardLogger(), msc)
 
 	sh := &serviceHandler{
 		muleEnv:             stage,
 		discoveryTags:       []string{},
 		discoveryIgnoreTags: []string{},
 		client:              mc,
-		subscriptionManager: sm,
+		schemas:             sm,
 		cache:               cache.New(),
 	}
 
@@ -833,7 +832,7 @@ func getSLATierInfo() (*anypoint.Tiers, *serviceHandler, *mocks.MockCentralClien
 func TestCreateSubscriptionSchemaForSLATier(t *testing.T) {
 	tiers, sh, mcc := getSLATierInfo()
 
-	_, err := sh.createSubscriptionSchemaForSLATier("1", tiers, mcc)
+	_, err := sh.createSLATierSchema("1", tiers, mcc)
 	assert.Nil(t, err)
 }
 
@@ -843,7 +842,7 @@ func TestSLATierSchemaSubscriptionCreateFailure(t *testing.T) {
 	mcc.RegisterSubscriptionSchemaMock = func(_ apic.SubscriptionSchema, _ bool) error {
 		return fmt.Errorf("cannot register subscription schema")
 	}
-	_, err := sh.createSubscriptionSchemaForSLATier("1", tiers, mcc)
+	_, err := sh.createSLATierSchema("1", tiers, mcc)
 
 	assert.Error(t, err)
 }

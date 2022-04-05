@@ -4,7 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Axway/agents-mulesoft/pkg/subscription"
+	"github.com/Axway/agents-mulesoft/pkg/common"
+	subs "github.com/Axway/agents-mulesoft/pkg/subscription"
 
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 
@@ -122,8 +123,8 @@ func (m mockPublisher) Stop() {
 
 type mockSchemaHandler struct{}
 
-func (m *mockSchemaHandler) GetSubscriptionSchemaName(_ config.PolicyDetail) string {
+func (m *mockSchemaHandler) GetSubscriptionSchemaName(_ common.PolicyDetail) string {
 	return ""
 }
-func (m *mockSchemaHandler) RegisterNewSchema(schema subscription.StateManager) {
+func (m *mockSchemaHandler) RegisterNewSchema(_ subs.SubSchema) {
 }
