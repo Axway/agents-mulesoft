@@ -353,17 +353,17 @@ func getSpecType(file *anypoint.ExchangeFile, specContent []byte) (string, error
 // getAuthPolicy gets the authentication policy type.
 func getAuthPolicy(policies anypoint.Policies) (string, map[string]interface{}, bool) {
 	for _, policy := range policies.Policies {
-		if policy.Template.AssetID == anypoint.ClientID {
+		if policy.Template.AssetID == common.ClientIDEnforcement {
 			conf := getMapFromInterface(policy.Configuration)
 			return apic.Apikey, conf, false
 		}
 
-		if strings.Contains(policy.Template.AssetID, anypoint.SLAAuth) {
+		if strings.Contains(policy.Template.AssetID, common.SLABased) {
 			conf := getMapFromInterface(policy.Configuration)
 			return apic.Apikey, conf, true
 		}
 
-		if policy.Template.AssetID == anypoint.ExternalOauth {
+		if policy.Template.AssetID == common.ExternalOauth {
 			conf := getMapFromInterface(policy.Configuration)
 			return apic.Oauth, conf, false
 		}
@@ -400,20 +400,20 @@ func setOAS2policies(swagger *openapi2.T, authPolicy string, configuration map[s
 	swagger.SecurityDefinitions = make(map[string]*openapi2.SecurityScheme)
 	switch authPolicy {
 	case apic.Apikey:
-		desc := anypoint.DescClientCred
-		if configuration[anypoint.CredOrigin] != nil {
-			desc += configuration[anypoint.CredOrigin].(string)
+		desc := common.DescClientCred
+		if configuration[common.CredOrigin] != nil {
+			desc += configuration[common.CredOrigin].(string)
 		}
 
 		ss := openapi2.SecurityScheme{
-			Type:        anypoint.APIKey,
-			Name:        anypoint.Authorization,
-			In:          anypoint.Header,
+			Type:        common.APIKey,
+			Name:        common.Authorization,
+			In:          common.Header,
 			Description: desc,
 		}
 
 		sd := map[string]*openapi2.SecurityScheme{
-			anypoint.ClientID: &ss,
+			common.ClientIDEnforcement: &ss,
 		}
 		swagger.SecurityDefinitions = sd
 
@@ -421,25 +421,25 @@ func setOAS2policies(swagger *openapi2.T, authPolicy string, configuration map[s
 		var tokenURL string
 		scopes := make(map[string]string)
 
-		if configuration[anypoint.TokenURL] != nil {
-			tokenURL = configuration[anypoint.TokenURL].(string)
+		if configuration[common.TokenURL] != nil {
+			tokenURL = configuration[common.TokenURL].(string)
 		}
 
-		if configuration[anypoint.Scopes] != nil {
-			scopes[anypoint.Scopes] = configuration[anypoint.Scopes].(string)
+		if configuration[common.Scopes] != nil {
+			scopes[common.Scopes] = configuration[common.Scopes].(string)
 		}
 
 		ssp := openapi2.SecurityScheme{
-			Description:      anypoint.DescOauth2,
-			Type:             anypoint.Oauth2,
-			Flow:             anypoint.AccessCode,
+			Description:      common.DescOauth2,
+			Type:             common.Oauth2,
+			Flow:             common.AccessCode,
 			TokenURL:         tokenURL,
 			AuthorizationURL: tokenURL,
 			Scopes:           scopes,
 		}
 
 		sd := map[string]*openapi2.SecurityScheme{
-			anypoint.Oauth2: &ssp,
+			common.Oauth2: &ssp,
 		}
 
 		swagger.SecurityDefinitions = sd
@@ -452,36 +452,36 @@ func setOAS3policies(spec *openapi3.T, authPolicy string, configuration map[stri
 	spec.Components.SecuritySchemes = make(openapi3.SecuritySchemes)
 	switch authPolicy {
 	case apic.Apikey:
-		desc := anypoint.DescClientCred
-		if configuration[anypoint.CredOrigin] != nil {
-			desc += configuration[anypoint.CredOrigin].(string)
+		desc := common.DescClientCred
+		if configuration[common.CredOrigin] != nil {
+			desc += configuration[common.CredOrigin].(string)
 		}
 
 		ss := openapi3.SecurityScheme{
-			Type:        anypoint.APIKey,
-			Name:        anypoint.Authorization,
-			In:          anypoint.Header,
+			Type:        common.APIKey,
+			Name:        common.Authorization,
+			In:          common.Header,
 			Description: desc}
 
 		ssr := openapi3.SecuritySchemeRef{
 			Value: &ss,
 		}
 
-		spec.Components.SecuritySchemes = openapi3.SecuritySchemes{anypoint.ClientID: &ssr}
+		spec.Components.SecuritySchemes = openapi3.SecuritySchemes{common.ClientIDEnforcement: &ssr}
 	case apic.Oauth:
 		var tokenURL string
 		scopes := make(map[string]string)
 
-		if configuration[anypoint.TokenURL] != nil {
+		if configuration[common.TokenURL] != nil {
 			var ok bool
-			tokenURL, ok = configuration[anypoint.TokenURL].(string)
+			tokenURL, ok = configuration[common.TokenURL].(string)
 			if !ok {
-				return nil, fmt.Errorf("unable to perform type assertion on %#v", configuration[anypoint.TokenURL])
+				return nil, fmt.Errorf("unable to perform type assertion on %#v", configuration[common.TokenURL])
 			}
 		}
 
-		if configuration[anypoint.Scopes] != nil {
-			scopes[anypoint.Scopes] = configuration[anypoint.Scopes].(string)
+		if configuration[common.Scopes] != nil {
+			scopes[common.Scopes] = configuration[common.Scopes].(string)
 		}
 
 		ac := openapi3.OAuthFlow{
@@ -493,15 +493,15 @@ func setOAS3policies(spec *openapi3.T, authPolicy string, configuration map[stri
 			AuthorizationCode: &ac,
 		}
 		ss := openapi3.SecurityScheme{
-			Type:        anypoint.Oauth2,
-			Description: anypoint.DescOauth2,
+			Type:        common.Oauth2,
+			Description: common.DescOauth2,
 			Flows:       &oAuthFlow,
 		}
 		ssr := openapi3.SecuritySchemeRef{
 			Value: &ss,
 		}
 
-		spec.Components.SecuritySchemes = openapi3.SecuritySchemes{anypoint.Oauth2: &ssr}
+		spec.Components.SecuritySchemes = openapi3.SecuritySchemes{common.Oauth2: &ssr}
 	}
 
 	return json.Marshal(spec)

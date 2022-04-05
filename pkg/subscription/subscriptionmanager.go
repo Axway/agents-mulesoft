@@ -6,7 +6,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 	"github.com/Axway/agents-mulesoft/pkg/common"
 
 	"github.com/Axway/agent-sdk/pkg/apic"
@@ -146,9 +145,9 @@ func (sm *Manager) Subscribe(sub apic.Subscription) error {
 
 	apiID := sub.GetRemoteAPIAttributes()[common.AttrAPIID]
 	stage := sub.GetRemoteAPIAttributes()[common.AttrProductVersion]
-	tier := sub.GetPropertyValue(anypoint.TierLabel)
-	appName := sub.GetPropertyValue(anypoint.AppName)
-	description := sub.GetPropertyValue(anypoint.Description)
+	tier := sub.GetPropertyValue(common.TierLabel)
+	appName := sub.GetPropertyValue(common.AppName)
+	description := sub.GetPropertyValue(common.Description)
 
 	app, err := sm.muleSubscription.CreateApp(appName, apiID, description)
 	if err != nil {
@@ -163,9 +162,9 @@ func (sm *Manager) Subscribe(sub apic.Subscription) error {
 	}
 
 	props := map[string]interface{}{
-		anypoint.AppID:            app.ID,
-		anypoint.ClientIDProp:     app.ClientID,
-		anypoint.ClientSecretProp: app.ClientSecret,
+		common.AppID:        app.ID,
+		common.ClientID:     app.ClientID,
+		common.ClientSecret: app.ClientSecret,
 	}
 
 	if err := sub.UpdateStateWithProperties(apic.SubscriptionActive, "", props); err != nil {
@@ -179,8 +178,8 @@ func (sm *Manager) Subscribe(sub apic.Subscription) error {
 // Unsubscribe deletes an application in Mulesoft
 func (sm *Manager) Unsubscribe(sub apic.Subscription) error {
 	log := sm.log.WithFields(logFields(sub))
-	appName := sub.GetPropertyValue(anypoint.AppName)
-	appID := sub.GetPropertyValue(anypoint.AppID)
+	appName := sub.GetPropertyValue(common.AppName)
+	appID := sub.GetPropertyValue(common.AppID)
 	appID64, err := strconv.ParseInt(appID, 10, 64)
 	if err != nil {
 		return sub.UpdateState(apic.SubscriptionFailedToSubscribe, fmt.Sprintf("failed to unsubscribe: %s", err))

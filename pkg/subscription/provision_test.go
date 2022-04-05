@@ -45,7 +45,7 @@ func TestAccessRequestDeprovision(t *testing.T) {
 			req := mock.MockAccessRequest{
 				AppName: "app1",
 				Details: map[string]string{
-					anypoint.ContractID: tc.contractID,
+					common.ContractID: tc.contractID,
 				},
 				InstanceDetails: map[string]interface{}{
 					common.AttrAPIID: tc.apiID,
@@ -134,7 +134,7 @@ func TestAccessRequestProvision(t *testing.T) {
 
 			req := &mock.MockAccessRequest{
 				AppDetails: map[string]string{
-					anypoint.AppID: tc.appID,
+					common.AppID: tc.appID,
 				},
 				AppName: "",
 
@@ -150,9 +150,9 @@ func TestAccessRequestProvision(t *testing.T) {
 			status := prv.AccessRequestProvision(req)
 			assert.Equal(t, tc.status.String(), status.GetStatus().String())
 			if tc.status == prov.Success {
-				assert.Contains(t, status.GetProperties(), anypoint.ContractID)
+				assert.Contains(t, status.GetProperties(), common.ContractID)
 			} else {
-				assert.Empty(t, status.GetProperties(), anypoint.ContractID)
+				assert.Empty(t, status.GetProperties(), common.ContractID)
 			}
 		})
 	}
@@ -192,7 +192,7 @@ func TestApplicationRequestDeprovision(t *testing.T) {
 			req := mock.MockApplicationRequest{
 				AppName: "app1",
 				Details: map[string]string{
-					anypoint.AppID: tc.appID,
+					common.AppID: tc.appID,
 				},
 			}
 			status := prv.ApplicationRequestDeprovision(req)
@@ -243,9 +243,9 @@ func TestApplicationRequestProvision(t *testing.T) {
 			status := prv.ApplicationRequestProvision(req)
 			assert.Equal(t, tc.status.String(), status.GetStatus().String())
 			if tc.status == prov.Success {
-				assert.Contains(t, status.GetProperties(), anypoint.AppID)
+				assert.Contains(t, status.GetProperties(), common.AppID)
 			} else {
-				assert.Empty(t, status.GetProperties(), anypoint.AppID)
+				assert.Empty(t, status.GetProperties(), common.AppID)
 			}
 		})
 	}
@@ -307,7 +307,7 @@ func TestCredentialProvision(t *testing.T) {
 			req := mock.MockCredentialRequest{
 				AppName: tc.appName,
 				AppDetails: map[string]string{
-					anypoint.AppID: tc.appID,
+					common.AppID: tc.appID,
 				},
 			}
 			status, cr := prv.CredentialProvision(req)

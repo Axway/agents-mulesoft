@@ -3,7 +3,6 @@ package subscription
 import (
 	"testing"
 
-	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 	"github.com/Axway/agents-mulesoft/pkg/common"
 	"github.com/stretchr/testify/assert"
 
@@ -14,9 +13,9 @@ func TestSlaTier(t *testing.T) {
 	name := "slatier"
 	contract := NewSLATierContractSchemaUC(name, []string{"tier1", "tier2"})
 	assert.Equal(t, name, contract.Name())
-	assert.NotNil(t, contract.Schema().GetProperty(anypoint.AppName))
-	assert.NotNil(t, contract.Schema().GetProperty(anypoint.Description))
-	assert.NotNil(t, contract.Schema().GetProperty(anypoint.TierLabel))
+	assert.NotNil(t, contract.Schema().GetProperty(common.AppName))
+	assert.NotNil(t, contract.Schema().GetProperty(common.Description))
+	assert.NotNil(t, contract.Schema().GetProperty(common.TierLabel))
 	pd := common.PolicyDetail{
 		Policy:     apic.Apikey,
 		IsSLABased: true,

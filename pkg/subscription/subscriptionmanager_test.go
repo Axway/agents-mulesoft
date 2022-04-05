@@ -27,9 +27,9 @@ var mockSub = &apic.MockSubscription{
 	UserID:         "5",
 	State:          apic.PublishedState,
 	PropertyVals: map[string]interface{}{
-		anypoint.AppName:     "mule-app",
-		anypoint.Description: "desc",
-		anypoint.TierLabel:   "666892-gold",
+		common.AppName:     "mule-app",
+		common.Description: "desc",
+		common.TierLabel:   "666892-gold",
 	},
 	RemoteAPIAttributes: map[string]string{
 		common.AttrAPIID:          "16810513",
@@ -143,7 +143,7 @@ func TestValidateSubscription(t *testing.T) {
 	assert.False(t, isFalse)
 
 	name := manager.GetSubscriptionSchemaName(common.PolicyDetail{
-		Policy:     anypoint.ClientID,
+		Policy:     common.ClientIDEnforcement,
 		IsSLABased: false,
 		APIId:      "1",
 	})

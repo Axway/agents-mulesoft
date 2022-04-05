@@ -7,7 +7,6 @@ import (
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/util"
-	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 	"github.com/Axway/agents-mulesoft/pkg/common"
 	"github.com/sirupsen/logrus"
 )
@@ -36,9 +35,9 @@ func (p provisioner) AccessRequestDeprovision(req prov.AccessRequest) prov.Reque
 		return p.failed(rs, notFound(common.AttrAPIID))
 	}
 
-	contractID := req.GetAccessRequestDetailsValue(anypoint.ContractID)
+	contractID := req.GetAccessRequestDetailsValue(common.ContractID)
 	if contractID == "" {
-		return p.failed(rs, notFound(anypoint.ContractID))
+		return p.failed(rs, notFound(common.ContractID))
 	}
 
 	// skip error handling since access request may already be deleted if the managed app was deleted first.
@@ -67,7 +66,7 @@ func (p provisioner) AccessRequestProvision(req prov.AccessRequest) prov.Request
 		return p.failed(rs, notFound(defs.AttrExternalAPIStage))
 	}
 
-	appID := req.GetApplicationDetailsValue(anypoint.AppID)
+	appID := req.GetApplicationDetailsValue(common.AppID)
 	appID64, err := strconv.ParseInt(appID, 10, 64)
 	if err != nil {
 		return p.failed(rs, fmt.Errorf("failed to convert appID to int64. %s", err))
@@ -81,7 +80,7 @@ func (p provisioner) AccessRequestProvision(req prov.AccessRequest) prov.Request
 		return p.failed(rs, fmt.Errorf("failed to create contract: %s", err))
 	}
 
-	rs.AddProperty(anypoint.ContractID, fmt.Sprintf("%d", contract.Id))
+	rs.AddProperty(common.ContractID, fmt.Sprintf("%d", contract.Id))
 
 	p.log.
 		WithField("api", apiID).
@@ -95,7 +94,7 @@ func (p provisioner) ApplicationRequestDeprovision(req prov.ApplicationRequest) 
 	p.log.Info("deprovisioning application")
 	rs := prov.NewRequestStatusBuilder()
 
-	appID := req.GetApplicationDetailsValue(anypoint.AppID)
+	appID := req.GetApplicationDetailsValue(common.AppID)
 	appID64, err := strconv.ParseInt(appID, 10, 64)
 	if err != nil {
 		return p.failed(rs, fmt.Errorf("failed to convert appID to int64. %s", err))
@@ -125,7 +124,7 @@ func (p provisioner) ApplicationRequestProvision(req prov.ApplicationRequest) pr
 		return p.failed(rs, fmt.Errorf("failed to create app: %s", err))
 	}
 
-	rs.AddProperty(anypoint.AppID, fmt.Sprintf("%d", app.ID))
+	rs.AddProperty(common.AppID, fmt.Sprintf("%d", app.ID))
 
 	p.log.Info("created application")
 
@@ -151,7 +150,7 @@ func (p provisioner) CredentialProvision(req prov.CredentialRequest) (prov.Reque
 		return p.failed(rs, notFound("appName")), nil
 	}
 
-	appID := req.GetApplicationDetailsValue(anypoint.AppID)
+	appID := req.GetApplicationDetailsValue(common.AppID)
 	if appID == "" {
 		return p.failed(rs, notFound(appID)), nil
 	}

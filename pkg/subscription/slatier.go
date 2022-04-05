@@ -3,7 +3,6 @@ package subscription
 import (
 	"github.com/Axway/agent-sdk/pkg/apic"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
-	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 	"github.com/Axway/agents-mulesoft/pkg/common"
 )
 
@@ -15,7 +14,7 @@ type slaTier struct {
 func NewSLATierContractSchemaMP(name string, tierNames []string) prov.SchemaBuilder {
 	tier := prov.NewSchemaPropertyBuilder().
 		SetName(common.SlaTier).
-		SetLabel(anypoint.TierLabel).
+		SetLabel(common.TierLabel).
 		SetRequired().
 		IsString().
 		SetEnumValues(tierNames)
@@ -29,7 +28,7 @@ func NewSLATierContractSchemaMP(name string, tierNames []string) prov.SchemaBuil
 func NewSLATierContractSchemaUC(name string, tierNames []string) SubSchema {
 	schema := apic.NewSubscriptionSchema(name)
 	schema.AddProperty(
-		anypoint.AppName,
+		common.AppName,
 		"string",
 		"Name of the new app",
 		"",
@@ -37,7 +36,7 @@ func NewSLATierContractSchemaUC(name string, tierNames []string) SubSchema {
 		nil,
 	)
 	schema.AddProperty(
-		anypoint.Description,
+		common.Description,
 		"string",
 		"",
 		"",
@@ -45,7 +44,7 @@ func NewSLATierContractSchemaUC(name string, tierNames []string) SubSchema {
 		nil,
 	)
 	schema.AddProperty(
-		anypoint.TierLabel,
+		common.TierLabel,
 		"string",
 		"",
 		"",

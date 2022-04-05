@@ -2,7 +2,6 @@ package subscription
 
 import (
 	"github.com/Axway/agent-sdk/pkg/apic"
-	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 	"github.com/Axway/agents-mulesoft/pkg/common"
 )
 
@@ -17,7 +16,7 @@ type clientID struct {
 func NewClientIDContract() SubSchema {
 	schema := apic.NewSubscriptionSchema(name)
 
-	schema.AddProperty(anypoint.AppName,
+	schema.AddProperty(common.AppName,
 		"string",
 		"Name of the new app",
 		"",
@@ -25,7 +24,7 @@ func NewClientIDContract() SubSchema {
 		nil,
 	)
 
-	schema.AddProperty(anypoint.Description,
+	schema.AddProperty(common.Description,
 		"string",
 		"Description",
 		"",
