@@ -166,9 +166,9 @@ func (sm *Manager) Subscribe(sub apic.Subscription) error {
 	}
 
 	props := map[string]interface{}{
-		common.AppID:        fmt.Sprintf("%d", app.ID),
-		common.ClientID:     app.ClientID,
-		common.ClientSecret: app.ClientSecret,
+		common.AppID:             fmt.Sprintf("%d", app.ID),
+		common.ClientIDLabel:     app.ClientID,
+		common.ClientSecretLabel: app.ClientSecret,
 	}
 
 	if err := sub.UpdateStateWithProperties(apic.SubscriptionActive, "", props); err != nil {
