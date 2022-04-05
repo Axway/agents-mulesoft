@@ -115,12 +115,20 @@ func (sm *Manager) GetSubscriptionSchemaName(pd common.PolicyDetail) string {
 
 // ProcessSubscribe moves a subscription from Approved to Active.
 func (sm *Manager) ProcessSubscribe(subscription apic.Subscription) {
-	sm.processForState(subscription, apic.SubscriptionApproved)
+	err := sm.processForState(subscription, apic.SubscriptionApproved)
+	if err != nil {
+		log := sm.log.WithFields(logFields(subscription))
+		log.Error(err)
+	}
 }
 
 // ProcessUnsubscribe moves a subscription from Unsubscribe Initiated to Unsubscribed.
 func (sm *Manager) ProcessUnsubscribe(subscription apic.Subscription) {
-	sm.processForState(subscription, apic.SubscriptionUnsubscribeInitiated)
+	err := sm.processForState(subscription, apic.SubscriptionUnsubscribeInitiated)
+	if err != nil {
+		log := sm.log.WithFields(logFields(subscription))
+		log.Error(err)
+	}
 }
 
 // processForState processes a subscription state change based on the current state.
@@ -141,8 +149,6 @@ func (sm *Manager) processForState(subscription apic.Subscription, state apic.Su
 
 // Subscribe creates an application and a contract in Mulesoft, and updates the subscription state in central.
 func (sm *Manager) Subscribe(sub apic.Subscription) error {
-	log := sm.log.WithFields(logFields(sub))
-
 	apiID := sub.GetRemoteAPIAttributes()[common.AttrAPIID]
 	stage := sub.GetRemoteAPIAttributes()[common.AttrProductVersion]
 	tier := sub.GetPropertyValue(common.TierLabel)
@@ -151,24 +157,21 @@ func (sm *Manager) Subscribe(sub apic.Subscription) error {
 
 	app, err := sm.muleSubscription.CreateApp(appName, apiID, description)
 	if err != nil {
-		log.WithError(err).Error("failed to subscribe")
 		return sub.UpdateState(apic.SubscriptionFailedToSubscribe, err.Error())
 	}
 
 	_, err = sm.muleSubscription.CreateContract(apiID, stage, tier, app.ID)
 	if err != nil {
-		log.WithError(err).Error("failed to subscribe")
 		return sub.UpdateState(apic.SubscriptionFailedToSubscribe, err.Error())
 	}
 
 	props := map[string]interface{}{
-		common.AppID:        app.ID,
+		common.AppID:        fmt.Sprintf("%d", app.ID),
 		common.ClientID:     app.ClientID,
 		common.ClientSecret: app.ClientSecret,
 	}
 
 	if err := sub.UpdateStateWithProperties(apic.SubscriptionActive, "", props); err != nil {
-		log.WithError(err).Error("failed to subscribe")
 		return err
 	}
 
@@ -177,21 +180,18 @@ func (sm *Manager) Subscribe(sub apic.Subscription) error {
 
 // Unsubscribe deletes an application in Mulesoft
 func (sm *Manager) Unsubscribe(sub apic.Subscription) error {
-	log := sm.log.WithFields(logFields(sub))
 	appName := sub.GetPropertyValue(common.AppName)
 	appID := sub.GetPropertyValue(common.AppID)
 	appID64, err := strconv.ParseInt(appID, 10, 64)
 	if err != nil {
-		return sub.UpdateState(apic.SubscriptionFailedToSubscribe, fmt.Sprintf("failed to unsubscribe: %s", err))
+		return sub.UpdateState(apic.SubscriptionFailedToUnsubscribe, fmt.Sprintf("failed to unsubscribe: %s", err))
 	}
 
 	if err := sm.muleSubscription.DeleteApp(appID64); err != nil {
-		log.WithError(err).Error("failed to delete client application")
-		return sub.UpdateState(apic.SubscriptionFailedToSubscribe, fmt.Sprintf("Failed to delete client application %s", appName))
+		return sub.UpdateState(apic.SubscriptionFailedToUnsubscribe, fmt.Sprintf("Failed to delete client application %s", appName))
 	}
 
 	if err := sub.UpdateState(apic.SubscriptionUnsubscribed, ""); err != nil {
-		log.WithError(err).Error("failed to unsubscribe")
 		return err
 	}
 
