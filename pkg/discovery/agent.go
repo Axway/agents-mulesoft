@@ -31,7 +31,7 @@ type Agent struct {
 }
 
 // NewAgent creates a new agent
-func NewAgent(cfg *config.AgentConfig, client anypoint.Client, sm subscription.SchemaHandler) (agent *Agent) {
+func NewAgent(cfg *config.AgentConfig, client anypoint.Client, sm subscription.SchemaStore) (agent *Agent) {
 	buffer := 5
 	apiChan := make(chan *ServiceDetail, buffer)
 
@@ -41,20 +41,20 @@ func NewAgent(cfg *config.AgentConfig, client anypoint.Client, sm subscription.S
 		publishAPI:  coreAgent.PublishAPI,
 	}
 
-	assetCache := cache.GetCache()
+	c := cache.New()
 
 	svcHandler := &serviceHandler{
 		muleEnv:             cfg.MulesoftConfig.Environment,
 		discoveryTags:       cleanTags(cfg.MulesoftConfig.DiscoveryTags),
 		discoveryIgnoreTags: cleanTags(cfg.MulesoftConfig.DiscoveryIgnoreTags),
 		client:              client,
-		subscriptionManager: sm,
-		cache:               assetCache,
+		schemas:             sm,
+		cache:               c,
 	}
 
 	disc := &discovery{
 		apiChan:           apiChan,
-		cache:             assetCache,
+		cache:             c,
 		client:            client,
 		centralClient:     coreAgent.GetCentralClient(),
 		discoveryPageSize: 50,

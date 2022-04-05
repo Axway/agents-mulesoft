@@ -41,11 +41,15 @@ func (mc *MockClientBase) Send(request api.Request) (*api.Response, error) {
 
 type MockAnypointClient struct {
 	mock.Mock
-	CreateContractAssertArgs          bool
-	CreateClientApplicationAssertArgs bool
 }
 
 func (m *MockAnypointClient) OnConfigChange(*config.MulesoftConfig) {
+}
+
+func (m *MockAnypointClient) GetAPI(id string) (*API, error) {
+	args := m.Called()
+	result := args.Get(0)
+	return result.(*API), args.Error(1)
 }
 
 func (m *MockAnypointClient) GetAccessToken() (string, *User, time.Duration, error) {
@@ -101,25 +105,15 @@ func (m *MockAnypointClient) GetAnalyticsWindow() ([]AnalyticsEvent, error) {
 
 func (m *MockAnypointClient) CreateClientApplication(id string, body *AppRequestBody) (*Application, error) {
 	var args mock.Arguments
-
-	if m.CreateContractAssertArgs {
-		args = m.Called(id, body)
-	} else {
-		args = m.Called()
-	}
+	args = m.Called()
 	result := args.Get(0)
 	return result.(*Application), args.Error(1)
 }
 
 func (m *MockAnypointClient) CreateContract(id int64, contract *Contract) (*Contract, error) {
 	var args mock.Arguments
-	if m.CreateContractAssertArgs {
-		args = m.Called(id, contract)
-	} else {
-		args = m.Called()
-	}
-	result := args.Get(0)
-	return result.(*Contract), args.Error(1)
+	args = m.Called()
+	return contract, args.Error(1)
 }
 
 func (m *MockAnypointClient) GetSLATiers(int642 int64) (*Tiers, error) {
@@ -135,6 +129,20 @@ func (m *MockAnypointClient) GetSLATiers(int642 int64) (*Tiers, error) {
 }
 
 func (m *MockAnypointClient) DeleteClientApplication(appID int64) error {
+	args := m.Called()
+	return args.Error(0)
+}
+
+func (m *MockAnypointClient) GetClientApplication(appID string) (*Application, error) {
+	return nil, nil
+}
+
+func (m *MockAnypointClient) DeleteContract(apiID string, contractID string) error {
+	args := m.Called()
+	return args.Error(0)
+}
+
+func (m *MockAnypointClient) RevokeContract(apiID, contractID string) error {
 	args := m.Called()
 	return args.Error(0)
 }

@@ -62,7 +62,7 @@ func TestServiceHandler(t *testing.T) {
 	policies := anypoint.Policies{Policies: []anypoint.Policy{
 		{
 			Template: anypoint.Template{
-				AssetID: anypoint.ClientID,
+				AssetID: common.ClientIDEnforcement,
 			},
 		},
 	}}
@@ -78,7 +78,7 @@ func TestServiceHandler(t *testing.T) {
 		discoveryTags:       []string{"tag1"},
 		discoveryIgnoreTags: []string{"nah"},
 		client:              mc,
-		subscriptionManager: msh,
+		schemas:             msh,
 		cache:               cache.New(),
 	}
 
@@ -124,7 +124,7 @@ func TestServiceHandlerSLAPolicy(t *testing.T) {
 	policies := anypoint.Policies{Policies: []anypoint.Policy{
 		{
 			Template: anypoint.Template{
-				AssetID: anypoint.SLAAuth,
+				AssetID: common.SLABased,
 			},
 		},
 	}}
@@ -140,7 +140,7 @@ func TestServiceHandlerSLAPolicy(t *testing.T) {
 		discoveryTags:       []string{"tag1"},
 		discoveryIgnoreTags: []string{"nah"},
 		client:              mc,
-		subscriptionManager: msh,
+		schemas:             msh,
 		cache:               cache.New(),
 	}
 
@@ -155,7 +155,7 @@ func TestServiceHandlerDidNotDiscoverAPI(t *testing.T) {
 	policies := anypoint.Policies{Policies: []anypoint.Policy{
 		{
 			Template: anypoint.Template{
-				AssetID: anypoint.ClientID,
+				AssetID: common.ClientIDEnforcement,
 			},
 		},
 	}}
@@ -167,7 +167,7 @@ func TestServiceHandlerDidNotDiscoverAPI(t *testing.T) {
 		discoveryIgnoreTags: []string{"nah"},
 		client:              mc,
 		cache:               cache.New(),
-		subscriptionManager: &mockSchemaHandler{},
+		schemas:             &mockSchemaHandler{},
 	}
 	details := sh.ToServiceDetails(&asset)
 	assert.Equal(t, 0, len(details))
@@ -186,7 +186,7 @@ func TestServiceHandlerGetPolicyError(t *testing.T) {
 		discoveryIgnoreTags: []string{},
 		client:              mc,
 		cache:               cache.New(),
-		subscriptionManager: &mockSchemaHandler{},
+		schemas:             &mockSchemaHandler{},
 	}
 	sd, err := sh.getServiceDetail(&asset, &asset.APIs[0])
 
@@ -206,7 +206,7 @@ func TestServiceHandlerGetExchangeAssetError(t *testing.T) {
 		discoveryTags:       []string{},
 		discoveryIgnoreTags: []string{},
 		client:              mc,
-		subscriptionManager: &mockSchemaHandler{},
+		schemas:             &mockSchemaHandler{},
 		cache:               cache.New(),
 	}
 	sd, err := sh.getServiceDetail(&asset, &asset.APIs[0])
@@ -284,7 +284,7 @@ func TestShouldDiscoverAPIBasedOnTags(t *testing.T) {
 	for i := range tests {
 		tc := tests[i]
 		t.Run(tc.name, func(t *testing.T) {
-			ok := shouldDiscoverAPI(tc.endpoint, tc.discoveryTags, tc.ignoreTags, tc.apiTags)
+			ok, _ := shouldDiscoverAPI(tc.endpoint, tc.discoveryTags, tc.ignoreTags, tc.apiTags)
 			assert.Equal(t, tc.expected, ok)
 		})
 	}
@@ -357,7 +357,7 @@ func TestGetExchangeAssetSpecFile(t *testing.T) {
 
 func Test_checksum(t *testing.T) {
 	s1 := makeChecksum(&asset, apic.Passthrough)
-	s2 := makeChecksum(&asset, anypoint.ClientID)
+	s2 := makeChecksum(&asset, common.ClientIDEnforcement)
 	assert.NotEmpty(t, s1)
 	assert.NotEqual(t, s1, s2)
 }
@@ -376,7 +376,7 @@ func Test_getAuthPolicy(t *testing.T) {
 					{
 						Configuration: map[string]interface{}{},
 						Template: anypoint.Template{
-							AssetID: anypoint.ClientID,
+							AssetID: common.ClientIDEnforcement,
 						},
 					},
 				},
@@ -390,7 +390,7 @@ func Test_getAuthPolicy(t *testing.T) {
 					{
 						Configuration: map[string]interface{}{},
 						Template: anypoint.Template{
-							AssetID: anypoint.ExternalOauth,
+							AssetID: common.ExternalOauth,
 						},
 					},
 				},
@@ -410,7 +410,7 @@ func Test_getAuthPolicy(t *testing.T) {
 					{
 						Configuration: map[string]interface{}{},
 						Template: anypoint.Template{
-							AssetID: anypoint.ClientID,
+							AssetID: common.ClientIDEnforcement,
 						},
 					},
 				},
@@ -423,7 +423,7 @@ func Test_getAuthPolicy(t *testing.T) {
 				Policies: []anypoint.Policy{
 					{
 						Template: anypoint.Template{
-							AssetID: anypoint.ClientID,
+							AssetID: common.ClientIDEnforcement,
 						},
 					},
 				},
@@ -624,7 +624,7 @@ func Test_setOAS2policies(t *testing.T) {
 		},
 		{
 			name:          "should apply APIKey security policy with Custom configuration set as Basic Auth",
-			configuration: map[string]interface{}{anypoint.CredOrigin: "httpBasicAuthenticationHeader"},
+			configuration: map[string]interface{}{common.CredOrigin: "httpBasicAuthenticationHeader"},
 			content: &openapi2.T{
 				Swagger: "2.0",
 				Info: openapi3.Info{
@@ -640,7 +640,7 @@ func Test_setOAS2policies(t *testing.T) {
 		},
 		{
 			name:          "should apply OAuth security policy with no scope",
-			configuration: map[string]interface{}{anypoint.TokenURL: "www.test.com"},
+			configuration: map[string]interface{}{common.TokenURL: "www.test.com"},
 			content: &openapi2.T{
 				Swagger: "2.0",
 				Info: openapi3.Info{
@@ -656,7 +656,7 @@ func Test_setOAS2policies(t *testing.T) {
 		},
 		{
 			name:          "should apply OAuth security policy with scopes",
-			configuration: map[string]interface{}{anypoint.TokenURL: "www.test.com", anypoint.Scopes: "read,write"},
+			configuration: map[string]interface{}{common.TokenURL: "www.test.com", common.Scopes: "read,write"},
 			content: &openapi2.T{
 				Swagger: "2.0",
 				Info: openapi3.Info{
@@ -724,7 +724,7 @@ func Test_setOAS3policies(t *testing.T) {
 		},
 		{
 			name:          "should apply APIKey security policy with Custom configuration set as Basic Auth",
-			configuration: map[string]interface{}{anypoint.CredOrigin: "httpBasicAuthenticationHeader"},
+			configuration: map[string]interface{}{common.CredOrigin: "httpBasicAuthenticationHeader"},
 			content: &openapi3.T{
 				OpenAPI: "3.0.1",
 				Info: &openapi3.Info{
@@ -737,7 +737,7 @@ func Test_setOAS3policies(t *testing.T) {
 		},
 		{
 			name:          "should apply OAuth security policy with no scope",
-			configuration: map[string]interface{}{anypoint.TokenURL: "www.test.com"},
+			configuration: map[string]interface{}{common.TokenURL: "www.test.com"},
 			content: &openapi3.T{
 				OpenAPI: "3.0.1",
 				Info: &openapi3.Info{
@@ -750,7 +750,7 @@ func Test_setOAS3policies(t *testing.T) {
 		},
 		{
 			name:          "should apply OAuth security policy with scopes",
-			configuration: map[string]interface{}{anypoint.TokenURL: "www.test.com", anypoint.Scopes: "read,write"},
+			configuration: map[string]interface{}{common.TokenURL: "www.test.com", common.Scopes: "read,write"},
 			content: &openapi3.T{
 				OpenAPI: "3.0.1",
 				Info: &openapi3.Info{
@@ -814,16 +814,15 @@ func getSLATierInfo() (*anypoint.Tiers, *serviceHandler, *mocks.MockCentralClien
 		}},
 	}
 
-	cig := &mockConsumerInstanceGetter{}
-
-	sm := subscription.New(logrus.StandardLogger(), cig)
+	msc := &subscription.MockMuleSubscriptionClient{}
+	sm := subscription.NewManager(logrus.StandardLogger(), msc)
 
 	sh := &serviceHandler{
 		muleEnv:             stage,
 		discoveryTags:       []string{},
 		discoveryIgnoreTags: []string{},
 		client:              mc,
-		subscriptionManager: sm,
+		schemas:             sm,
 		cache:               cache.New(),
 	}
 
@@ -833,7 +832,7 @@ func getSLATierInfo() (*anypoint.Tiers, *serviceHandler, *mocks.MockCentralClien
 func TestCreateSubscriptionSchemaForSLATier(t *testing.T) {
 	tiers, sh, mcc := getSLATierInfo()
 
-	_, err := sh.createSubscriptionSchemaForSLATier("1", tiers, mcc)
+	_, err := sh.createSLATierSchema("1", tiers, mcc)
 	assert.Nil(t, err)
 }
 
@@ -843,7 +842,7 @@ func TestSLATierSchemaSubscriptionCreateFailure(t *testing.T) {
 	mcc.RegisterSubscriptionSchemaMock = func(_ apic.SubscriptionSchema, _ bool) error {
 		return fmt.Errorf("cannot register subscription schema")
 	}
-	_, err := sh.createSubscriptionSchemaForSLATier("1", tiers, mcc)
+	_, err := sh.createSLATierSchema("1", tiers, mcc)
 
 	assert.Error(t, err)
 }

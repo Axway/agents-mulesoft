@@ -2,47 +2,40 @@ package subscription
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/Axway/agents-mulesoft/pkg/common"
 
-	"github.com/Axway/agents-mulesoft/pkg/config"
-
 	"github.com/Axway/agent-sdk/pkg/apic"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/sirupsen/logrus"
 )
 
-type SchemaHandler interface {
-	GetSubscriptionSchemaName(pd config.PolicyDetail) string
-	RegisterNewSchema(schema StateManager)
+// SchemaStore interface for saving and retrieving subscription schemas
+type SchemaStore interface {
+	// GetSubscriptionSchemaName returns the name of a schema for the provided policy if the schema is found
+	GetSubscriptionSchemaName(pd common.PolicyDetail) string
+	// RegisterNewSchema saves a schema to the store
+	RegisterNewSchema(schema SubSchema)
 }
 
-// ConsumerInstanceGetter gets a consumer instance by id.
-type ConsumerInstanceGetter interface {
-	GetConsumerInstanceByID(id string) (*v1alpha1.ConsumerInstance, error)
-}
-
-// SubSchema the policy attached required to create a subscription.
+// SubSchema the subscription schema to represent the policy in the Unified Catalog.
 type SubSchema interface {
+	// Schema is the Unified Catalog Subscription Schema
 	Schema() apic.SubscriptionSchema
+	// Name of the Subscription Schema based on the policy type, such as client-id
 	Name() string
-	IsApplicable(policyDetail config.PolicyDetail) bool
+	// IsApplicable returns true if the provided policy matches the schema
+	IsApplicable(policy common.PolicyDetail) bool
 }
 
-// StateManager handles subscription state changes.
-type StateManager interface {
-	SubSchema
-	Subscribe(log logrus.FieldLogger, subs apic.Subscription) error
-	Unsubscribe(log logrus.FieldLogger, subs apic.Subscription) error
-}
-
-// Manager handles the subscription aspects
+// Manager stores subscription schemas and handles subscription state changes
 type Manager struct {
-	log      logrus.FieldLogger
-	handlers map[string]StateManager
-	cig      ConsumerInstanceGetter
-	dg       *duplicateGuard
+	log              logrus.FieldLogger
+	schemas          map[string]SubSchema
+	dg               *duplicateGuard
+	muleSubscription MuleSubscriptionClient
 }
 
 type duplicateGuard struct {
@@ -50,18 +43,20 @@ type duplicateGuard struct {
 	lock  *sync.Mutex
 }
 
-// New creates a SubscriptionManager
-func New(log logrus.FieldLogger, cig ConsumerInstanceGetter, schemas ...StateManager) *Manager {
-	handlers := make(map[string]StateManager, len(schemas))
+// NewManager creates a SubscriptionManager
+func NewManager(
+	log logrus.FieldLogger, muleSubscription MuleSubscriptionClient, schemas ...SubSchema,
+) *Manager {
+	handlers := make(map[string]SubSchema, len(schemas))
 
 	manager := &Manager{
-		log:      log,
-		handlers: handlers,
-		cig:      cig,
+		log:     log,
+		schemas: handlers,
 		dg: &duplicateGuard{
 			cache: map[string]interface{}{},
 			lock:  &sync.Mutex{},
 		},
+		muleSubscription: muleSubscription,
 	}
 
 	for _, schema := range schemas {
@@ -71,26 +66,14 @@ func New(log logrus.FieldLogger, cig ConsumerInstanceGetter, schemas ...StateMan
 	return manager
 }
 
-// RegisterNewSchema registers a schema to represent a Mulesoft policy that can be subscribed to in the Catalog.
-func (sm *Manager) RegisterNewSchema(schema StateManager) {
+// RegisterNewSchema registers a schema to represent a Mulesoft policy that can be subscribed to in the Unified Catalog.
+func (sm *Manager) RegisterNewSchema(schema SubSchema) {
 	sm.dg.lock.Lock()
 	defer sm.dg.lock.Unlock()
-	sm.handlers[schema.Name()] = schema
+	sm.schemas[schema.Name()] = schema
 }
 
-func (sm *Manager) Schemas() []apic.SubscriptionSchema {
-	sm.dg.lock.Lock()
-	defer sm.dg.lock.Unlock()
-
-	res := make([]apic.SubscriptionSchema, 0, len(sm.handlers))
-	for _, h := range sm.handlers {
-		res = append(res, h.Schema())
-	}
-
-	return res
-}
-
-// markActive returns
+// markActive returns true when a subscription is being processed for a given id.
 func (dg *duplicateGuard) markActive(id string) bool {
 	dg.lock.Lock()
 	defer dg.lock.Unlock()
@@ -103,7 +86,7 @@ func (dg *duplicateGuard) markActive(id string) bool {
 	return false
 }
 
-// markInactive returns
+// markInactive is called after processing a subscription
 func (dg *duplicateGuard) markInactive(id string) {
 	dg.lock.Lock()
 	defer dg.lock.Unlock()
@@ -111,6 +94,7 @@ func (dg *duplicateGuard) markInactive(id string) {
 	delete(dg.cache, id)
 }
 
+// ValidateSubscription checks if a subscription should  be processed or not. If a subscription is already marked as active, then false is returned
 func (sm *Manager) ValidateSubscription(subscription apic.Subscription) bool {
 	if sm.dg.markActive(subscription.GetID()) {
 		sm.log.Info("duplicate subscription event; already handling subscription")
@@ -120,8 +104,8 @@ func (sm *Manager) ValidateSubscription(subscription apic.Subscription) bool {
 }
 
 // GetSubscriptionSchemaName returns the appropriate subscription schema name given a policy
-func (sm *Manager) GetSubscriptionSchemaName(pd config.PolicyDetail) string {
-	for _, h := range sm.handlers {
+func (sm *Manager) GetSubscriptionSchemaName(pd common.PolicyDetail) string {
+	for _, h := range sm.schemas {
 		if h.IsApplicable(pd) {
 			return h.Name()
 		}
@@ -131,55 +115,106 @@ func (sm *Manager) GetSubscriptionSchemaName(pd config.PolicyDetail) string {
 
 // ProcessSubscribe moves a subscription from Approved to Active.
 func (sm *Manager) ProcessSubscribe(subscription apic.Subscription) {
-	log := sm.log.WithFields(logFields(subscription))
-	if err := sm.processForState(subscription, log, apic.SubscriptionApproved); err != nil {
-		log.WithError(err).Error("failed to update subscription state")
-	}
-}
-
-// processForState processes a subscription state change based on the current state.
-func (sm *Manager) processForState(subscription apic.Subscription, log logrus.FieldLogger, state apic.SubscriptionState) error {
-	subID := subscription.GetID()
-	consumerInstanceID := subscription.GetApicID()
-
-	defer sm.dg.markInactive(subID)
-
-	ci, err := sm.cig.GetConsumerInstanceByID(consumerInstanceID)
+	err := sm.processForState(subscription, apic.SubscriptionApproved)
 	if err != nil {
-		return fmt.Errorf("failed to fetch consumer instance")
+		log := sm.log.WithFields(logFields(subscription))
+		log.Error(err)
 	}
-
-	log.Info("processing subscription state change")
-
-	def := ci.Spec.Subscription.SubscriptionDefinition
-	if h, ok := sm.handlers[def]; ok {
-		switch state {
-		case apic.SubscriptionApproved:
-			return h.Subscribe(log.WithField("handler", h.Name()), subscription)
-		case apic.SubscriptionUnsubscribeInitiated:
-			return h.Unsubscribe(log.WithField("handler", h.Name()), subscription)
-		}
-	}
-
-	log.Infof("No known handler for type: %s", def)
-	return nil
 }
 
 // ProcessUnsubscribe moves a subscription from Unsubscribe Initiated to Unsubscribed.
 func (sm *Manager) ProcessUnsubscribe(subscription apic.Subscription) {
-	log := sm.log.WithFields(logFields(subscription))
-	if err := sm.processForState(subscription, log, apic.SubscriptionUnsubscribeInitiated); err != nil {
-		log.WithError(err).Error("failed to update subscription state")
+	err := sm.processForState(subscription, apic.SubscriptionUnsubscribeInitiated)
+	if err != nil {
+		log := sm.log.WithFields(logFields(subscription))
+		log.Error(err)
 	}
+}
+
+// processForState processes a subscription state change based on the current state.
+func (sm *Manager) processForState(subscription apic.Subscription, state apic.SubscriptionState) error {
+	subID := subscription.GetID()
+	sm.dg.markActive(subID)
+	defer sm.dg.markInactive(subID)
+
+	switch state {
+	case apic.SubscriptionApproved:
+		return sm.Subscribe(subscription)
+	case apic.SubscriptionUnsubscribeInitiated:
+		return sm.Unsubscribe(subscription)
+	default:
+		return nil
+	}
+}
+
+// Subscribe creates an application and a contract in Mulesoft, and updates the subscription state in central.
+func (sm *Manager) Subscribe(sub apic.Subscription) error {
+	apiID := sub.GetRemoteAPIAttributes()[common.AttrAPIID]
+	tier := sub.GetPropertyValue(common.TierLabel)
+	appName := sub.GetPropertyValue(common.AppName)
+	description := sub.GetPropertyValue(common.Description)
+
+	app, err := sm.muleSubscription.CreateApp(appName, apiID, description)
+	if err != nil {
+		return sub.UpdateState(apic.SubscriptionFailedToSubscribe, err.Error())
+	}
+
+	sm.log.WithField("appName", appName).Info("client app created")
+
+	_, err = sm.muleSubscription.CreateContract(apiID, tier, app.ID)
+	if err != nil {
+		return sub.UpdateState(apic.SubscriptionFailedToSubscribe, err.Error())
+	}
+
+	sm.log.WithField("appName", appName).WithField("apiID", apiID).Info("contract created")
+
+	props := map[string]interface{}{
+		common.AppID:             fmt.Sprintf("%d", app.ID),
+		common.ClientIDLabel:     app.ClientID,
+		common.ClientSecretLabel: app.ClientSecret,
+	}
+
+	if err := sub.UpdateStateWithProperties(apic.SubscriptionActive, "", props); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Unsubscribe deletes an application in Mulesoft
+func (sm *Manager) Unsubscribe(sub apic.Subscription) error {
+	appName := sub.GetPropertyValue(common.AppName)
+	appID := sub.GetPropertyValue(common.AppID)
+	appID64, err := strconv.ParseInt(appID, 10, 64)
+	if err != nil {
+		return sub.UpdateState(apic.SubscriptionFailedToUnsubscribe, fmt.Sprintf("failed to unsubscribe: %s", err))
+	}
+
+	if err := sm.muleSubscription.DeleteApp(appID64); err != nil {
+		return sub.UpdateState(apic.SubscriptionFailedToUnsubscribe, fmt.Sprintf("Failed to delete client application %s", appName))
+	}
+
+	sm.log.WithField("appName", appName).Info("client app deleted")
+
+	if err := sub.UpdateState(apic.SubscriptionUnsubscribed, ""); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func logFields(sub apic.Subscription) logrus.Fields {
 	return logrus.Fields{
-		"subscriptionName":   sub.GetName(),
-		"subscriptionID":     sub.GetID(),
-		"catalogItemID":      sub.GetCatalogItemID(),
-		"remoteID":           sub.GetRemoteAPIAttributes()[common.AttrAPIID],
-		"consumerInstanceID": sub.GetApicID(),
-		"currentState":       sub.GetState(),
+		"subscriptionName": sub.GetName(),
+		"catalogItemID":    sub.GetCatalogItemID(),
 	}
+}
+
+func parseTierID(tierValue string) int64 {
+	tierID := strings.Split(tierValue, "-")[0]
+	i, err := strconv.ParseInt(tierID, 10, 64)
+	if err != nil {
+		return 0
+	}
+	return i
 }

@@ -77,8 +77,6 @@ func Test_buildServiceBody(t *testing.T) {
 	assert.Equal(t, sd.Title, apicSvc.NameToPush)
 	assert.Equal(t, sd.URL, apicSvc.URL)
 	assert.Equal(t, sd.Version, apicSvc.Version)
-	assert.Equal(t, apicSvc.AltRevisionPrefix, common.FormatRevisionName(details[common.AttrAssetVersion], details[common.AttrAPIID]))
-
 }
 
 type mockAPIPublisher struct {

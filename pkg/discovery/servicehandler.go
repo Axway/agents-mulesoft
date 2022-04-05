@@ -8,22 +8,18 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Axway/agents-mulesoft/pkg/common"
-
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/util/oas"
+	"github.com/Axway/agents-mulesoft/pkg/common"
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/Axway/agents-mulesoft/pkg/subscription/slatier"
-
-	"github.com/Axway/agents-mulesoft/pkg/subscription"
+	subs "github.com/Axway/agents-mulesoft/pkg/subscription"
 	"github.com/getkin/kin-openapi/openapi2"
 
 	"github.com/getkin/kin-openapi/openapi3"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
-	"github.com/Axway/agent-sdk/pkg/util/log"
 
 	"github.com/Axway/agent-sdk/pkg/apic"
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
@@ -42,7 +38,7 @@ type serviceHandler struct {
 	discoveryTags       []string
 	discoveryIgnoreTags []string
 	client              anypoint.Client
-	subscriptionManager subscription.SchemaHandler
+	schemas             subs.SchemaStore
 	cache               cache.Cache
 }
 
@@ -62,12 +58,12 @@ func (s *serviceHandler) ToServiceDetails(asset *anypoint.Asset) []*ServiceDetai
 	})
 
 	for _, api := range asset.APIs {
-		logger.
+		logger = logger.
 			WithField("apiID", api.ID).
 			WithField("apiAssetVersion", api.AssetVersion)
 
-		if !shouldDiscoverAPI(api.EndpointURI, s.discoveryTags, s.discoveryIgnoreTags, api.Tags) {
-			logger.WithField("endpoint", api.EndpointURI).Debug("skipping discovery for api")
+		if ok, msg := shouldDiscoverAPI(api.EndpointURI, s.discoveryTags, s.discoveryIgnoreTags, api.Tags); !ok {
+			logger.WithField("endpoint", api.EndpointURI).Debugf("skipping discovery. %s", msg)
 			continue
 		}
 
@@ -99,11 +95,12 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 		return nil, err
 	}
 	authPolicy, configuration, isSLABased := getAuthPolicy(policies)
+	logger = logger.WithField("policy", authPolicy)
 
 	isAlreadyPublished, checksum := isPublished(api, authPolicy, s.cache)
 	// If true, then the api is published and there were no changes detected
 	if isAlreadyPublished {
-		logger.WithFields(logrus.Fields{"policy": authPolicy, "msg": "api is already published"})
+		logger.Debug("api is already published")
 		return nil, nil
 	}
 
@@ -112,12 +109,13 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 	// Setting with the secondary key allows the subscription manager to find the api.
 	err = s.cache.SetWithSecondaryKey(checksum, secondaryKey, *api)
 	if err != nil {
-		logger.Error(err)
+		logger.Errorf("failed to save api to cache: %s", err)
+		// TODO: if err, remove api, then set again.
 	}
 
 	apiID := strconv.FormatInt(api.ID, 10)
 
-	subSchName := s.subscriptionManager.GetSubscriptionSchemaName(config.PolicyDetail{
+	subSchName := s.schemas.GetSubscriptionSchemaName(common.PolicyDetail{
 		Policy:     authPolicy,
 		IsSLABased: isSLABased,
 		APIId:      apiID,
@@ -130,10 +128,12 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 		if err1 != nil {
 			return nil, err1
 		}
-		schema, err1 := s.createSubscriptionSchemaForSLATier(apiID, tiers, agent.GetCentralClient())
+		schema, err1 := s.createSLATierSchema(apiID, tiers, agent.GetCentralClient())
 		if err1 != nil {
 			return nil, err1
 		}
+
+		logger.Infof("schema registered")
 
 		subSchName = schema.GetSubscriptionName()
 	}
@@ -144,7 +144,6 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 	}
 
 	exchFile := getExchangeAssetSpecFile(exchangeAsset.Files)
-
 	if exchFile == nil {
 		logger.Debugf("no supported specification file found")
 		return nil, nil
@@ -154,14 +153,17 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 	if err != nil {
 		return nil, err
 	}
+
 	specContent := specYAMLToJSON(rawSpec) // SDK does not support YAML specifications
 	specType, err := getSpecType(exchFile, specContent)
 	if err != nil {
 		return nil, err
 	}
+
 	if specType == "" {
 		return nil, fmt.Errorf("unknown spec type")
 	}
+
 	modifiedSpec, err := updateSpec(specType, api.EndpointURI, authPolicy, configuration, specContent)
 	if err != nil {
 		return nil, err
@@ -178,10 +180,12 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 	}
 
 	return &ServiceDetail{
-		APIName:           api.AssetID,
-		APISpec:           modifiedSpec,
-		AuthPolicy:        authPolicy,
-		Description:       api.Description,
+		AccessRequestDefinition: subSchName, // TODO: check what value this is
+		APIName:                 api.AssetID,
+		APISpec:                 modifiedSpec,
+		AuthPolicy:              authPolicy,
+		Description:             api.Description,
+		// Use the Asset ID for the externalAPIID so that apis linked to the asset are created as a revision
 		ID:                fmt.Sprint(asset.ID),
 		Image:             icon,
 		ImageContentType:  iconContentType,
@@ -194,65 +198,61 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 			common.AttrChecksum:       checksum,
 			common.AttrProductVersion: api.ProductVersion,
 		},
-		Stage:            api.AssetVersion,
-		Tags:             api.Tags,
-		Title:            asset.ExchangeAssetName,
-		Version:          api.AssetVersion,
-		SubscriptionName: subSchName,
-		Status:           status,
+		Stage:             api.AssetVersion,
+		Tags:              api.Tags,
+		Title:             asset.ExchangeAssetName,
+		Version:           api.AssetVersion,
+		SubscriptionName:  subSchName,
+		APIUpdateSeverity: apic.MinorChange,
+		Status:            status,
 	}, nil
 }
 
-func (s *serviceHandler) createSubscriptionSchemaForSLATier(
-	apiID string,
-	tiers *anypoint.Tiers,
-	centralClient apic.Client,
+func (s *serviceHandler) createSLATierSchema(
+	apiID string, tiers *anypoint.Tiers, client apic.Client,
 ) (apic.SubscriptionSchema, error) {
-
-	var names []string
-
+	var tierNames []string
 	for _, tier := range tiers.Tiers {
 		t := fmt.Sprintf("%v-%s", tier.ID, tier.Name)
-		names = append(names, t)
+		tierNames = append(tierNames, t)
 	}
 
-	// Create a subscription schema to represent SLA Tiers.
-	schema := apic.NewSubscriptionSchema(apiID)
-	schema.AddProperty(anypoint.AppName, "string", "Name of the new app", "", true, nil)
-	schema.AddProperty(anypoint.Description, "string", "", "", false, nil)
-	schema.AddProperty(anypoint.TierLabel, "string", "", "", true, names)
+	slaSchema := subs.NewSLATierContractSchemaUC(apiID, tierNames)
+	s.schemas.RegisterNewSchema(slaSchema)
+	schema := slaSchema.Schema()
 
-	// Register the schema with the mule subscription manager
-	s.subscriptionManager.RegisterNewSchema(slatier.NewSLATierContract(apiID, schema, s.client))
-
-	// Register the schema with the agent-sdk subscription manager
-	if err := centralClient.RegisterSubscriptionSchema(schema, true); err != nil {
-		return nil, fmt.Errorf("failed to register subscription schema %s: %w", schema.GetSubscriptionName(), err)
+	// Register the consumer subscription definition with the agent-sdk subscription manager
+	if err := client.RegisterSubscriptionSchema(schema, true); err != nil {
+		return nil, fmt.Errorf("failed to register sla tier subscription schema for api %s: %w", apiID, err)
 	}
 
-	log.Infof("Schema registered: %s", schema.GetSubscriptionName())
+	mpSchema := subs.NewSLATierContractSchemaMP(apiID, tierNames)
+	agent.NewAccessRequestBuilder().
+		SetName(schema.GetSubscriptionName()).
+		SetSchema(mpSchema).
+		Register()
 
 	return schema, nil
 }
 
 // shouldDiscoverAPI determines if the API should be pushed to Central or not
-func shouldDiscoverAPI(endpoint string, discoveryTags, ignoreTags, apiTags []string) bool {
-
+func shouldDiscoverAPI(endpoint string, discoveryTags, ignoreTags, apiTags []string) (bool, string) {
 	if endpoint == "" {
 		// If the API has no exposed endpoint we're not going to discover it.
-		return false
+		return false, "no consumer endpoint configured"
 	}
 
 	if doesAPIContainAnyMatchingTag(ignoreTags, apiTags) {
-		return false
+		return false, "api contains tag found in the ignoreTags list"
 	}
 
 	if len(discoveryTags) > 0 {
 		if !doesAPIContainAnyMatchingTag(discoveryTags, apiTags) {
-			return false // ignore
+			return false, "api does not contain necessary tags for discovery"
 		}
 	}
-	return true
+
+	return true, ""
 }
 
 // updateSpec Updates the spec endpoints based on the given type.
@@ -353,17 +353,17 @@ func getSpecType(file *anypoint.ExchangeFile, specContent []byte) (string, error
 // getAuthPolicy gets the authentication policy type.
 func getAuthPolicy(policies anypoint.Policies) (string, map[string]interface{}, bool) {
 	for _, policy := range policies.Policies {
-		if policy.Template.AssetID == anypoint.ClientID {
+		if policy.Template.AssetID == common.ClientIDEnforcement {
 			conf := getMapFromInterface(policy.Configuration)
 			return apic.Apikey, conf, false
 		}
 
-		if strings.Contains(policy.Template.AssetID, anypoint.SLAAuth) {
+		if strings.Contains(policy.Template.AssetID, common.SLABased) {
 			conf := getMapFromInterface(policy.Configuration)
 			return apic.Apikey, conf, true
 		}
 
-		if policy.Template.AssetID == anypoint.ExternalOauth {
+		if policy.Template.AssetID == common.ExternalOauth {
 			conf := getMapFromInterface(policy.Configuration)
 			return apic.Oauth, conf, false
 		}
@@ -400,21 +400,20 @@ func setOAS2policies(swagger *openapi2.T, authPolicy string, configuration map[s
 	swagger.SecurityDefinitions = make(map[string]*openapi2.SecurityScheme)
 	switch authPolicy {
 	case apic.Apikey:
-
-		desc := anypoint.DescClienCred
-		if configuration[anypoint.CredOrigin] != nil {
-			desc += configuration[anypoint.CredOrigin].(string)
+		desc := common.DescClientCred
+		if configuration[common.CredOrigin] != nil {
+			desc += configuration[common.CredOrigin].(string)
 		}
 
 		ss := openapi2.SecurityScheme{
-			Type:        anypoint.APIKey,
-			Name:        anypoint.Authorization,
-			In:          anypoint.Header,
+			Type:        common.APIKey,
+			Name:        common.Authorization,
+			In:          common.Header,
 			Description: desc,
 		}
 
 		sd := map[string]*openapi2.SecurityScheme{
-			anypoint.ClientID: &ss,
+			common.ClientIDEnforcement: &ss,
 		}
 		swagger.SecurityDefinitions = sd
 
@@ -422,25 +421,25 @@ func setOAS2policies(swagger *openapi2.T, authPolicy string, configuration map[s
 		var tokenURL string
 		scopes := make(map[string]string)
 
-		if configuration[anypoint.TokenURL] != nil {
-			tokenURL = configuration[anypoint.TokenURL].(string)
+		if configuration[common.TokenURL] != nil {
+			tokenURL = configuration[common.TokenURL].(string)
 		}
 
-		if configuration[anypoint.Scopes] != nil {
-			scopes[anypoint.Scopes] = configuration[anypoint.Scopes].(string)
+		if configuration[common.Scopes] != nil {
+			scopes[common.Scopes] = configuration[common.Scopes].(string)
 		}
 
 		ssp := openapi2.SecurityScheme{
-			Description:      anypoint.DescOauth2,
-			Type:             anypoint.Oauth2,
-			Flow:             anypoint.AccessCode,
+			Description:      common.DescOauth2,
+			Type:             common.Oauth2,
+			Flow:             common.AccessCode,
 			TokenURL:         tokenURL,
 			AuthorizationURL: tokenURL,
 			Scopes:           scopes,
 		}
 
 		sd := map[string]*openapi2.SecurityScheme{
-			anypoint.Oauth2: &ssp,
+			common.Oauth2: &ssp,
 		}
 
 		swagger.SecurityDefinitions = sd
@@ -453,36 +452,36 @@ func setOAS3policies(spec *openapi3.T, authPolicy string, configuration map[stri
 	spec.Components.SecuritySchemes = make(openapi3.SecuritySchemes)
 	switch authPolicy {
 	case apic.Apikey:
-		desc := anypoint.DescClienCred
-		if configuration[anypoint.CredOrigin] != nil {
-			desc += configuration[anypoint.CredOrigin].(string)
+		desc := common.DescClientCred
+		if configuration[common.CredOrigin] != nil {
+			desc += configuration[common.CredOrigin].(string)
 		}
 
 		ss := openapi3.SecurityScheme{
-			Type:        anypoint.APIKey,
-			Name:        anypoint.Authorization,
-			In:          anypoint.Header,
+			Type:        common.APIKey,
+			Name:        common.Authorization,
+			In:          common.Header,
 			Description: desc}
 
 		ssr := openapi3.SecuritySchemeRef{
 			Value: &ss,
 		}
 
-		spec.Components.SecuritySchemes = openapi3.SecuritySchemes{anypoint.ClientID: &ssr}
+		spec.Components.SecuritySchemes = openapi3.SecuritySchemes{common.ClientIDEnforcement: &ssr}
 	case apic.Oauth:
 		var tokenURL string
 		scopes := make(map[string]string)
 
-		if configuration[anypoint.TokenURL] != nil {
+		if configuration[common.TokenURL] != nil {
 			var ok bool
-			tokenURL, ok = configuration[anypoint.TokenURL].(string)
+			tokenURL, ok = configuration[common.TokenURL].(string)
 			if !ok {
-				return nil, fmt.Errorf("unable to perform type assertion on %#v", configuration[anypoint.TokenURL])
+				return nil, fmt.Errorf("unable to perform type assertion on %#v", configuration[common.TokenURL])
 			}
 		}
 
-		if configuration[anypoint.Scopes] != nil {
-			scopes[anypoint.Scopes] = configuration[anypoint.Scopes].(string)
+		if configuration[common.Scopes] != nil {
+			scopes[common.Scopes] = configuration[common.Scopes].(string)
 		}
 
 		ac := openapi3.OAuthFlow{
@@ -494,15 +493,15 @@ func setOAS3policies(spec *openapi3.T, authPolicy string, configuration map[stri
 			AuthorizationCode: &ac,
 		}
 		ss := openapi3.SecurityScheme{
-			Type:        anypoint.Oauth2,
-			Description: anypoint.DescOauth2,
+			Type:        common.Oauth2,
+			Description: common.DescOauth2,
 			Flows:       &oAuthFlow,
 		}
 		ssr := openapi3.SecuritySchemeRef{
 			Value: &ss,
 		}
 
-		spec.Components.SecuritySchemes = openapi3.SecuritySchemes{anypoint.Oauth2: &ssr}
+		spec.Components.SecuritySchemes = openapi3.SecuritySchemes{common.Oauth2: &ssr}
 	}
 
 	return json.Marshal(spec)

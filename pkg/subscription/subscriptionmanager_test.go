@@ -1,21 +1,14 @@
 package subscription
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/Axway/agents-mulesoft/pkg/common"
-
-	"github.com/Axway/agents-mulesoft/pkg/config"
-
-	"github.com/Axway/agents-mulesoft/pkg/subscription/mocks"
-
 	"github.com/stretchr/testify/mock"
 
 	"github.com/stretchr/testify/assert"
 
 	"github.com/Axway/agent-sdk/pkg/apic"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 	"github.com/sirupsen/logrus"
 )
@@ -34,9 +27,9 @@ var mockSub = &apic.MockSubscription{
 	UserID:         "5",
 	State:          apic.PublishedState,
 	PropertyVals: map[string]interface{}{
-		anypoint.AppName:     "mule-app",
-		anypoint.Description: "desc",
-		anypoint.TierLabel:   "666892-gold",
+		common.AppName:     "mule-app",
+		common.Description: "desc",
+		common.TierLabel:   "666892-gold",
 	},
 	RemoteAPIAttributes: map[string]string{
 		common.AttrAPIID:          "16810513",
@@ -53,40 +46,33 @@ var mockSub = &apic.MockSubscription{
 }
 
 func TestManagerRegisterNewSchema(t *testing.T) {
-	cig := &mockConsumerInstanceGetter{}
-
-	manager := New(logrus.StandardLogger(), cig)
+	mms := &MockMuleSubscriptionClient{}
+	manager := NewManager(logrus.StandardLogger(), mms)
 	assert.NotNil(t, manager)
 
-	mh1 := &mocks.MockContract{}
+	mh1 := &MockSubSchema{}
 	mh1.On("Name").Return("first")
 	mh1.On("Schema").Return("sofake schema")
 
-	mh2 := &mocks.MockContract{}
+	mh2 := &MockSubSchema{}
 	mh2.On("Name").Return("second")
 	mh2.On("Schema").Return("sofake schema")
 
 	manager.RegisterNewSchema(mh1)
 	manager.RegisterNewSchema(mh2)
 
-	assert.Equal(t, 2, len(manager.handlers))
-	assert.Contains(t, manager.handlers, "first")
-	assert.Contains(t, manager.handlers, "second")
-	assert.Equal(t, 2, len(manager.Schemas()))
+	assert.Equal(t, 2, len(manager.schemas))
+	assert.Contains(t, manager.schemas, "first")
+	assert.Contains(t, manager.schemas, "second")
+	assert.Equal(t, 2, len(manager.schemas))
 
 	assert.Equal(t, true, manager.ValidateSubscription(mockSub))
 	assert.Equal(t, false, manager.ValidateSubscription(mockSub))
 }
 
 func Test_processForState(t *testing.T) {
-	type cigReturns struct {
-		consumer *v1alpha1.ConsumerInstance
-		err      error
-	}
-
 	tests := []struct {
 		name              string
-		cigReturns        cigReturns
 		err               error
 		sub               apic.Subscription
 		subHandlerReturns error
@@ -97,86 +83,33 @@ func Test_processForState(t *testing.T) {
 			state:             apic.SubscriptionApproved,
 			subHandlerReturns: nil,
 			err:               nil,
-			cigReturns: cigReturns{
-				err: nil,
-				consumer: &v1alpha1.ConsumerInstance{
-					Spec: v1alpha1.ConsumerInstanceSpec{
-						Subscription: v1alpha1.ConsumerInstanceSpecSubscription{
-							Enabled:                true,
-							AutoSubscribe:          false,
-							SubscriptionDefinition: "sofake",
-						},
-					},
-				},
-			},
-			sub: mockSub,
-		},
-		{
-			name:              "should return an error when calling Subscribe on the handdler",
-			state:             apic.SubscriptionApproved,
-			subHandlerReturns: fmt.Errorf("errs"),
-			err:               fmt.Errorf("errs"),
-			cigReturns: cigReturns{
-				err: nil,
-				consumer: &v1alpha1.ConsumerInstance{
-					Spec: v1alpha1.ConsumerInstanceSpec{
-						Subscription: v1alpha1.ConsumerInstanceSpecSubscription{
-							Enabled:                true,
-							AutoSubscribe:          false,
-							SubscriptionDefinition: "sofake",
-						},
-					},
-				},
-			},
-			sub: mockSub,
-		},
-		{
-			name:              "should return an error when calling GetConsumerInstanceByID",
-			state:             apic.SubscriptionApproved,
-			subHandlerReturns: nil,
-			err:               fmt.Errorf("errrr"),
-			cigReturns: cigReturns{
-				err:      fmt.Errorf("errrr"),
-				consumer: nil,
-			},
-			sub: mockSub,
+			sub:               mockSub,
 		},
 		{
 			name:              "should unsubscribe from a subscription",
 			state:             apic.SubscriptionUnsubscribeInitiated,
 			subHandlerReturns: nil,
 			err:               nil,
-			cigReturns: cigReturns{
-				err: nil,
-				consumer: &v1alpha1.ConsumerInstance{
-					Spec: v1alpha1.ConsumerInstanceSpec{
-						Subscription: v1alpha1.ConsumerInstanceSpecSubscription{
-							Enabled:                true,
-							AutoSubscribe:          false,
-							SubscriptionDefinition: "sofake",
-						},
-					},
-				},
-			},
-			sub: mockSub,
+			sub:               mockSub,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 
-			cig := &mockConsumerInstanceGetter{}
-			cig.On("GetConsumerInstanceByID").Return(tc.cigReturns.consumer, tc.cigReturns.err)
+			mms := &MockMuleSubscriptionClient{
+				app: &anypoint.Application{ID: 123},
+				err: tc.err,
+			}
+			manager := NewManager(logrus.StandardLogger(), mms)
 
-			manager := New(logrus.StandardLogger(), cig)
+			mc := &MockSubSchema{}
+			mc.On("Name").Return("fake")
+			mc.On("Subscribe").Return(tc.subHandlerReturns)
 
-			mh := &mocks.MockContract{}
-			mh.On("Name").Return("sofake")
-			mh.On("Subscribe").Return(tc.subHandlerReturns)
+			manager.RegisterNewSchema(mc)
 
-			manager.RegisterNewSchema(mh)
-
-			err := manager.processForState(tc.sub, &logrus.Logger{}, tc.state)
+			err := manager.processForState(tc.sub, tc.state)
 			if tc.err != nil {
 				assert.NotNil(t, err)
 			} else {
@@ -189,32 +122,28 @@ func Test_processForState(t *testing.T) {
 func Test_setLogFields(t *testing.T) {
 	fields := logFields(mockSub)
 	assert.Contains(t, fields, "subscriptionName")
-	assert.Contains(t, fields, "subscriptionID")
 	assert.Contains(t, fields, "catalogItemID")
-	assert.Contains(t, fields, "remoteID")
-	assert.Contains(t, fields, "consumerInstanceID")
-	assert.Contains(t, fields, "currentState")
 }
 
 func TestValidateSubscription(t *testing.T) {
-	cig := &mockConsumerInstanceGetter{}
 	schemaName := "first"
-	mc := &mocks.MockContract{}
+	mc := &MockSubSchema{}
 	mc.On("Name").Return("first")
 	mc.On("Schema").Return("sofake")
 	mc.On("IsApplicable").Return(true)
 
-	manager := New(logrus.StandardLogger(), cig, mc)
+	mms := &MockMuleSubscriptionClient{}
+	manager := NewManager(logrus.StandardLogger(), mms, mc)
 	isTrue := manager.ValidateSubscription(mockSub)
 	assert.True(t, isTrue)
 
-	assert.Equal(t, 1, len(manager.Schemas()))
+	assert.Equal(t, 1, len(manager.schemas))
 
 	isFalse := manager.ValidateSubscription(mockSub)
 	assert.False(t, isFalse)
 
-	name := manager.GetSubscriptionSchemaName(config.PolicyDetail{
-		Policy:     anypoint.ClientID,
+	name := manager.GetSubscriptionSchemaName(common.PolicyDetail{
+		Policy:     common.ClientIDEnforcement,
 		IsSLABased: false,
 		APIId:      "1",
 	})
@@ -222,12 +151,21 @@ func TestValidateSubscription(t *testing.T) {
 	assert.Equal(t, schemaName, name)
 }
 
-type mockConsumerInstanceGetter struct {
+type MockSubSchema struct {
 	mock.Mock
 }
 
-func (m *mockConsumerInstanceGetter) GetConsumerInstanceByID(id string) (*v1alpha1.ConsumerInstance, error) {
+func (m *MockSubSchema) Schema() apic.SubscriptionSchema {
 	args := m.Called()
-	ci := args.Get(0).(*v1alpha1.ConsumerInstance)
-	return ci, args.Error(1)
+	return apic.NewSubscriptionSchema(args.String(0))
+}
+
+func (m *MockSubSchema) Name() string {
+	args := m.Called()
+	return args.String(0)
+}
+
+func (m *MockSubSchema) IsApplicable(common.PolicyDetail) bool {
+	args := m.Called()
+	return args.Bool(0)
 }

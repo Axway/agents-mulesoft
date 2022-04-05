@@ -1,16 +1,16 @@
-# Amplify Mulesoft Anypoint Agent
+# Amplify MuleSoft Anypoint Agent
 
 ## Overview
 
-This repository contains the Axway Amplify dataplane agents for the Mulesoft Anypoint platform. These agents connect your Mulesoft Anypoint dataplane to the Amplify Central management plane.
+This repository contains the Axway Amplify dataplane agents for the MuleSoft Anypoint platform. These agents connect your MuleSoft Anypoint dataplane to the Amplify Central management plane.
 
 ### Discovery
 
-The Discovery agent is used to discover APIs in the Mulesoft API Manager and publish them to the Amplify Central.
+The Discovery agent is used to discover APIs in the MuleSoft API Manager and publish them to the Amplify Central.
 
 ### Traceability
 
-The traceability agent retrieves traffic and usage data from the Mulesoft API Manager analytics service and publishes it to the Amplify Central.
+The traceability agent retrieves traffic and usage data from the MuleSoft API Manager analytics service and publishes it to the Amplify Central.
 
 ## Getting Started
 

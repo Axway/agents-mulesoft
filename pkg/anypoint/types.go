@@ -229,27 +229,6 @@ type AnalyticsEvent struct {
 	ViolatedPolicyName string    `json:"Violated Policy Name"`
 }
 
-const (
-	AccessCode       = "accessCode"
-	APIKey           = "apiKey"
-	AppName          = "appName"
-	Authorization    = "authorization"
-	ClientID         = "client-id-enforcement"
-	ClientIDProp     = "client_id"
-	ClientSecretProp = "client_secret"
-	CredOrigin       = "credentialsOriginHasHttpBasicAuthenticationHeader"
-	DescClienCred    = "Provided as: client_id:<INSERT_VALID_CLIENTID_HERE> \n\n client_secret:<INSERT_VALID_SECRET_HERE>\n\n"
-	DescOauth2       = "This API supports OAuth 2.0 for authenticating all API requests"
-	Description      = "description"
-	ExternalOauth    = "external-oauth2-access-token-enforcement"
-	Header           = "header"
-	Oauth2           = "oauth2"
-	Scopes           = "scopes"
-	SLAAuth          = "sla-based"
-	TierLabel        = "SLA Tier"
-	TokenURL         = "tokenUrl"
-)
-
 type Application struct {
 	APIEndpoints bool   `json:"apiEndpoints,omitempty"`
 	ClientID     string `json:"clientId"`
@@ -270,19 +249,12 @@ type Contract struct {
 	AssetID         string `json:"assetId"`
 	EnvironmentID   string `json:"environmentId"`
 	GroupID         string `json:"groupId"`
+	Id              int64  `json:"id""`
 	OrganizationID  string `json:"organizationId"`
 	RequestedTierID int64  `json:"requestedTierId,omitempty"`
+	Status          string `json:"status"`
 	Version         string `json:"version"`
 	VersionGroup    string `json:"versionGroup"`
-}
-
-type ContractResponse struct {
-	API           API    `json:"api"`
-	ApplicationID int    `json:"applicationId"`
-	ClientID      string `json:"clientId"`
-	ClientSecret  string `json:"clientSecret"`
-	ID            int    `json:"id"`
-	Status        string `json:"status"`
 }
 
 type Tiers struct {
