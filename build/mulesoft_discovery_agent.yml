@@ -6,6 +6,8 @@ central:
   url: https://apicentral.axway.com
   platformURL: https://platform.axway.com
   pollInterval: 5s
+  grpc:
+    enabled: false
   auth:
     clientID: <Amplify_CENTRAL_DOSA_CLIENT_ID>
     privateKey: <Amplify_CENTRAL_DOSA_PRIVATE_KEY_PATH>

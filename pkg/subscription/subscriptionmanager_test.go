@@ -33,7 +33,7 @@ var mockSub = &apic.MockSubscription{
 	CatalogID:      "8a2e855979191de701795810a8f82f3a",
 	UserID:         "5",
 	State:          apic.PublishedState,
-	PropertyVals: map[string]string{
+	PropertyVals: map[string]interface{}{
 		anypoint.AppName:     "mule-app",
 		anypoint.Description: "desc",
 		anypoint.TierLabel:   "666892-gold",

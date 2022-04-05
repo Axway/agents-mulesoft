@@ -2,14 +2,14 @@ image: docker:dind
 
 variables:
   PROJECT: 'agents-mulesoft'
-#  REPO: 'hub.docker.com'
-#  REPO_USER: 'chrisccoy'
-#  REPO_TOKEN: '5fc7f290-8d92-44b6-a027-6fd20bc9957f'
+  #  REPO: 'hub.docker.com'
+  #  REPO_USER: 'chrisccoy'
+  #  REPO_TOKEN: '5fc7f290-8d92-44b6-a027-6fd20bc9957f'
   # ART_TEST_PUSH: 'ampc-xenon-docker-release-phx.swf-artifactory.lab.phx.axway.int'
   # ART_TEST_PULL: 'axway.jfrog.io/ampc-xenon-docker-release'
   # ART_RELEASE_FOR_ON_PREM_PUSH: 'ampc-public-docker-release-phx.swf-artifactory.lab.phx.axway.int'
   # ART_RELEASE_FOR_ON_PREM_PULL: 'axway.jfrog.io/ampc-public-docker-release'
-  
+
   # Fortify
   FORTIFY_PROJECT: "10715"
   FORTIFY_BUILD_ID: "agents-mulesoft"

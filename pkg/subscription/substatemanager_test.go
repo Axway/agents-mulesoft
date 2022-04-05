@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agents-mulesoft/pkg/common"
 
 	"github.com/Axway/agent-sdk/pkg/apic"
@@ -287,8 +288,8 @@ func Test_createApp(t *testing.T) {
 	apiID := "fake-api-id"
 
 	appBody := &anypoint.AppRequestBody{
-		Name:        mockSub.PropertyVals[anypoint.AppName],
-		Description: mockSub.PropertyVals[anypoint.Description],
+		Name:        util.ToString(mockSub.PropertyVals[anypoint.AppName]),
+		Description: util.ToString(mockSub.PropertyVals[anypoint.Description]),
 	}
 	client.On("CreateClientApplication", apiID, appBody).Return(&anypoint.Application{}, nil)
 
@@ -339,12 +340,12 @@ func TestSubscribe(t *testing.T) {
 }
 
 func TestUnsubscribe(t *testing.T) {
-	cache.GetCache().Set(mockSub.PropertyVals[anypoint.AppName], int64(64))
+	cache.GetCache().Set(util.ToString(mockSub.PropertyVals[anypoint.AppName]), int64(64))
 
 	client := &anypoint.MockAnypointClient{}
 	mockContract := &mocks.MockContract{}
 	mockContract.On("Name").Return("first")
-	mockContract.On("Schema").Return("sofake schema")
+	mockContract.On("Schema").Return("fake schema")
 
 	client.On("DeleteClientApplication").Return(nil)
 
@@ -360,11 +361,11 @@ func TestUnsubscribe(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, apic.SubscriptionFailedToSubscribe, mockSub.State)
 
-	cache.GetCache().Delete(mockSub.PropertyVals[anypoint.AppName])
+	cache.GetCache().Delete(util.ToString(mockSub.PropertyVals[anypoint.AppName]))
 	err = base.Unsubscribe(logrus.StandardLogger(), mockSub)
 	assert.NotNil(t, err)
 
-	cache.GetCache().Set(mockSub.PropertyVals[anypoint.AppName], "string")
+	cache.GetCache().Set(util.ToString(mockSub.PropertyVals[anypoint.AppName]), "string")
 	err = base.Unsubscribe(logrus.StandardLogger(), mockSub)
 	assert.NotNil(t, err)
 }

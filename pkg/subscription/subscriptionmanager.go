@@ -73,10 +73,15 @@ func New(log logrus.FieldLogger, cig ConsumerInstanceGetter, schemas ...StateMan
 
 // RegisterNewSchema registers a schema to represent a Mulesoft policy that can be subscribed to in the Catalog.
 func (sm *Manager) RegisterNewSchema(schema StateManager) {
+	sm.dg.lock.Lock()
+	defer sm.dg.lock.Unlock()
 	sm.handlers[schema.Name()] = schema
 }
 
 func (sm *Manager) Schemas() []apic.SubscriptionSchema {
+	sm.dg.lock.Lock()
+	defer sm.dg.lock.Unlock()
+
 	res := make([]apic.SubscriptionSchema, 0, len(sm.handlers))
 	for _, h := range sm.handlers {
 		res = append(res, h.Schema())
@@ -124,7 +129,7 @@ func (sm *Manager) GetSubscriptionSchemaName(pd config.PolicyDetail) string {
 	return ""
 }
 
-// ProcessUnsubscribe moves a subscription from Approved to Active.
+// ProcessSubscribe moves a subscription from Approved to Active.
 func (sm *Manager) ProcessSubscribe(subscription apic.Subscription) {
 	log := sm.log.WithFields(logFields(subscription))
 	if err := sm.processForState(subscription, log, apic.SubscriptionApproved); err != nil {

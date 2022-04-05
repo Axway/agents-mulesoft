@@ -10,11 +10,11 @@ services:
       CENTRAL_ORGANIZATIONID: "xxxxxxxx"
       CENTRAL_AUTH_PUBLICKEY: /keys/dosa-public.pem
       CENTRAL_AUTH_PRIVATEKEY: /keys/dosa-key.pem
-      #CENTRAL_AUTH_KEYPASSWORD:
+      CENTRAL_AUTH_KEYPASSWORD:
       CENTRAL_ENVIRONMENT:
       CENTRAL_AUTH_CLIENTID: <DOSA>
       LOG_LEVEL: debug
-      #LOG_FORMAT: json
+      LOG_FORMAT: json
       LOG_OUTPUT: stdout
       LOG_PATH: logs
       MULESOFT_ANYPOINTEXCHANGEURL: https://anypoint.mulesoft.com
@@ -35,11 +35,11 @@ services:
       CENTRAL_ORGANIZATIONID: "xxxxxxx"
       CENTRAL_AUTH_PUBLICKEY: /keys/dosa-public.pem
       CENTRAL_AUTH_PRIVATEKEY: /keys/dosa-key.pem
-      #CENTRAL_AUTH_KEYPASSWORD:
+      CENTRAL_AUTH_KEYPASSWORD:
       CENTRAL_ENVIRONMENT:
       CENTRAL_AUTH_CLIENTID: <DOSA>
       LOG_LEVEL: debug
-      #LOG_FORMAT: json
+      LOG_FORMAT: json
       LOG_OUTPUT: stdout
       LOG_PATH: logs
       MULESOFT_ANYPOINTEXCHANGEURL: https://anypoint.mulesoft.com

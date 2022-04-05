@@ -15,6 +15,7 @@ type ServiceDetail struct {
 	ImageContentType  string
 	ResourceType      string
 	ServiceAttributes map[string]string
+	AgentDetails      map[string]string
 	Stage             string
 	State             string
 	Status            string

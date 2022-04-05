@@ -129,7 +129,7 @@ func (a *Agent) Stop() {
 
 // cleanTags splits the CSV and trims off whitespace
 func cleanTags(tagCSV string) []string {
-	clean := []string{}
+	var clean []string
 	tags := strings.Split(tagCSV, ",")
 	for _, v := range tags {
 		tag := strings.TrimSpace(strings.ToLower(v))

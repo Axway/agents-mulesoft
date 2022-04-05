@@ -3,7 +3,6 @@ before:
   hooks:
     - go mod download
     - go mod tidy
-    - go mod vendor
 
 builds:
   - id: mulesoft_discovery_agent
@@ -18,6 +17,7 @@ builds:
       - -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildCommitSha={{.Commit}}'
       - -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildAgentName=MulesoftDiscoveryAgent'
       - -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildAgentDescription=Mulesoft Discovery Agent'
+      - -X 'github.com/Axway/agent-sdk/pkg/cmd.SDKBuildVersion={{ .Env.SDK_VERSION }}'
     env:
       - CGO_ENABLED=0
     goos:
@@ -36,9 +36,11 @@ archives:
       amd64: x86_64
     wrap_in_directory: discovery_agent
     files:
-      - mulesoft_discovery_agent.yml
       - README_discovery.md
       - README_subscription.md
+      - src: build/mulesoft_discovery_agent.yml
+        dst: .
+        strip_parent: true
 
 checksum:
   name_template: "discovery_checksums.txt"

@@ -1,7 +1,6 @@
 package discovery
 
 import (
-	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -95,14 +94,14 @@ func TestServiceHandler(t *testing.T) {
 	assert.Equal(t, asset.ExchangeAssetName, item.Title)
 	assert.Equal(t, api.AssetVersion, item.Version)
 	assert.Equal(t, api.Tags, item.Tags)
-	assert.NotEmpty(t, item.ServiceAttributes[common.AttrChecksum])
-	assert.Equal(t, fmt.Sprint(api.ID), item.ServiceAttributes[common.AttrAPIID])
-	assert.Equal(t, fmt.Sprint(asset.ID), item.ServiceAttributes[common.AttrAssetID])
-	assert.Equal(t, api.AssetVersion, item.ServiceAttributes[common.AttrAssetVersion])
-	assert.Equal(t, api.ProductVersion, item.ServiceAttributes[common.AttrProductVersion])
+	assert.NotEmpty(t, item.AgentDetails[common.AttrChecksum])
+	assert.Equal(t, fmt.Sprint(api.ID), item.AgentDetails[common.AttrAPIID])
+	assert.Equal(t, fmt.Sprint(asset.ID), item.AgentDetails[common.AttrAssetID])
+	assert.Equal(t, api.AssetVersion, item.AgentDetails[common.AttrAssetVersion])
+	assert.Equal(t, api.ProductVersion, item.AgentDetails[common.AttrProductVersion])
 
 	// Should find the api in the cache
-	cachedItem, err := sh.cache.Get(item.ServiceAttributes[common.AttrChecksum])
+	cachedItem, err := sh.cache.Get(item.AgentDetails[common.AttrChecksum])
 	assert.Nil(t, err)
 	assert.Equal(t, api, cachedItem)
 
@@ -119,9 +118,7 @@ func TestServiceHandler(t *testing.T) {
 func TestServiceHandlerSLAPolicy(t *testing.T) {
 	cc := &mocks.MockCentralClient{}
 	cc.On("RegisterSubscriptionSchema").Return(nil)
-	agent.Initialize(&corecfg.CentralConfiguration{
-		UpdateFromAPIServer: false,
-	})
+	agent.Initialize(&corecfg.CentralConfiguration{})
 	agent.InitializeForTest(cc)
 	content := `{"openapi":"3.0.1","servers":[{"url":"https://abc.com"}], "paths":{}, "info":{"title":"petstore3"}}`
 	policies := anypoint.Policies{Policies: []anypoint.Policy{
@@ -836,19 +833,17 @@ func getSLATierInfo() (*anypoint.Tiers, *serviceHandler, *mocks.MockCentralClien
 func TestCreateSubscriptionSchemaForSLATier(t *testing.T) {
 	tiers, sh, mcc := getSLATierInfo()
 
-	mcc.On("RegisterSubscriptionSchema").Return(nil)
-
 	_, err := sh.createSubscriptionSchemaForSLATier("1", tiers, mcc)
-	if err != nil {
-		t.Error(err)
-	}
+	assert.Nil(t, err)
 }
 
 func TestSLATierSchemaSubscriptionCreateFailure(t *testing.T) {
 	tiers, sh, mcc := getSLATierInfo()
 
-	mcc.On("RegisterSubscriptionSchema").Return(errors.New("Cannot register subscription schema"))
+	mcc.RegisterSubscriptionSchemaMock = func(_ apic.SubscriptionSchema, _ bool) error {
+		return fmt.Errorf("cannot register subscription schema")
+	}
 	_, err := sh.createSubscriptionSchemaForSLATier("1", tiers, mcc)
 
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 }

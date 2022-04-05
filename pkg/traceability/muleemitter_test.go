@@ -23,7 +23,7 @@ func Test_MuleEventEmitter(t *testing.T) {
 	emitter := NewMuleEventEmitter("/tmp", eventCh, client)
 
 	assert.NotNil(t, emitter)
-	//Check to be sure the time changes
+	// Check to be sure the time changes
 	startDateBefore, _ := emitter.getLastRun()
 
 	go emitter.Start()

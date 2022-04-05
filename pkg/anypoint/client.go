@@ -83,7 +83,6 @@ func NewClient(mulesoftConfig *config.MulesoftConfig, options ...ClientOptions) 
 	client.OnConfigChange(mulesoftConfig)
 
 	hc.RegisterHealthcheck("Mulesoft Anypoint Exchange", HealthCheckEndpoint, client.healthcheck)
-	// TODO: handle error
 
 	return client
 }
@@ -114,9 +113,7 @@ func (c *AnypointClient) OnConfigChange(mulesoftConfig *config.MulesoftConfig) {
 	}
 }
 
-// healthcheck performs Mulesoft healthcheck.
 func (c *AnypointClient) healthcheck(name string) (status *hc.Status) {
-	// Create the default status
 	status = &hc.Status{
 		Result: hc.OK,
 	}
@@ -138,7 +135,7 @@ func (c *AnypointClient) healthcheck(name string) (status *hc.Status) {
 	return status
 }
 
-// GetAccessToken gets an access token
+// GetAccessToken retrieves a token
 func (c *AnypointClient) GetAccessToken() (string, *User, time.Duration, error) {
 	body := map[string]string{
 		"username": c.username,
@@ -207,7 +204,7 @@ func (c *AnypointClient) getCurrentUser(token string) (*User, error) {
 		return nil, err
 	}
 
-	//this sets the User.Organization.ID as the Org ID of the Business Unit specified in Config
+	// this sets the User.Organization.ID as the Org ID of the Business Unit specified in Config
 	for _, value := range user.User.MemberOfOrganizations {
 		if value.Name == c.orgName {
 			user.User.Organization.ID = value.ID
@@ -384,7 +381,6 @@ func (c *AnypointClient) CreateClientApplication(apiInstanceID string, app *AppR
 		"apiInstanceID": apiInstanceID,
 	}
 
-	// TODO Mulesoft trial uses v1 for create app and v2 for delete app. Check this on enterprise account
 	url := fmt.Sprintf("%s/exchange/api/v1/organizations/%s/applications", c.baseURL, c.auth.GetOrgID())
 
 	buffer, err := json.Marshal(app)

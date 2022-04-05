@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
+	"github.com/Axway/agent-sdk/pkg/apic"
 
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 	"github.com/Axway/agents-mulesoft/pkg/discovery/mocks"
@@ -39,7 +40,10 @@ func Test_initSubscriptionManager(t *testing.T) {
 
 	agent.InitializeForTest(cc)
 
-	cc.On("RegisterSubscriptionSchema").Return(nil)
+	cc.GetSubscriptionManagerMock = func() apic.SubscriptionManager {
+		return &apic.MockSubscriptionManager{}
+	}
+
 	manager, err := initSubscriptionManager(mc, cc)
 	assert.NotNil(t, manager)
 	assert.Equal(t, 1, len(manager.Schemas()))
@@ -47,7 +51,14 @@ func Test_initSubscriptionManager(t *testing.T) {
 
 	cc = &mocks.MockCentralClient{}
 	// should throw an error when registering
-	cc.On("RegisterSubscriptionSchema").Return(fmt.Errorf("failed"))
+
+	cc.GetSubscriptionManagerMock = func() apic.SubscriptionManager {
+		return &apic.MockSubscriptionManager{}
+	}
+
+	cc.RegisterSubscriptionSchemaMock = func(_ apic.SubscriptionSchema, _ bool) error {
+		return fmt.Errorf("failed")
+	}
 	_, err = initSubscriptionManager(mc, cc)
 	assert.NotNil(t, err)
 }
