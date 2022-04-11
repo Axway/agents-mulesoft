@@ -70,7 +70,6 @@ require (
 	github.com/joeshaw/multierror v0.0.0-20140124173710-69b34d4ec901 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.8.2 // indirect
-	github.com/klauspost/cpuid v1.3.1 // indirect
 	github.com/magefile/mage v1.9.0 // indirect
 	github.com/magiconair/properties v1.8.5 // indirect
 	github.com/mailru/easyjson v0.7.1 // indirect
@@ -143,6 +142,7 @@ replace (
 	github.com/getkin/kin-openapi => github.com/getkin/kin-openapi v0.67.0
 	github.com/google/gopacket => github.com/adriansr/gopacket v1.1.18-0.20200327165309-dd62abfa8a41
 	github.com/insomniacslk/dhcp => github.com/elastic/dhcp v0.0.0-20200227161230-57ec251c7eb3 // indirect
+	github.com/klauspost/compress => github.com/klauspost/compress v1.15.1
 	github.com/tonistiigi/fifo => github.com/containerd/fifo v0.0.0-20190816180239-bda0ff6ed73c
 	k8s.io/api => k8s.io/api v0.17.0
 	k8s.io/apimachinery => k8s.io/apimachinery v0.17.0

@@ -9,6 +9,7 @@ variables:
   # ART_TEST_PULL: 'axway.jfrog.io/ampc-xenon-docker-release'
   # ART_RELEASE_FOR_ON_PREM_PUSH: 'ampc-public-docker-release-phx.swf-artifactory.lab.phx.axway.int'
   # ART_RELEASE_FOR_ON_PREM_PULL: 'axway.jfrog.io/ampc-public-docker-release'
+  CSR_SUPPRESSION_LIST: "/tmp/csr-suppressions/amplify-central/golang-agents-common.json"
 
   # Fortify
   FORTIFY_PROJECT: "10715"
