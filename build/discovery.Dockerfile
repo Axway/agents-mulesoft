@@ -1,5 +1,5 @@
 # Build image
-FROM golang:1.17.8 as builder
+FROM golang:1.17.9 as builder
 ENV APP_HOME /build
 ENV APP_USER axway
 
