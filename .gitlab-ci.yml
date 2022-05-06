@@ -24,6 +24,7 @@ include:
     file:
       - '/.gitlab-ci-prepcsr.yml'
       - '/.gitlab-ci-fortify.yml'
+      - "/.gitlab-ci-twistlock.yml"
       - "/.gitlab-ci-whitesource.yml"
       - "/.gitlab-ci-csr.yml"
 
