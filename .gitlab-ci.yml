@@ -58,13 +58,13 @@ fetch-iriusrisk:
 twistlock:
   before_script:
     - export IMAGE_NAME=ghrc.io/axway/apigee_discovery_agent:v0.0.6
-    - docker login ghcr.io --username dfeldick
+    - docker login ghcr.io --username dfeldick sh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQC/nWB9HeHLh1tC/k0zTPjMTw1cmTrLNLqXBqIqM7ioiw3i+Cpanidh6tvq6B30InDSwb+R8MNUOYqjvhMUoV/zqplMnWRCUmqDJrfLRmHH8drmpzBXRjx9hOFSlHwk83oPj5LBJPhzzAnhs5C/uEBJ0WfSkict9u3rL1cxFDQSlqVymV1+XLrJ4BXDmI6DB6J3C+D/nbzCn99r2wbiWwIQ3KOPX3PjPx7+WEF2yZv8V8+CToMUbSAKkS2FyXZlULnY5bAgqom+xI0xNGz6F79jGbw5lJVPLgOjDx0R6RKS/1NOMLO2H7Z769/fVBp5Vc1pcltTa+ysQzpCf+cvG3EhEAwKvp4ni8mgq6JfumlVXIa+KxFiZ+F31bygbHCKIdFD29sfeXqvDDsccBNTy1zAvNPvAQHdOObkiqSNTw9/+YwJOiEUXFeApirTWD4zgX8SgBVe9BI7n959MD2NC69D/ffCjy6wZI9oPIpaNArlZ/w10gGh53BsjJfGyJMlsDpMv9bXXJr+p+FS4vmxg136C7lQy/vObbU1RFlKK9MY7mx0cY9BKLzYbg3o0GBLDP45jOtZi9wYXqwMhWkTcmxhM8JKHTW6daaAz2VSZTMvSxu8bhwB7JWjVwmSxAKPpyGYsZxysAEGhPp5Cc9GRAe5FewYCW52vpnZRbacr21EJQ== dfeldick@axway.com
     - docker pull ${IMAGE_NAME}
 
 twistlock:on-schedule:
   before_script:
     - export IMAGE_NAME=ghrc.io/axway/apigee_discovery_agent:v0.0.6
-    - docker login ghcr.io --username dfeldick
+    - docker login ghcr.io --username dfeldick sh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQC/nWB9HeHLh1tC/k0zTPjMTw1cmTrLNLqXBqIqM7ioiw3i+Cpanidh6tvq6B30InDSwb+R8MNUOYqjvhMUoV/zqplMnWRCUmqDJrfLRmHH8drmpzBXRjx9hOFSlHwk83oPj5LBJPhzzAnhs5C/uEBJ0WfSkict9u3rL1cxFDQSlqVymV1+XLrJ4BXDmI6DB6J3C+D/nbzCn99r2wbiWwIQ3KOPX3PjPx7+WEF2yZv8V8+CToMUbSAKkS2FyXZlULnY5bAgqom+xI0xNGz6F79jGbw5lJVPLgOjDx0R6RKS/1NOMLO2H7Z769/fVBp5Vc1pcltTa+ysQzpCf+cvG3EhEAwKvp4ni8mgq6JfumlVXIa+KxFiZ+F31bygbHCKIdFD29sfeXqvDDsccBNTy1zAvNPvAQHdOObkiqSNTw9/+YwJOiEUXFeApirTWD4zgX8SgBVe9BI7n959MD2NC69D/ffCjy6wZI9oPIpaNArlZ/w10gGh53BsjJfGyJMlsDpMv9bXXJr+p+FS4vmxg136C7lQy/vObbU1RFlKK9MY7mx0cY9BKLzYbg3o0GBLDP45jOtZi9wYXqwMhWkTcmxhM8JKHTW6daaAz2VSZTMvSxu8bhwB7JWjVwmSxAKPpyGYsZxysAEGhPp5Cc9GRAe5FewYCW52vpnZRbacr21EJQ== dfeldick@axway.com
     - docker pull ${IMAGE_NAME}
 
 twistlock-master:
