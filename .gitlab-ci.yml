@@ -48,8 +48,8 @@ stages:
 fetch-iriusrisk:
   extends: .dummy
 
-# twistlock:
-#   extends: .dummy
+twistlock:
+  extends: .dummy
 
 # twistlock:on-schedule:
 #   extends: .dummy
@@ -78,7 +78,8 @@ twistlock-master:
 run-csr:
   dependencies:
     - fetch-fortify
-    - twistlock
+    - twistlock-discovery
+    - twistlock-traceability
     - whitesource
 
 # run-csr-traceability:
