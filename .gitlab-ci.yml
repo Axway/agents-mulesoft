@@ -55,12 +55,12 @@ fetch-iriusrisk:
 #   extends: .dummy
 twistlock:
   before_script:
-    - export IMAGE_NAME=ghrc.io/axway/apigee_discovery_agent:v0.0.6
+    - export IMAGE_NAME=ghcr.io/axway/apigee_discovery_agent:v0.0.6
     - docker pull ${IMAGE_NAME}
 
 twistlock:on-schedule:
   before_script:
-    - export IMAGE_NAME=ghrc.io/axway/apigee_discovery_agent:v0.0.6
+    - export IMAGE_NAME=ghcr.io/axway/apigee_discovery_agent:v0.0.6
     - docker pull ${IMAGE_NAME}
 
 twistlock-master:
