@@ -93,8 +93,8 @@ update-csr:
     - twistlock:on-schedule
     - whitesource:on-schedule
 
-update-csr-trace:
-  dependencies:
-    - fetch-fortify
-    - twistlock:on-schedule
-    - whitesource:on-schedule
+# update-csr-trace:
+#   dependencies:
+#     - fetch-fortify
+#     - twistlock:on-schedule
+#     - whitesource:on-schedule
