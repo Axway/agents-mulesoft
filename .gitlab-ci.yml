@@ -58,13 +58,14 @@ twistlock-discovery:
   before_script:
     - apk --no-cache update && apk add make
     - make docker-build-disc 
-    - export IMAGE_NAME=ghcr.io/axway/mulesofe_discovery_agent:latest
+    - export IMAGE_NAME=mulesofe_discovery_agent:latest
 
 twistlock-traceability:
   extends: .twistlock
   before_script:
+    - apk --no-cache update && apk add make
     - make docker-build-trace 
-    - export IMAGE_NAME=ghcr.io/axway/mulesoft_traceability_agent:latest
+    - export IMAGE_NAME=mulesoft_traceability_agent:latest
 
 twistlock:on-schedule:
   before_script:
@@ -74,13 +75,25 @@ twistlock:on-schedule:
 twistlock-master:
   extends: .dummy
 
-run-csr:
+run-csr-discovery:
   dependencies:
     - fetch-fortify
-    - twistlock
+    - twistlock-discovery
     - whitesource
 
-update-csr:
+run-csr-traceability:
+  dependencies:
+    - fetch-fortify
+    - twistlock-traceability
+    - whitesource
+
+update-csr-discovery:
+  dependencies:
+    - fetch-fortify
+    - twistlock:on-schedule
+    - whitesource:on-schedule
+
+update-csr-trace:
   dependencies:
     - fetch-fortify
     - twistlock:on-schedule
