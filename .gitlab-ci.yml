@@ -69,9 +69,11 @@ twistlock-master:
 run-csr:
   dependencies:
     - fetch-fortify
+    - twistlock
     - whitesource
 
 update-csr:
   dependencies:
     - fetch-fortify
+    - twistlock:on-schedule
     - whitesource:on-schedule
