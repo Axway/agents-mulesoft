@@ -53,10 +53,14 @@ fetch-iriusrisk:
 
 # twistlock:on-schedule:
 #   extends: .dummy
-twistlock:
+twistlock-discovery:
   before_script:
-    - export IMAGE_NAME=ghcr.io/axway/apigee_discovery_agent:v0.0.6
-    - docker pull ${IMAGE_NAME}
+    - make docker-build-disc 
+    - export IMAGE_NAME=ghcr.io/axway/mulesofe_discovery_agent:latest
+twistlock-traceability:
+  before_script:
+    - make docker-build-trace 
+    - export IMAGE_NAME=ghcr.io/axway/mulesoft_traceability_agent:latest
 
 twistlock:on-schedule:
   before_script:
