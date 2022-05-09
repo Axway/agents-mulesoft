@@ -61,32 +61,46 @@ twistlock:
 # twistlock:on-schedule:
 #   extends: .dummy
 twistlock-discovery:
-  extends: twistlock
+  extends: .twistlock
   before_script:
     - apk --no-cache update && apk add make
     - make docker-build-disc 
     - export IMAGE_NAME=mulesoft_discovery_agent:latest
+  except:
+    refs:
+      - schedules
+      - tags
 
 twistlock-traceability:
-  extends: twistlock
+  extends: .twistlock
   before_script:
     - apk --no-cache update && apk add make
     - make docker-build-trace 
     - export IMAGE_NAME=mulesoft_traceability_agent:latest
+  except:
+    refs:
+      - schedules
+      - tags
 
 twistlock-discovery:on-schedule:
-  extends: twistlock:on-schedule
+  extends: .twistlock
   before_script:
     - apk --no-cache update && add git
     - *get-latest-tag
     - export IMAGE_NAME=mulesoft_discovery_agent:${LAST_TAG}
+  only:
+    refs:
+      - schedules
 
 twistlock-traceability:on-schedule:
-  extends: twistlock:on-schedule
+  extends: .twistlock
   before_script:
     - apk --no-cache update && add git
     - *get-latest-tag
     - export IMAGE_NAME=mulesoft_discovery_agent:${LAST_TAG}
+  only:
+    refs:
+      - schedules
 
 twistlock-master:
   extends: .dummy
