@@ -1,0 +1,77 @@
+image: docker:dind
+
+variables:
+  PROJECT: 'agents-mulesoft'
+  CSR_SUPPRESSION_LIST: "/tmp/csr-suppressions/amplify-central/golang-agents-common.json"
+
+  # Fortify
+  FORTIFY_PROJECT: "10715"
+  FORTIFY_BUILD_ID: "agents-mulesoft"
+
+  # Whitesource
+  WS_PROJECT_ID: "agents-mulesoft"
+  WS_CONFIG_FILE: "whitesource.config"
+  WS_BRANCH: main
+
+include:
+  - project: "apigov/beano_cicd"
+    ref: master
+    # the order of these include files is important
+    file:
+      - "/gitlabci/csrjobs.yml"
+  - project: 'scurity/gitlabci'
+    ref: master
+    file:
+      - '/.gitlab-ci-prepcsr.yml'
+      - '/.gitlab-ci-fortify.yml'
+      - "/.gitlab-ci-twistlock.yml"
+      - "/.gitlab-ci-whitesource.yml"
+      - "/.gitlab-ci-csr.yml"
+
+stages:
+  # - build
+  # - push
+  - security-scans
+  - security-review
+
+####################
+# CSR - overridden from csrjobs.yml to effectively not see this job ever
+####################
+.dummy:
+  stage: security-scans
+  only:
+    refs:
+      - xxxxx
+  script:
+    - ""
+
+fetch-iriusrisk:
+  extends: .dummy
+
+# twistlock:
+#   extends: .dummy
+
+# twistlock:on-schedule:
+#   extends: .dummy
+twistlock:
+  before_script:
+    - export IMAGE_NAME=ghrc.io/axway/apigee_discovery_agent:v0.0.6
+    - docker pull ${IMAGE_NAME}
+
+twistlock:on-schedule:
+  before_script:
+    - export IMAGE_NAME=ghrc.io/axway/apigee_discovery_agent:v0.0.6
+    - docker pull ${IMAGE_NAME}
+
+twistlock-master:
+  extends: .dummy
+
+run-csr:
+  dependencies:
+    - fetch-fortify
+    - whitesource
+
+update-csr:
+  dependencies:
+    - fetch-fortify
+    - whitesource:on-schedule
