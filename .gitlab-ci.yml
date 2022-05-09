@@ -75,19 +75,19 @@ twistlock:on-schedule:
 twistlock-master:
   extends: .dummy
 
-run-csr-discovery:
+run-csr:
   dependencies:
     - fetch-fortify
-    - twistlock-discovery
+    - twistlock
     - whitesource
 
-run-csr-traceability:
-  dependencies:
-    - fetch-fortify
-    - twistlock-traceability
-    - whitesource
+# run-csr-traceability:
+#   dependencies:
+#     - fetch-fortify
+#     - twistlock-traceability
+#     - whitesource
 
-update-csr-discovery:
+update-csr:
   dependencies:
     - fetch-fortify
     - twistlock:on-schedule
