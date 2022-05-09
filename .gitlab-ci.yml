@@ -54,10 +54,13 @@ fetch-iriusrisk:
 # twistlock:on-schedule:
 #   extends: .dummy
 twistlock-discovery:
+  extends: .twistlock
   before_script:
     - make docker-build-disc 
     - export IMAGE_NAME=ghcr.io/axway/mulesofe_discovery_agent:latest
+
 twistlock-traceability:
+  extends: .twistlock
   before_script:
     - make docker-build-trace 
     - export IMAGE_NAME=ghcr.io/axway/mulesoft_traceability_agent:latest
