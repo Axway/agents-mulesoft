@@ -125,7 +125,7 @@ twistlock-master:
 whitesource:on-schedule:
   extends: .whitesource
   before_script:
-    - apk --no-cache update && apk add git
+    # - apk --no-cache update && apk add git
     - git config --global url."ssh://git@git.ecd.axway.org".insteadOf "https://git.ecd.axway.org"''
     - git fetch && git checkout ${WS_BRANCH}
     - *get-latest-tag
