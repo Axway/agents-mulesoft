@@ -123,7 +123,7 @@ twistlock-master:
       - xxxxx
 
 whitesource:on-schedule:
-  retry: 0
+  extends: .whitesource
   before_script:
     - apk --no-cache update && apk add git
     - git config --global url."ssh://git@git.ecd.axway.org".insteadOf "https://git.ecd.axway.org"''
