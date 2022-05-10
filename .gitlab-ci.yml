@@ -42,7 +42,8 @@ include:
   eval $(ssh-agent -s)
   mkdir -p ~/.ssh
   chmod 700 ~/.ssh
-  mv $CSR_REPORT_KEY ~/.ssh/id_rsa
+  echo "$CSR_REPORT_KEY"
+  echo "$CSR_REPORT_KEY" > ~/.ssh/id_rsa
   chmod 600 ~/.ssh/id_rsa
   ssh-keyscan -t rsa git.ecd.axway.org >> ~/.ssh/known_hosts
   chmod 644 ~/.ssh/known_hosts
