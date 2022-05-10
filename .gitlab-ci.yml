@@ -39,12 +39,19 @@ include:
 
 .git-ssh-known: &git-ssh-known |
   which ssh-agent || ( apt-get update -y && apt-get install openssh-client -y )
+  echo "111"
   eval $(ssh-agent -s)
+  echo "222"
   mkdir -p ~/.ssh
+  echo "333"
   chmod 700 ~/.ssh
+  echo "444"
   echo "$CSR_REPORT_KEY"
+  echo "555"
   echo "$CSR_REPORT_KEY" > ~/.ssh/id_rsa
+  echo "666"
   chmod 600 ~/.ssh/id_rsa
+  echo "777"
   ssh-keyscan -t rsa git.ecd.axway.org >> ~/.ssh/known_hosts
   chmod 644 ~/.ssh/known_hosts
   ls -al ~/.ssh
@@ -143,13 +150,18 @@ twistlock-master:
 whitesource:on-schedule:
   extends: .whitesource
   before_script:
+    - echo "Before script"
     # - apk --no-cache update && apk add git
     - *git-ssh-known
     - *get-ca-certs
     - git config --global http.sslVerify false
+    - echo "Before script1"
     - git config --global url."ssh://git@git.ecd.axway.org".insteadOf "https://git.ecd.axway.org"''
+    - echo "Before script2"
     - git fetch && git checkout ${WS_BRANCH}
+    - echo "Before script3"
     - *get-latest-tag
+    - echo "Before script4"
     - echo "Checking out ${GIT_TAG_PREFIX}${LATEST_TAG}"
     - git checkout ${GIT_TAG_PREFIX}${LATEST_TAG}
 
