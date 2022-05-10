@@ -149,8 +149,8 @@ whitesource:on-schedule:
     - git config --global url."ssh://git@git.ecd.axway.org".insteadOf "https://git.ecd.axway.org"''
     - git fetch && git checkout ${WS_BRANCH}
     - *get-latest-tag
-    - echo "Checking out ${GIT_TAG_PREFIX}${IMAGE_VERSION}"
-    - git checkout ${GIT_TAG_PREFIX}${IMAGE_VERSION}
+    - echo "Checking out ${GIT_TAG_PREFIX}${LATEST_TAG}"
+    - git checkout ${GIT_TAG_PREFIX}${LATEST_TAG}
 
 run-csr:
   dependencies:
