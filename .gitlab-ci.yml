@@ -37,30 +37,7 @@ include:
     export LATEST_TAG=$(git describe --tags $(git rev-list --tags --max-count=1))
   fi
 
-.git-ssh-known: &git-ssh-known |
-  which ssh-agent || ( apt-get update -y && apt-get install openssh-client -y )
-  eval $(ssh-agent -s)
-  mkdir -p ~/.ssh
-  chmod 700 ~/.ssh
-  echo "$CSR_REPORT_KEY" > ~/.ssh/id_rsa
-  chmod 600 ~/.ssh/id_rsa
-  ssh-keyscan -t rsa git.ecd.axway.org >> ~/.ssh/known_hosts
-  echo "111"
-  chmod 644 ~/.ssh/known_hosts
-  echo "222"
-  ls -al ~/.ssh
-  echo "333"
-  ssh-add ~/.ssh/id_rsa
-  echo "444"
-
-# get the CA root cert
-.get-ca-certs: &get-ca-certs |
-  mkdir /usr/local/share/ca-certificates/axway.com
-  cp $AXWAY_ROOT_CA /usr/local/share/ca-certificates/axway.com/AxwayRootCA.crt
-
 stages:
-  # - build
-  # - push
   - security-scans
   - security-review
 
@@ -147,9 +124,6 @@ whitesource:on-schedule:
   extends: .whitesource
   before_script:
     - echo "Before script"
-    # - apk --no-cache update && apk add git
-    # - *git-ssh-known
-    # - *get-ca-certs
     - git config --global http.sslVerify false
     - echo "Before script1"
     - git config --global url."ssh://git@git.ecd.axway.org".insteadOf "https://git.ecd.axway.org"''
