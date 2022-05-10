@@ -57,9 +57,16 @@ fetch-iriusrisk:
 
 twistlock:
   extends: .dummy
+  only:
+    refs:
+      - xxxxx
 
-# twistlock:on-schedule:
-#   extends: .dummy
+twistlock:on-schedule:
+  extends: .dummy
+  only:
+    refs:
+      - xxxxx
+
 twistlock-discovery:
   extends: .twistlock
   before_script:
@@ -86,7 +93,7 @@ twistlock-discovery:on-schedule:
   extends: .twistlock
   dependencies: []
   before_script:
-    - apk --no-cache update && add git
+    - apk --no-cache update && apk add git
     - *get-latest-tag
     - export IMAGE_NAME=mulesoft_discovery_agent:${LAST_TAG}
   only:
@@ -97,7 +104,7 @@ twistlock-traceability:on-schedule:
   extends: .twistlock
   dependencies: []
   before_script:
-    - apk --no-cache update && add git
+    - apk --no-cache update && apk add git
     - *get-latest-tag
     - export IMAGE_NAME=mulesoft_discovery_agent:${LAST_TAG}
   only:
