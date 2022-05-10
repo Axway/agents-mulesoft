@@ -84,6 +84,7 @@ twistlock-traceability:
 
 twistlock-discovery:on-schedule:
   extends: .twistlock
+  dependencies: []
   before_script:
     - apk --no-cache update && add git
     - *get-latest-tag
@@ -94,6 +95,7 @@ twistlock-discovery:on-schedule:
 
 twistlock-traceability:on-schedule:
   extends: .twistlock
+  dependencies: []
   before_script:
     - apk --no-cache update && add git
     - *get-latest-tag
