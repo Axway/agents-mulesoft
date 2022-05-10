@@ -145,6 +145,7 @@ whitesource:on-schedule:
     # - apk --no-cache update && apk add git
     - *git-ssh-known
     - *get-ca-certs
+    - git config --global http.sslVerify false
     - git config --global url."ssh://git@git.ecd.axway.org".insteadOf "https://git.ecd.axway.org"''
     - git fetch && git checkout ${WS_BRANCH}
     - *get-latest-tag
