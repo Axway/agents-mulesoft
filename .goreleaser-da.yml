@@ -24,6 +24,9 @@ builds:
       - linux
       - windows
       - darwin
+    ignore:
+      - goos: windows
+        goarch: arm64
 
 archives:
   - id: discovery_agent_archives
