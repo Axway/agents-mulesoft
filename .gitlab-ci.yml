@@ -95,7 +95,7 @@ twistlock-discovery:on-schedule:
   before_script:
     - apk --no-cache update && apk add git
     - *get-latest-tag
-    - export IMAGE_NAME=mulesoft_discovery_agent:${LAST_TAG}
+    - export IMAGE_NAME=ghcr.io/axway/mulesoft_discovery_agent:${LAST_TAG}
   only:
     refs:
       - schedules
@@ -106,13 +106,17 @@ twistlock-traceability:on-schedule:
   before_script:
     - apk --no-cache update && apk add git
     - *get-latest-tag
-    - export IMAGE_NAME=mulesoft_discovery_agent:${LAST_TAG}
+    - export IMAGE_NAME=ghcr.io/axway/mulesoft_traceability_agent:${LAST_TAG}
   only:
     refs:
       - schedules
 
+# never run twistlock-master
 twistlock-master:
   extends: .dummy
+  only:
+    refs:
+      - xxxxx
 
 run-csr:
   dependencies:
