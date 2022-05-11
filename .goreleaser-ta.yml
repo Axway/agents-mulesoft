@@ -25,7 +25,10 @@ builds:
       - linux
       - windows
       - darwin
-
+    ignore:
+      - goos: windows
+        goarch: arm64
+        
 archives:
   - id: traceability_agent_archives
     name_template: "mulesoft_traceability_agent_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
