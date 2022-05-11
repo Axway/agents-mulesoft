@@ -123,15 +123,10 @@ twistlock-master:
 whitesource:on-schedule:
   extends: .whitesource
   before_script:
-    - echo "Before script"
     - git config --global http.sslVerify false
-    - echo "Before script1"
     - git config --global url."ssh://git@git.ecd.axway.org".insteadOf "https://git.ecd.axway.org"''
-    - echo "Before script2"
-    - git fetch && git checkout ${WS_BRANCH}
-    - echo "Before script3"
+    - git fetch
     - *get-latest-tag
-    - echo "Before script4"
     - echo "Checking out ${GIT_TAG_PREFIX}${LATEST_TAG}"
     - git checkout ${GIT_TAG_PREFIX}${LATEST_TAG}
 
