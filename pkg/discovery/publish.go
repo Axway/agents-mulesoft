@@ -89,6 +89,6 @@ func BuildServiceBody(service *ServiceDetail) (apic.ServiceBody, error) {
 		SetTitle(service.Title).
 		SetURL(service.URL).
 		SetVersion(service.Version).
-		SetAccessRequestDefintionName(service.AccessRequestDefinition).
+		SetAccessRequestDefinitionName(service.AccessRequestDefinition).
 		Build()
 }
