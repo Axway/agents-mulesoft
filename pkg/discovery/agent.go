@@ -113,11 +113,8 @@ func (a *Agent) Run() {
 	gracefulStop := make(chan os.Signal, 1)
 	signal.Notify(gracefulStop, syscall.SIGTERM, os.Interrupt)
 
-	select {
-	case <-gracefulStop:
-		a.Stop()
-		return
-	}
+	<-gracefulStop
+	a.Stop()
 }
 
 // Stop stops the discovery agent.

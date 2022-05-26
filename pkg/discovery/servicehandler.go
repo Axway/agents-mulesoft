@@ -229,7 +229,7 @@ func (s *serviceHandler) createSLATierSchema(
 	mpSchema := subs.NewSLATierContractSchemaMP(apiID, tierNames)
 	agent.NewAccessRequestBuilder().
 		SetName(schema.GetSubscriptionName()).
-		SetSchema(mpSchema).
+		SetRequestSchema(mpSchema).
 		Register()
 
 	return schema, nil
