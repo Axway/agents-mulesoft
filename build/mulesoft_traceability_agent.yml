@@ -30,6 +30,12 @@ mulesoft_traceability_agent:
       minVersion: ${CENTRAL_SSL_MINVERSION:"TLS1.2"}
       nextProtos: ${CENTRAL_SSL_NEXTPROTOS:[]}
       # End Central Config
+  agentFeatures:
+    persistCache: ${AGENTFEATURES_PERSISTCACHE}
+    marketplaceProvisioning: ${AGENTFEATURES_MARKETPLACEPROVISIONING}
+    versionChecker: ${AGENTFEATURES_VERSIONCHECKER}
+    processSystemSignals: ${AGENTFEATURES_PROCESSSYSTEMSIGNALS}
+    connectToCentral: ${AGENTFEATURES_CONNECTTOCENTRAL}
 
   log:
     format: ${LOG_FORMAT:json}
