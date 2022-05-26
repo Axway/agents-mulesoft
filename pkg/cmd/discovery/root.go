@@ -5,6 +5,7 @@ import (
 
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/migrate"
+	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agents-mulesoft/pkg/common"
 
@@ -73,13 +74,15 @@ func initConfig(centralConfig corecfg.CentralConfig) (interface{}, error) {
 
 	config.SetConfig(conf)
 
-	client = anypoint.NewClient(conf.MulesoftConfig)
-	sm, err := initSubscriptionManager(client, agent.GetCentralClient())
-	if err != nil {
-		return nil, fmt.Errorf("error while initializing the subscription manager %s", err)
-	}
+	if util.IsNotTest() {
+		client = anypoint.NewClient(conf.MulesoftConfig)
+		sm, err := initSubscriptionManager(client, agent.GetCentralClient())
+		if err != nil {
+			return nil, fmt.Errorf("error while initializing the subscription manager %s", err)
+		}
 
-	discoveryAgent = discovery.NewAgent(conf, client, sm)
+		discoveryAgent = discovery.NewAgent(conf, client, sm)
+	}
 	return conf, nil
 }
 
