@@ -5,6 +5,7 @@ import (
 
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/migrate"
+	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agents-mulesoft/pkg/common"
 
@@ -23,7 +24,11 @@ import (
 )
 
 // RootCmd - Agent root command
-var RootCmd corecmd.AgentRootCmd
+var (
+	RootCmd        corecmd.AgentRootCmd
+	client         *anypoint.AnypointClient
+	discoveryAgent *discovery.Agent
+)
 
 func init() {
 	// Create new root command with callbacks to initialize the agent config and command execution.
@@ -50,16 +55,7 @@ func init() {
 
 // run Callback that agent will call to process the execution
 func run() error {
-	cfg := config.GetConfig()
-
-	client := anypoint.NewClient(cfg.MulesoftConfig)
-	sm, err := initSubscriptionManager(client, agent.GetCentralClient())
-	if err != nil {
-		return fmt.Errorf("error while initializing the subscription manager %s", err)
-	}
-
-	discoveryAgent := discovery.NewAgent(cfg, client, sm)
-	err = discoveryAgent.CheckHealth()
+	err := discoveryAgent.CheckHealth()
 	if err != nil {
 		return err
 	}
@@ -77,6 +73,16 @@ func initConfig(centralConfig corecfg.CentralConfig) (interface{}, error) {
 	}
 
 	config.SetConfig(conf)
+
+	if util.IsNotTest() {
+		client = anypoint.NewClient(conf.MulesoftConfig)
+		sm, err := initSubscriptionManager(client, agent.GetCentralClient())
+		if err != nil {
+			return nil, fmt.Errorf("error while initializing the subscription manager %s", err)
+		}
+
+		discoveryAgent = discovery.NewAgent(conf, client, sm)
+	}
 	return conf, nil
 }
 

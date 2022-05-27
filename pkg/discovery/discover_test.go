@@ -87,10 +87,8 @@ func TestDiscovery_Loop(t *testing.T) {
 	// accounts for the immediate tick, and two ticks of the pollInterval
 	count := 0
 	for count < 3 {
-		select {
-		case <-disc.apiChan:
-			count++
-		}
+		<-disc.apiChan
+		count++
 	}
 	disc.Stop()
 	disc.OnConfigChange(&config.MulesoftConfig{})
@@ -150,7 +148,6 @@ func Test_discoverAPIs(t *testing.T) {
 
 type mockServiceHandler struct {
 	mock.Mock
-	count int
 }
 
 func (m *mockServiceHandler) ToServiceDetails(*anypoint.Asset) []*ServiceDetail {

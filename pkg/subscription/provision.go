@@ -51,25 +51,25 @@ func (p provisioner) AccessRequestDeprovision(req prov.AccessRequest) prov.Reque
 }
 
 // AccessRequestProvision adds an API to an app
-func (p provisioner) AccessRequestProvision(req prov.AccessRequest) prov.RequestStatus {
+func (p provisioner) AccessRequestProvision(req prov.AccessRequest) (prov.RequestStatus, prov.AccessData) {
 	p.log.Info("provisioning access request")
 	rs := prov.NewRequestStatusBuilder()
 	instDetails := req.GetInstanceDetails()
 
 	apiID := util.ToString(instDetails[common.AttrAPIID])
 	if apiID == "" {
-		return p.failed(rs, notFound(common.AttrAPIID))
+		return p.failed(rs, notFound(common.AttrAPIID)), nil
 	}
 
 	stage := util.ToString(instDetails[defs.AttrExternalAPIStage])
 	if stage == "" {
-		return p.failed(rs, notFound(defs.AttrExternalAPIStage))
+		return p.failed(rs, notFound(defs.AttrExternalAPIStage)), nil
 	}
 
 	appID := req.GetApplicationDetailsValue(common.AppID)
 	appID64, err := strconv.ParseInt(appID, 10, 64)
 	if err != nil {
-		return p.failed(rs, fmt.Errorf("failed to convert appID to int64. %s", err))
+		return p.failed(rs, fmt.Errorf("failed to convert appID to int64. %s", err)), nil
 	}
 
 	accessData := req.GetAccessRequestData()
@@ -77,7 +77,7 @@ func (p provisioner) AccessRequestProvision(req prov.AccessRequest) prov.Request
 
 	contract, err := p.client.CreateContract(apiID, tier, appID64)
 	if err != nil {
-		return p.failed(rs, fmt.Errorf("failed to create contract: %s", err))
+		return p.failed(rs, fmt.Errorf("failed to create contract: %s", err)), nil
 	}
 
 	rs.AddProperty(common.ContractID, fmt.Sprintf("%d", contract.Id))
@@ -86,7 +86,7 @@ func (p provisioner) AccessRequestProvision(req prov.AccessRequest) prov.Request
 		WithField("api", apiID).
 		WithField("app", req.GetApplicationName()).
 		Info("granted access")
-	return rs.Success()
+	return rs.Success(), nil
 }
 
 // ApplicationRequestDeprovision deletes an app

@@ -147,7 +147,7 @@ func TestAccessRequestProvision(t *testing.T) {
 				},
 			}
 
-			status := prv.AccessRequestProvision(req)
+			status, _ := prv.AccessRequestProvision(req)
 			assert.Equal(t, tc.status.String(), status.GetStatus().String())
 			if tc.status == prov.Success {
 				assert.Contains(t, status.GetProperties(), common.ContractID)
