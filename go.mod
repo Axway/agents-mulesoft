@@ -5,7 +5,7 @@ go 1.17
 // replace github.com/Axway/agent-sdk => /home/ubuntu/go/src/github.com/Axway/agent-sdk
 
 require (
-	github.com/Axway/agent-sdk v1.1.25-0.20220527205549-c2296d29b337
+	github.com/Axway/agent-sdk v1.1.26-0.20220608144844-700336c75806
 	github.com/elastic/beats/v7 v7.17.2
 	github.com/getkin/kin-openapi v0.76.0
 	github.com/sirupsen/logrus v1.8.1

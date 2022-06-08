@@ -21,6 +21,7 @@ import (
 	"github.com/elastic/beats/v7/libbeat/common"
 
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
+	transutil "github.com/Axway/agent-sdk/pkg/transaction/util"
 	"github.com/Axway/agents-mulesoft/pkg/config"
 )
 
@@ -57,7 +58,7 @@ func TestEventProcessor_ProcessRaw(t *testing.T) {
 	assert.Equal(t, "200", summaryEvent.TransactionSummary.StatusDetail)
 	assert.Equal(t, 60, summaryEvent.TransactionSummary.Duration)
 	assert.Equal(t, TeamID, summaryEvent.TransactionSummary.Team.ID)
-	assert.Equal(t, transaction.FormatProxyID(event.APIVersionID), summaryEvent.TransactionSummary.Proxy.ID)
+	assert.Equal(t, transutil.FormatProxyID(event.APIVersionID), summaryEvent.TransactionSummary.Proxy.ID)
 	assert.Equal(t, 1, summaryEvent.TransactionSummary.Proxy.Revision)
 	assert.Equal(t, FormatAPIName(event.APIName, event.APIVersionName), summaryEvent.TransactionSummary.Proxy.Name)
 	assert.Nil(t, summaryEvent.TransactionSummary.Runtime)
