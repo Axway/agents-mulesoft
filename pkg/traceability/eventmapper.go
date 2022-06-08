@@ -12,6 +12,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/transaction"
+	transutil "github.com/Axway/agent-sdk/pkg/transaction/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
@@ -134,7 +135,7 @@ func (em *EventMapper) createSummaryEvent(
 	builder := transaction.NewTransactionSummaryBuilder().
 		SetDuration(event.ResponseTime).
 		SetEntryPoint("http", method, uri, host).
-		SetProxy(transaction.FormatProxyID(apiVersionID), name, 1).
+		SetProxy(transutil.FormatProxyID(apiVersionID), name, 1).
 		SetStatus(getTransactionSummaryStatus(statusCode), strconv.Itoa(statusCode)).
 		SetTeam(teamID).
 		SetTransactionID(txID).
@@ -145,7 +146,7 @@ func (em *EventMapper) createSummaryEvent(
 		if err != nil {
 			logrus.Errorf("failed to get application with id '%s'", event.Application)
 		}
-		builder.SetApplication(transaction.FormatApplicationID(event.Application), app.Name)
+		builder.SetApplication(transutil.FormatApplicationID(event.Application), app.Name)
 	}
 
 	return builder.Build()

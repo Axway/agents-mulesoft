@@ -14,6 +14,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	transutil "github.com/Axway/agent-sdk/pkg/transaction/util"
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 )
 
@@ -73,7 +74,7 @@ func TestEventMapper_processMapping(t *testing.T) {
 
 	item, err := mapper.ProcessMapping(event)
 	assert.Nil(t, err)
-	assert.Equal(t, transaction.FormatApplicationID(event.Application), item[0].TransactionSummary.Application.ID)
+	assert.Equal(t, transutil.FormatApplicationID(event.Application), item[0].TransactionSummary.Application.ID)
 	assert.Equal(t, event.ApplicationName, item[0].TransactionSummary.Application.Name)
 	assert.Equal(t, 3, len(item))
 	assert.NotNil(t, item[1].TransactionEvent.Protocol)
@@ -188,5 +189,5 @@ func Test_APIServiceNameAndTransactionProxyNameAreEqual(t *testing.T) {
 
 	assert.True(t, strings.Contains(transactionProxyID, util.ToString(body.ServiceAgentDetails[common.AttrAPIID])))
 	assert.Equal(t, event.ApplicationName, le.TransactionSummary.Application.Name)
-	assert.Equal(t, transaction.FormatApplicationID(event.Application), le.TransactionSummary.Application.ID)
+	assert.Equal(t, transutil.FormatApplicationID(event.Application), le.TransactionSummary.Application.ID)
 }
