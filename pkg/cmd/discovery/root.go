@@ -55,10 +55,22 @@ func init() {
 
 // run Callback that agent will call to process the execution
 func run() error {
+<<<<<<< Updated upstream
 	err := discoveryAgent.CheckHealth()
 	if err != nil {
 		return err
 	}
+=======
+	cfg := config.GetConfig()
+
+	client := anypoint.NewClient(cfg.MulesoftConfig)
+	sm, err := initSubscriptionManager(client, agent.GetCentralClient())
+	if err != nil {
+		return fmt.Errorf("error while initializing the subscription manager %s", err)
+	}
+
+	discoveryAgent := discovery.NewAgent(cfg, client, sm)
+>>>>>>> Stashed changes
 
 	discoveryAgent.Run()
 	return nil
