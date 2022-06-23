@@ -49,8 +49,6 @@ func TestAgent_Run(t *testing.T) {
 		hitCh:  pubHit,
 	}
 	a := newAgent(mockClient, disc, pub)
-	err := a.CheckHealth()
-	assert.Nil(t, err)
 	go a.Run()
 
 	go a.onConfigChange()
