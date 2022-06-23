@@ -55,11 +55,6 @@ func init() {
 
 // run Callback that agent will call to process the execution
 func run() error {
-	err := discoveryAgent.CheckHealth()
-	if err != nil {
-		return err
-	}
-
 	discoveryAgent.Run()
 	return nil
 }

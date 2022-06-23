@@ -10,8 +10,6 @@ import (
 
 	coreAgent "github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/cache"
-	utilErrors "github.com/Axway/agent-sdk/pkg/util/errors"
-	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 	"github.com/Axway/agents-mulesoft/pkg/config"
 )
@@ -93,14 +91,6 @@ func (a *Agent) onConfigChange() {
 	// Restart Discovery & Publish
 	go a.discovery.Loop()
 	go a.publisher.Loop()
-}
-
-// CheckHealth - check the health of all clients associated with the agent
-func (a *Agent) CheckHealth() error {
-	if hc.RunChecks() != hc.OK {
-		return utilErrors.ErrInitServicesNotReady
-	}
-	return nil
 }
 
 // Run the agent loop
