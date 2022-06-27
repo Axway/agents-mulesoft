@@ -254,7 +254,7 @@ func (c *AnypointClient) ListAssets(page *Page) ([]Asset, error) {
 	var assetResult AssetSearch
 	url := c.baseURL + "/apimanager/api/v1/organizations/" + c.auth.GetOrgID() + "/environments/" + c.environment.ID + "/apis"
 	query := map[string]string{
-		"filters": "active",
+		// "filters": "active",
 	}
 	err := c.invokeJSONGet(url, page, &assetResult, query)
 
