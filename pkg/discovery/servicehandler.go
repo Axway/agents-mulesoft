@@ -180,7 +180,7 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 	}
 
 	return &ServiceDetail{
-		AccessRequestDefinition: subSchName, // TODO: check what value this is
+		AccessRequestDefinition: subSchName,
 		APIName:                 api.AssetID,
 		APISpec:                 modifiedSpec,
 		AuthPolicy:              authPolicy,
@@ -198,13 +198,12 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 			common.AttrChecksum:       checksum,
 			common.AttrProductVersion: api.ProductVersion,
 		},
-		Stage:             api.AssetVersion,
-		Tags:              api.Tags,
-		Title:             asset.ExchangeAssetName,
-		Version:           api.AssetVersion,
-		SubscriptionName:  subSchName,
-		APIUpdateSeverity: apic.MinorChange,
-		Status:            status,
+		Stage:            api.AssetVersion,
+		Tags:             api.Tags,
+		Title:            asset.ExchangeAssetName,
+		Version:          api.AssetVersion,
+		SubscriptionName: subSchName,
+		Status:           status,
 	}, nil
 }
 

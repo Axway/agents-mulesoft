@@ -28,7 +28,7 @@ func (p *publisher) Loop() {
 	for {
 		select {
 		case serviceDetail := <-p.apiChan:
-			go p.publish(serviceDetail)
+			p.publish(serviceDetail)
 		case <-p.stopPublish:
 			logrus.Debug("stopping publish listener")
 			return
