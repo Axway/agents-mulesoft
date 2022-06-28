@@ -5,7 +5,7 @@ go 1.17
 // replace github.com/Axway/agent-sdk => /home/ubuntu/go/src/github.com/Axway/agent-sdk
 
 require (
-	github.com/Axway/agent-sdk v1.1.26-0.20220608144844-700336c75806
+	github.com/Axway/agent-sdk v1.1.27-0.20220628174046-e157b989df42
 	github.com/elastic/beats/v7 v7.17.2
 	github.com/getkin/kin-openapi v0.76.0
 	github.com/sirupsen/logrus v1.8.1
@@ -22,6 +22,7 @@ require (
 	github.com/armon/go-radix v1.0.0 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.0.0-20210816181553-5444fa50b93d // indirect
 	github.com/dlclark/regexp2 v1.1.7-0.20171009020623-7632a260cbaf // indirect
 	github.com/docker/distribution v2.8.0+incompatible // indirect
 	github.com/docker/docker v1.13.1 // indirect
@@ -54,6 +55,7 @@ require (
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect
 	github.com/go-openapi/swag v0.19.5 // indirect
 	github.com/go-sourcemap/sourcemap v2.1.2+incompatible // indirect
+	github.com/goccy/go-json v0.9.7 // indirect
 	github.com/gofrs/flock v0.7.2-0.20190320160742-5135e617513b // indirect
 	github.com/gofrs/uuid v3.3.0+incompatible // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
@@ -84,6 +86,12 @@ require (
 	github.com/jonboulle/clockwork v0.2.2 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.13.6 // indirect
+	github.com/lestrrat-go/backoff/v2 v2.0.8 // indirect
+	github.com/lestrrat-go/blackmagic v1.0.0 // indirect
+	github.com/lestrrat-go/httpcc v1.0.1 // indirect
+	github.com/lestrrat-go/iter v1.0.1 // indirect
+	github.com/lestrrat-go/jwx v1.2.25 // indirect
+	github.com/lestrrat-go/option v1.0.0 // indirect
 	github.com/magefile/mage v1.11.0 // indirect
 	github.com/magiconair/properties v1.8.5 // indirect
 	github.com/mailru/easyjson v0.7.1 // indirect
