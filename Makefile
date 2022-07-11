@@ -31,6 +31,9 @@ dep:
 dep-version:
 	@export version=$(sdk) && make update-sdk && make dep
 
+dep-branch:
+	@make sdk=`git branch --show-current` dep-version
+
 dep-sdk:
 	@make sdk=main dep-version
 
