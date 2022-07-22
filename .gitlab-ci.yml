@@ -71,6 +71,7 @@ twistlock-discovery:
     refs:
       - schedules
       - tags
+      - main
 
 twistlock-traceability:
   extends: .twistlock
@@ -82,6 +83,7 @@ twistlock-traceability:
     refs:
       - schedules
       - tags
+      - main
 
 twistlock-discovery:on-schedule:
   extends: .twistlock
