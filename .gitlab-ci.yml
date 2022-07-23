@@ -111,7 +111,7 @@ fetch-iriusrisk:
     refs:
       - yyyyy
 
-fetch-iriusrisk:
+fetch-iriusrisk:on-schedule:
   only:
     refs:
       - xxxxx
