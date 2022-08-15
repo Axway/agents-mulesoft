@@ -18,7 +18,7 @@ import (
 
 	"github.com/Axway/agents-mulesoft/pkg/discovery/mocks"
 
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agents-mulesoft/pkg/subscription"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
@@ -786,9 +786,9 @@ type mockConsumerInstanceGetter struct {
 	mock.Mock
 }
 
-func (m *mockConsumerInstanceGetter) GetConsumerInstanceByID(string) (*v1alpha1.ConsumerInstance, error) {
+func (m *mockConsumerInstanceGetter) GetConsumerInstanceByID(string) (*management.ConsumerInstance, error) {
 	args := m.Called()
-	ci := args.Get(0).(*v1alpha1.ConsumerInstance)
+	ci := args.Get(0).(*management.ConsumerInstance)
 	return ci, args.Error(1)
 }
 
