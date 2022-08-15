@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 
 	"github.com/Axway/agent-sdk/pkg/cache"
 
@@ -69,7 +69,7 @@ func TestDiscovery_Loop(t *testing.T) {
 	msh := &mockServiceHandler{}
 	msh.On("ToServiceDetails").Return([]*ServiceDetail{sd})
 	centralClient := &mocks.MockCentralClient{}
-	centralClient.On("GetAPIRevisions").Return([]*v1alpha1.APIServiceRevision{}, nil)
+	centralClient.On("GetAPIRevisions").Return([]*management.APIServiceRevision{}, nil)
 
 	disc := &discovery{
 		apiChan:           apiChan,
@@ -123,7 +123,7 @@ func Test_discoverAPIs(t *testing.T) {
 			msh.On("ToServiceDetails").Return([]*ServiceDetail{sd})
 
 			centralClient := &mocks.MockCentralClient{}
-			centralClient.On("GetAPIRevisions").Return([]*v1alpha1.APIServiceRevision{}, nil)
+			centralClient.On("GetAPIRevisions").Return([]*management.APIServiceRevision{}, nil)
 
 			disc := &discovery{
 				apiChan:           apiChan,
