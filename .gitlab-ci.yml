@@ -155,7 +155,7 @@ twistlock-master:
 # These overridden from jobs.xml to never run      
 ###################
 test:
-  extends: .onlynever
+  extends: .only-never
 
 error-check:
-  extends: .onlynever
+  extends: .only-never
