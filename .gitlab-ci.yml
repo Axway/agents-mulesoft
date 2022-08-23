@@ -114,40 +114,48 @@ whitesource:on-schedule:
 fetch-iriusrisk:
   only:
     refs:
-      - xxxxx
+      - never
   except:
     refs:
-      - yyyyy
+      - never
 
 fetch-iriusrisk:on-schedule:
   only:
     refs:
-      - xxxxx
+      - never
   except:
     refs:
-      - yyyyy
+      - never
 
 twistlock:
   only:
     refs:
-      - xxxxx
+      - never
   except:
     refs:
-      - yyyyy
+      - never
 
 twistlock:on-schedule:
   only:
     refs:
-      - xxxxx
+      - never
   except:
     refs:
-      - yyyyy
+      - never
 
 twistlock-master:
   only:
     refs:
-      - xxxxx
+      - never
   except:
     refs:
-      - yyyyy
+      - never
 
+###################
+# These overridden from jobs.xml to never run      
+###################
+test:
+  extends: .onlynever
+
+error-check:
+  extends: .onlynever
