@@ -1,8 +1,8 @@
-.PHONY: all clean lint build
+.PHONY: all clean build
 
 WORKSPACE ?= $$(pwd)
 
-GO_PKG_LIST := $(shell go list ./... | grep -v /vendor/ | grep -v *mock*.go)
+GO_PKG_LIST := $(shell go list ./... | grep -v *mock*.go)
 SDK_VERSION := $(shell go list -m github.com/Axway/agent-sdk | cut -d ' ' -f 2 | cut -c 2-)
 
 download:
@@ -15,9 +15,6 @@ all: clean build
 
 clean:
 	@rm -rf dist
-
-lint:
-	@golint -set_exit_status ${GO_PKG_LIST}
 
 format:
 	@gofmt -w .
@@ -90,3 +87,14 @@ docker-build-disc:
 docker-build-trace:
 	@docker build -t mulesoft_traceability_agent:latest -f ${WORKSPACE}/build/traceability.Dockerfile .
 	@echo "Docker build complete"
+
+test-sonar:
+	echo "here"
+	echo "${GO_PKG_LIST}"
+	@go vet ${GO_PKG_LIST}
+	echo "1"
+	@go test -v -short -coverpkg=./... -coverprofile=./gocoverage.out -count=1 ${GO_PKG_LIST} -json > ./goreport.json
+	echo "there"
+
+sonar: test-sonar
+	./sonar.sh $(sonarHost)
