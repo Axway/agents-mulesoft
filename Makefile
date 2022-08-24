@@ -89,12 +89,8 @@ docker-build-trace:
 	@echo "Docker build complete"
 
 test-sonar:
-	echo "here"
-	echo "${GO_PKG_LIST}"
 	@go vet ${GO_PKG_LIST}
-	echo "1"
 	@go test -v -short -coverpkg=./... -coverprofile=./gocoverage.out -count=1 ${GO_PKG_LIST} -json > ./goreport.json
-	echo "there"
 
 sonar: test-sonar
 	./sonar.sh $(sonarHost)
