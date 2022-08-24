@@ -44,6 +44,7 @@ type MockAnypointClient struct {
 }
 
 func (m *MockAnypointClient) OnConfigChange(*config.MulesoftConfig) {
+	// intentionally left empty for this mock
 }
 
 func (m *MockAnypointClient) GetAPI(id string) (*API, error) {

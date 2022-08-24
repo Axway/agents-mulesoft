@@ -249,7 +249,7 @@ type Contract struct {
 	AssetID         string `json:"assetId"`
 	EnvironmentID   string `json:"environmentId"`
 	GroupID         string `json:"groupId"`
-	Id              int64  `json:"id""`
+	Id              int64  `json:"id"`
 	OrganizationID  string `json:"organizationId"`
 	RequestedTierID int64  `json:"requestedTierId,omitempty"`
 	Status          string `json:"status"`

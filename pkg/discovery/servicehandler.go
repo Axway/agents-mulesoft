@@ -110,7 +110,6 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 	err = s.cache.SetWithSecondaryKey(checksum, secondaryKey, *api)
 	if err != nil {
 		logger.Errorf("failed to save api to cache: %s", err)
-		// TODO: if err, remove api, then set again.
 	}
 
 	apiID := strconv.FormatInt(api.ID, 10)

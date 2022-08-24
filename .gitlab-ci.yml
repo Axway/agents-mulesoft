@@ -16,6 +16,13 @@ variables:
   GIT_TAG_PREFIX: v
 
 include:
+  - project: "apigov/beano_cicd"
+    ref: master
+    # the order of these include files is important
+    file:
+      - "/gitlabci/variables.yml"
+      - "/gitlabci/restrictions.yml"
+      - "/gitlabci/jobs.yml"
   - project: 'scurity/gitlabci'
     ref: master
     file:
@@ -39,6 +46,8 @@ include:
   fi
 
 stages:
+  - test
+  - sonar
   - security-scans
   - security-review
 
@@ -106,40 +115,48 @@ whitesource:on-schedule:
 fetch-iriusrisk:
   only:
     refs:
-      - xxxxx
+      - never
   except:
     refs:
-      - yyyyy
+      - never
 
 fetch-iriusrisk:on-schedule:
   only:
     refs:
-      - xxxxx
+      - never
   except:
     refs:
-      - yyyyy
+      - never
 
 twistlock:
   only:
     refs:
-      - xxxxx
+      - never
   except:
     refs:
-      - yyyyy
+      - never
 
 twistlock:on-schedule:
   only:
     refs:
-      - xxxxx
+      - never
   except:
     refs:
-      - yyyyy
+      - never
 
 twistlock-master:
   only:
     refs:
-      - xxxxx
+      - never
   except:
     refs:
-      - yyyyy
+      - never
 
+###################
+# These overridden from jobs.xml to never run      
+###################
+test:
+  extends: .only-never
+
+error-check:
+  extends: .only-never
