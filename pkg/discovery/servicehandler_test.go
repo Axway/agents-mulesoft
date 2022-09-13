@@ -437,7 +437,7 @@ func Test_getAuthPolicy(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			policy, conf, _ := getAuthPolicy(tc.policies)
+			policy, conf, _ := getAuthPolicy(tc.policies, catalog)
 			assert.Equal(t, policy, tc.expected)
 			assert.NotNil(t, conf)
 		})

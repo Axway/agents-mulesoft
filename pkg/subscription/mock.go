@@ -5,9 +5,11 @@ import (
 )
 
 type MockMuleSubscriptionClient struct {
-	app      *anypoint.Application
-	err      error
-	contract *anypoint.Contract
+	app       *anypoint.Application
+	newApp    *anypoint.Application
+	err       error
+	rotateErr error
+	contract  *anypoint.Contract
 }
 
 func (m *MockMuleSubscriptionClient) CreateApp(appName, apiID, description string) (*anypoint.Application, error) {
@@ -28,4 +30,8 @@ func (m *MockMuleSubscriptionClient) DeleteContract(apiID, contractID string) er
 
 func (m *MockMuleSubscriptionClient) GetApp(id string) (*anypoint.Application, error) {
 	return m.app, m.err
+}
+
+func (m *MockMuleSubscriptionClient) ResetAppSecret(appID int64) (*anypoint.Application, error) {
+	return m.newApp, m.rotateErr
 }

@@ -147,3 +147,7 @@ func (m *MockAnypointClient) RevokeContract(apiID, contractID string) error {
 	args := m.Called()
 	return args.Error(0)
 }
+
+func (m *MockAnypointClient) ResetAppSecret(appID int64) (*Application, error) {
+	return nil, nil
+}

@@ -314,8 +314,89 @@ func TestCredentialProvision(t *testing.T) {
 			assert.Equal(t, tc.status.String(), status.GetStatus().String())
 			if tc.status.String() == prov.Success.String() {
 				assert.NotNil(t, cr)
-				assert.Contains(t, cr.GetData(), common.ClientSecret)
-				assert.Contains(t, cr.GetData(), common.ClientID)
+				assert.Contains(t, cr.GetData(), prov.OauthClientSecret)
+				assert.Contains(t, cr.GetData(), prov.OauthClientID)
+			} else {
+				assert.Nil(t, cr)
+			}
+		})
+	}
+}
+
+func TestCredentialUpdate(t *testing.T) {
+	tests := []struct {
+		name      string
+		appName   string
+		appID     string
+		getAppErr error
+		rotateErr error
+		status    prov.Status
+		action    prov.CredentialAction
+	}{
+		{
+			name:    "should update credentials",
+			appName: "app1",
+			appID:   "65432",
+			status:  prov.Success,
+			action:  prov.Rotate,
+		},
+		{
+			name:    "should fail to update credentials when the action is not rotate",
+			appName: "app1",
+			appID:   "65432",
+			status:  prov.Error,
+			action:  prov.Suspend,
+		},
+		{
+			name:      "should fail to update credentials when making the api call",
+			appName:   "app1",
+			appID:     "65432",
+			rotateErr: fmt.Errorf("error"),
+			status:    prov.Error,
+			action:    prov.Rotate,
+		},
+		{
+			name:      "should return an error when app is not found",
+			appName:   "app1",
+			appID:     "65432",
+			status:    prov.Error,
+			action:    prov.Rotate,
+			getAppErr: fmt.Errorf("failed to get app"),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			app := &anypoint.Application{
+				ClientID:     "12345",
+				ClientSecret: "lajksdf",
+			}
+			newApp := &anypoint.Application{
+				ClientID:     "12345",
+				ClientSecret: "uihgobfjd",
+			}
+			client := &MockMuleSubscriptionClient{
+				err:       tc.getAppErr,
+				rotateErr: tc.rotateErr,
+				app:       app,
+				newApp:    newApp,
+			}
+			prv := NewProvisioner(client, logrus.StandardLogger())
+			req := mock.MockCredentialRequest{
+				AppName: tc.appName,
+				AppDetails: map[string]string{
+					common.AppID: tc.appID,
+				},
+				Action: tc.action,
+			}
+
+			status, cr := prv.CredentialUpdate(req)
+			assert.Equal(t, tc.status.String(), status.GetStatus().String())
+			if tc.status.String() == prov.Success.String() {
+				assert.NotNil(t, cr)
+				assert.Contains(t, cr.GetData(), prov.OauthClientSecret)
+				assert.Contains(t, cr.GetData(), prov.OauthClientID)
+				assert.NotEqual(t, app.ClientSecret, cr.GetData()[prov.OauthClientSecret])
 			} else {
 				assert.Nil(t, cr)
 			}
