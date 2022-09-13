@@ -20,15 +20,23 @@ include:
     ref: master
     # the order of these include files is important
     file:
-      - "/gitlabci/csrjobs.yml"
+      - "/gitlabci/variables.yml"
+      - "/gitlabci/restrictions.yml"
+      - "/gitlabci/jobs.yml"
   - project: 'scurity/gitlabci'
     ref: master
     file:
       - '/.gitlab-ci-prepcsr.yml'
       - '/.gitlab-ci-fortify.yml'
       - "/.gitlab-ci-twistlock.yml"
+      - "/.gitlab-ci-iriusrisk.yml"
       - "/.gitlab-ci-whitesource.yml"
       - "/.gitlab-ci-csr.yml"
+  - project: "apigov/beano_cicd"
+    ref: master
+    # the order of these include files is important
+    file:
+      - "/gitlabci/csrjobs.yml"
 
 .get-latest-tag: &get-latest-tag |
   if [ $(git --version | grep -Eo '2.*') ]; then 
@@ -38,34 +46,10 @@ include:
   fi
 
 stages:
+  - test
+  - sonar
   - security-scans
   - security-review
-
-####################
-# CSR - overridden from csrjobs.yml to effectively not see this job ever
-####################
-.dummy:
-  stage: security-scans
-  only:
-    refs:
-      - xxxxx
-  script:
-    - ""
-
-fetch-iriusrisk:
-  extends: .dummy
-
-twistlock:
-  extends: .dummy
-  only:
-    refs:
-      - xxxxx
-
-twistlock:on-schedule:
-  extends: .dummy
-  only:
-    refs:
-      - xxxxx
 
 twistlock-discovery:
   extends: .twistlock
@@ -77,6 +61,7 @@ twistlock-discovery:
     refs:
       - schedules
       - tags
+      - main
 
 twistlock-traceability:
   extends: .twistlock
@@ -88,6 +73,7 @@ twistlock-traceability:
     refs:
       - schedules
       - tags
+      - main
 
 twistlock-discovery:on-schedule:
   extends: .twistlock
@@ -113,13 +99,6 @@ twistlock-traceability:on-schedule:
     refs:
       - schedules
 
-# never run twistlock-master
-twistlock-master:
-  extends: .dummy
-  only:
-    refs:
-      - xxxxx
-
 whitesource:on-schedule:
   extends: .whitesource
   before_script:
@@ -129,3 +108,55 @@ whitesource:on-schedule:
     - *get-latest-tag
     - echo "Checking out ${GIT_TAG_PREFIX}${LATEST_TAG}"
     - git checkout ${GIT_TAG_PREFIX}${LATEST_TAG}
+
+####################
+# CSR - overridden from csrjobs.yml to effectively not see these jobs ever
+####################
+fetch-iriusrisk:
+  only:
+    refs:
+      - never
+  except:
+    refs:
+      - never
+
+fetch-iriusrisk:on-schedule:
+  only:
+    refs:
+      - never
+  except:
+    refs:
+      - never
+
+twistlock:
+  only:
+    refs:
+      - never
+  except:
+    refs:
+      - never
+
+twistlock:on-schedule:
+  only:
+    refs:
+      - never
+  except:
+    refs:
+      - never
+
+twistlock-master:
+  only:
+    refs:
+      - never
+  except:
+    refs:
+      - never
+
+###################
+# These overridden from jobs.xml to never run      
+###################
+test:
+  extends: .only-never
+
+error-check:
+  extends: .only-never

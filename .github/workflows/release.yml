@@ -17,7 +17,7 @@ jobs:
         run: git fetch --prune --unshallow
       - uses: actions/setup-go@v2
         with:
-          go-version: 1.17
+          go-version: 1.19
       - name: Export SDK Version # exports the SDK_VERSION to be used by the goreleaser
         run: echo "SDK_VERSION=$(make sdk-version)" >> $GITHUB_ENV
       - name: Discovery Release
@@ -39,7 +39,7 @@ jobs:
         run: git fetch --prune --unshallow
       - uses: actions/setup-go@v2
         with:
-          go-version: 1.17
+          go-version: 1.19
       - name: Export SDK Version # exports the SDK_VERSION to be used by the goreleaser
         run: echo "SDK_VERSION=$(make sdk-version)" >> $GITHUB_ENV
       - name: Traceability Release

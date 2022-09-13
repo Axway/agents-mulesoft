@@ -194,7 +194,7 @@ func (c *AnypointClient) getUser() (*User, error) {
 // getCurrentUser returns the current user. Used internally during authentication
 func (c *AnypointClient) getCurrentUser(token string) (*User, error) {
 	headers := map[string]string{
-		"Authorization": "Bearer " + token,
+		"Authorization": c.getAuthString(token),
 	}
 
 	request := coreapi.Request{
@@ -224,16 +224,17 @@ func (c *AnypointClient) getCurrentUser(token string) (*User, error) {
 // GetEnvironmentByName gets the Mulesoft environment with the specified name.
 func (c *AnypointClient) GetEnvironmentByName(name string) (*Environment, error) {
 	headers := map[string]string{
-		"Authorization": "Bearer " + c.auth.GetToken(),
+		"Authorization": c.getAuthString(c.auth.GetToken()),
 	}
 
 	query := map[string]string{
 		"name": name,
 	}
 
+	url := fmt.Sprintf("%s/accounts/api/organizations/%s/environments", c.baseURL, c.auth.GetOrgID())
 	request := coreapi.Request{
 		Method:      coreapi.GET,
-		URL:         c.baseURL + "/accounts/api/organizations/" + c.auth.GetOrgID() + "/environments",
+		URL:         url,
 		Headers:     headers,
 		QueryParams: query,
 	}
@@ -253,7 +254,7 @@ func (c *AnypointClient) GetEnvironmentByName(name string) (*Environment, error)
 // ListAssets lists the API Assets.
 func (c *AnypointClient) ListAssets(page *Page) ([]Asset, error) {
 	var assetResult AssetSearch
-	url := c.baseURL + "/apimanager/api/v1/organizations/" + c.auth.GetOrgID() + "/environments/" + c.environment.ID + "/apis"
+	url := fmt.Sprintf("%s/apimanager/api/v1/organizations/%s/environments/%s/apis", c.baseURL, c.auth.GetOrgID(), c.environment.ID)
 	query := map[string]string{
 		"filters": "active",
 	}
@@ -268,7 +269,7 @@ func (c *AnypointClient) ListAssets(page *Page) ([]Asset, error) {
 
 // GetAPI gets a single api by id
 func (c *AnypointClient) GetAPI(id string) (*API, error) {
-	url := c.baseURL + "/apimanager/api/v1/organizations/" + c.auth.GetOrgID() + "/environments/" + c.environment.ID + "/apis/" + id
+	url := fmt.Sprintf("%s/apimanager/api/v1/organizations/%s/environments/%s/apis/%s", c.baseURL, c.auth.GetOrgID(), c.environment.ID, id)
 	res := &API{}
 	err := c.invokeJSONGet(url, nil, res, nil)
 
@@ -360,10 +361,10 @@ func (c *AnypointClient) GetAnalyticsWindow(startDate, endDate string) ([]Analyt
 		"fields":    "Application Name.Application.Browser.City.Client IP.Continent.Country.Hardware Platform.Message ID.OS Family.OS Major Version.OS Minor Version.OS Version.Postal Code.Request Outcome.Request Size.Resource Path.Response Size.Response Time.Status Code.Timezone.User Agent Name.User Agent Version.Verb.Violated Policy Name",
 	}
 	headers := map[string]string{
-		"Authorization": "Bearer " + c.auth.GetToken(),
+		"Authorization": c.getAuthString(c.auth.GetToken()),
 	}
 
-	url := c.baseURL + "/analytics/1.0/" + c.auth.GetOrgID() + "/environments/" + c.environment.ID + "/events"
+	url := fmt.Sprintf("%s/analytics/1.0/%s/environments/%s/events", c.baseURL, c.auth.GetOrgID(), c.environment.ID)
 	events := make([]AnalyticsEvent, 0)
 	request := coreapi.Request{
 		Method:      coreapi.GET,
@@ -378,7 +379,7 @@ func (c *AnypointClient) GetAnalyticsWindow(startDate, endDate string) ([]Analyt
 func (c *AnypointClient) GetSLATiers(apiID int64) (*Tiers, error) {
 	var slatiers Tiers
 	headers := map[string]string{
-		"Authorization": "Bearer " + c.auth.GetToken(),
+		"Authorization": c.getAuthString(c.auth.GetToken()),
 	}
 	url := fmt.Sprintf("%s/apimanager/api/v1/organizations/%s/environments/%s/apis/%d/tiers",
 		c.baseURL, c.auth.GetOrgID(), c.environment.ID, apiID)
@@ -424,7 +425,7 @@ func (c *AnypointClient) DeleteClientApplication(appID int64) error {
 	url := fmt.Sprintf("%s/exchange/api/v2/organizations/%s/applications/%v", c.baseURL, c.auth.GetOrgID(), appID)
 
 	headers := map[string]string{
-		"Authorization": "Bearer " + c.auth.GetToken(),
+		"Authorization": c.getAuthString(c.auth.GetToken()),
 	}
 
 	request := coreapi.Request{
@@ -443,7 +444,7 @@ func (c *AnypointClient) GetClientApplication(appID string) (*Application, error
 	url := fmt.Sprintf("%s/exchange/api/v2/organizations/%s/applications/%s", c.baseURL, c.auth.GetOrgID(), appID)
 
 	headers := map[string]string{
-		"Authorization": "Bearer " + c.auth.GetToken(),
+		"Authorization": c.getAuthString(c.auth.GetToken()),
 	}
 
 	request := coreapi.Request{
@@ -463,7 +464,7 @@ func (c *AnypointClient) DeleteContract(apiID string, contractID string) error {
 	)
 
 	headers := map[string]string{
-		"Authorization": "Bearer " + c.auth.GetToken(),
+		"Authorization": c.getAuthString(c.auth.GetToken()),
 	}
 
 	request := coreapi.Request{
@@ -529,7 +530,7 @@ func (c *AnypointClient) CreateContract(appID int64, contract *Contract) (*Contr
 
 func (c *AnypointClient) invokeJSONGet(url string, page *Page, resp interface{}, query map[string]string) error {
 	headers := map[string]string{
-		"Authorization": "Bearer " + c.auth.GetToken(),
+		"Authorization": c.getAuthString(c.auth.GetToken()),
 	}
 
 	if query == nil {
@@ -554,7 +555,7 @@ func (c *AnypointClient) invokeJSONGet(url string, page *Page, resp interface{},
 
 func (c *AnypointClient) invokeJSONPost(url string, query map[string]string, body []byte, resp interface{}) error {
 	headers := map[string]string{
-		"Authorization": "Bearer " + c.auth.GetToken(),
+		"Authorization": c.getAuthString(c.auth.GetToken()),
 		"Content-Type":  "application/json",
 		"Accept":        "application/json",
 	}
@@ -624,4 +625,8 @@ func SetClient(c coreapi.Client) ClientOptions {
 	return func(ac *AnypointClient) {
 		ac.apiClient = c
 	}
+}
+
+func (c *AnypointClient) getAuthString(token string) string {
+	return "Bearer " + token
 }
