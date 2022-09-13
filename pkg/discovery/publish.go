@@ -90,5 +90,6 @@ func BuildServiceBody(service *ServiceDetail) (apic.ServiceBody, error) {
 		SetURL(service.URL).
 		SetVersion(service.Version).
 		SetAccessRequestDefinitionName(service.AccessRequestDefinition, false).
+		SetCredentialRequestDefinitions(service.CRDs).
 		Build()
 }

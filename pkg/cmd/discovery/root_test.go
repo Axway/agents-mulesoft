@@ -44,7 +44,7 @@ func Test_initSubscriptionManager(t *testing.T) {
 		return &apic.MockSubscriptionManager{}
 	}
 
-	manager, err := initSubscriptionManager(mc, cc)
+	manager, err := initUCSubscriptionManager(mc, cc)
 	assert.NotNil(t, manager)
 
 	assert.Nil(t, err)
@@ -59,6 +59,6 @@ func Test_initSubscriptionManager(t *testing.T) {
 	cc.RegisterSubscriptionSchemaMock = func(_ apic.SubscriptionSchema, _ bool) error {
 		return fmt.Errorf("failed")
 	}
-	_, err = initSubscriptionManager(mc, cc)
+	_, err = initUCSubscriptionManager(mc, cc)
 	assert.NotNil(t, err)
 }

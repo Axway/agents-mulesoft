@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/util/oas"
 	"github.com/Axway/agents-mulesoft/pkg/common"
@@ -27,6 +28,11 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
+const (
+	marketplace = "marketplace"
+	catalog     = "unified-catalog"
+)
+
 // ServiceHandler converts a mulesoft asset to an array of ServiceDetails
 type ServiceHandler interface {
 	ToServiceDetails(asset *anypoint.Asset) []*ServiceDetail
@@ -40,6 +46,7 @@ type serviceHandler struct {
 	client              anypoint.Client
 	schemas             subs.SchemaStore
 	cache               cache.Cache
+	mode                string
 }
 
 func (s *serviceHandler) OnConfigChange(cfg *config.MulesoftConfig) {
@@ -94,7 +101,7 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 	if err != nil {
 		return nil, err
 	}
-	authPolicy, configuration, isSLABased := getAuthPolicy(policies)
+	authPolicy, configuration, isSLABased := getAuthPolicy(policies, s.mode)
 	logger = logger.WithField("policy", authPolicy)
 
 	isAlreadyPublished, checksum := isPublished(api, authPolicy, s.cache)
@@ -110,32 +117,41 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 	err = s.cache.SetWithSecondaryKey(checksum, secondaryKey, *api)
 	if err != nil {
 		logger.Errorf("failed to save api to cache: %s", err)
-		// TODO: if err, remove api, then set again.
 	}
 
 	apiID := strconv.FormatInt(api.ID, 10)
 
-	subSchName := s.schemas.GetSubscriptionSchemaName(common.PolicyDetail{
-		Policy:     authPolicy,
-		IsSLABased: isSLABased,
-		APIId:      apiID,
-	})
-
-	// If the API has a new SLA Tier policy, create a new subscription schema for it
-	if subSchName == "" && isSLABased {
-		// Get details of the SLA tiers
-		tiers, err1 := s.client.GetSLATiers(api.ID)
-		if err1 != nil {
-			return nil, err1
+	var crds []string
+	subSchName := ""
+	ard := ""
+	if s.mode == marketplace {
+		if authPolicy == apic.Oauth {
+			ard = provisioning.APIKeyARD
+			crds = []string{provisioning.OAuthSecretCRD}
 		}
-		schema, err1 := s.createSLATierSchema(apiID, tiers, agent.GetCentralClient())
-		if err1 != nil {
-			return nil, err1
+	} else {
+		subSchName = s.schemas.GetSubscriptionSchemaName(common.PolicyDetail{
+			Policy:     authPolicy,
+			IsSLABased: isSLABased,
+			APIId:      apiID,
+		})
+
+		// If the API has a new SLA Tier policy, create a new subscription schema for it
+		if subSchName == "" && isSLABased {
+			// Get details of the SLA tiers
+			tiers, err1 := s.client.GetSLATiers(api.ID)
+			if err1 != nil {
+				return nil, err1
+			}
+			schema, err1 := s.createSLATierSchema(apiID, tiers, agent.GetCentralClient())
+			if err1 != nil {
+				return nil, err1
+			}
+
+			logger.Infof("schema registered")
+
+			subSchName = schema.GetSubscriptionName()
 		}
-
-		logger.Infof("schema registered")
-
-		subSchName = schema.GetSubscriptionName()
 	}
 
 	exchangeAsset, err := s.client.GetExchangeAsset(api.GroupID, api.AssetID, api.AssetVersion)
@@ -180,7 +196,8 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 	}
 
 	return &ServiceDetail{
-		AccessRequestDefinition: subSchName,
+		AccessRequestDefinition: ard,
+		CRDs:                    crds,
 		APIName:                 api.AssetID,
 		APISpec:                 modifiedSpec,
 		AuthPolicy:              authPolicy,
@@ -350,16 +367,21 @@ func getSpecType(file *anypoint.ExchangeFile, specContent []byte) (string, error
 }
 
 // getAuthPolicy gets the authentication policy type.
-func getAuthPolicy(policies anypoint.Policies) (string, map[string]interface{}, bool) {
+func getAuthPolicy(policies anypoint.Policies, mode string) (string, map[string]interface{}, bool) {
+	authPolicy := apic.Apikey
+	if mode == marketplace {
+		authPolicy = apic.Oauth
+	}
+
 	for _, policy := range policies.Policies {
 		if policy.Template.AssetID == common.ClientIDEnforcement {
 			conf := getMapFromInterface(policy.Configuration)
-			return apic.Apikey, conf, false
+			return authPolicy, conf, false
 		}
 
 		if strings.Contains(policy.Template.AssetID, common.SLABased) {
 			conf := getMapFromInterface(policy.Configuration)
-			return apic.Apikey, conf, true
+			return authPolicy, conf, true
 		}
 
 		if policy.Template.AssetID == common.ExternalOauth {

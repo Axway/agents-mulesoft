@@ -9,6 +9,7 @@ type ServiceDetail struct {
 	APISpec                 []byte
 	APIUpdateSeverity       string
 	AuthPolicy              string
+	CRDs                    []string
 	Description             string
 	Documentation           []byte
 	ID                      string

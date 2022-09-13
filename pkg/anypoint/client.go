@@ -45,6 +45,7 @@ type Client interface {
 	OnConfigChange(mulesoftConfig *config.MulesoftConfig)
 	DeleteContract(apiID string, contractID string) error
 	RevokeContract(apiID, contractID string) error
+	ResetAppSecret(appID int64) (*Application, error)
 }
 
 type AnalyticsClient interface {
@@ -410,6 +411,13 @@ func (c *AnypointClient) CreateClientApplication(apiInstanceID string, app *AppR
 		return nil, err
 	}
 	return &application, nil
+}
+
+func (c *AnypointClient) ResetAppSecret(appID int64) (*Application, error) {
+	url := fmt.Sprintf("%s/exchange/api/v2/organizations/%s/applications/%v/secret/reset", c.baseURL, c.auth.GetOrgID(), appID)
+	application := &Application{}
+	err := c.invokeJSONPost(url, nil, []byte{}, application)
+	return application, err
 }
 
 func (c *AnypointClient) DeleteClientApplication(appID int64) error {

@@ -6,6 +6,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agents-mulesoft/pkg/subscription"
 
 	coreAgent "github.com/Axway/agent-sdk/pkg/agent"
@@ -48,6 +49,12 @@ func NewAgent(cfg *config.AgentConfig, client anypoint.Client, sm subscription.S
 		client:              client,
 		schemas:             sm,
 		cache:               c,
+	}
+
+	if util.IsNil(sm) {
+		svcHandler.mode = marketplace
+	} else {
+		svcHandler.mode = catalog
 	}
 
 	disc := &discovery{
