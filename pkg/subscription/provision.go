@@ -164,12 +164,41 @@ func (p provisioner) CredentialProvision(req prov.CredentialRequest) (prov.Reque
 		return p.failed(rs, fmt.Errorf("failed to retrieve app: %s", err)), nil
 	}
 
-	cr := prov.NewCredentialBuilder().SetCredential(map[string]interface{}{
-		common.ClientID:     app.ClientID,
-		common.ClientSecret: app.ClientSecret,
-	})
+	cr := prov.NewCredentialBuilder().SetOAuthIDAndSecret(app.ClientID, app.ClientSecret)
 
 	p.log.Info("created credentials")
+
+	return rs.Success(), cr
+}
+
+func (p provisioner) CredentialUpdate(req prov.CredentialRequest) (prov.RequestStatus, prov.Credential) {
+	p.log.Info("updating credential for app %s", req.GetApplicationName())
+	rs := prov.NewRequestStatusBuilder()
+
+	appID := req.GetApplicationDetailsValue(common.AppID)
+	appID64, err := strconv.ParseInt(appID, 10, 64)
+	if err != nil {
+		return p.failed(rs, fmt.Errorf("failed to convert appID to int64. %s", err)), nil
+	}
+
+	// return right away if the action is rotate
+	if req.GetCredentialAction() != prov.Rotate {
+		return p.failed(rs, fmt.Errorf("%s is not available for mulesoft credentials", req.GetCredentialAction())), nil
+	}
+
+	app, err := p.client.GetApp(appID)
+	if err != nil {
+		return p.failed(rs, fmt.Errorf("failed to rotate application secret: %s", err)), nil
+	}
+
+	secret, err := p.client.ResetAppSecret(appID64)
+	if err != nil {
+		return p.failed(rs, fmt.Errorf("failed to rotate application secret: %s", err)), nil
+	}
+
+	cr := prov.NewCredentialBuilder().SetOAuthIDAndSecret(app.ClientID, secret.ClientSecret)
+
+	p.log.Infof("updated credentials for app %s", req.GetApplicationName())
 
 	return rs.Success(), cr
 }

@@ -13,6 +13,7 @@ type MuleSubscriptionClient interface {
 	DeleteApp(appID int64) error
 	DeleteContract(apiID, contractID string) error
 	GetApp(id string) (*anypoint.Application, error)
+	ResetAppSecret(appID int64) (*anypoint.Application, error)
 }
 
 type muleSubscription struct {
@@ -24,6 +25,11 @@ func NewMuleSubscriptionClient(client anypoint.Client) MuleSubscriptionClient {
 	return &muleSubscription{
 		client: client,
 	}
+}
+
+// ResetAppSecret resets the secret for an app
+func (c muleSubscription) ResetAppSecret(appID int64) (*anypoint.Application, error) {
+	return c.client.ResetAppSecret(appID)
 }
 
 // GetApp gets a mulesoft app by id

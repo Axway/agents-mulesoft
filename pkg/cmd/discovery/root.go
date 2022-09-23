@@ -3,7 +3,6 @@ package discovery
 import (
 	"fmt"
 
-	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/migrate"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
@@ -71,9 +70,20 @@ func initConfig(centralConfig corecfg.CentralConfig) (interface{}, error) {
 
 	if util.IsNotTest() {
 		client = anypoint.NewClient(conf.MulesoftConfig)
-		sm, err := initSubscriptionManager(client, agent.GetCentralClient())
-		if err != nil {
-			return nil, fmt.Errorf("error while initializing the subscription manager %s", err)
+		muleSubClient := subs.NewMuleSubscriptionClient(client)
+		entry := logrus.NewEntry(log.Get())
+		var sm *subs.Manager
+
+		if centralConfig.IsMarketplaceSubsEnabled() {
+			agent.RegisterProvisioner(subs.NewProvisioner(muleSubClient, entry))
+			agent.NewAPIKeyAccessRequestBuilder().Register()
+			agent.NewOAuthCredentialRequestBuilder(agent.WithCRDOAuthSecret()).IsRenewable().Register()
+		} else {
+			var err error
+			sm, err = initUCSubscriptionManager(client, agent.GetCentralClient())
+			if err != nil {
+				return nil, fmt.Errorf("error while initializing the subscription manager %s", err)
+			}
 		}
 
 		discoveryAgent = discovery.NewAgent(conf, client, sm)
@@ -81,7 +91,7 @@ func initConfig(centralConfig corecfg.CentralConfig) (interface{}, error) {
 	return conf, nil
 }
 
-func initSubscriptionManager(apc anypoint.Client, central apic.Client) (*subs.Manager, error) {
+func initUCSubscriptionManager(apc anypoint.Client, central apic.Client) (*subs.Manager, error) {
 	entry := logrus.NewEntry(log.Get())
 	muleSubClient := subs.NewMuleSubscriptionClient(apc)
 	clientID := subs.NewClientIDContract()
@@ -103,33 +113,5 @@ func initSubscriptionManager(apc anypoint.Client, central apic.Client) (*subs.Ma
 	// start polling for subscriptions
 	subManager.Start()
 
-	agent.RegisterProvisioner(subs.NewProvisioner(muleSubClient, entry))
-	agent.NewAPIKeyAccessRequestBuilder().Register()
-	newCredentialReq().Register()
-
 	return sm, nil
-}
-
-func newCredentialReq() prov.CredentialRequestBuilder {
-	id := prov.NewSchemaPropertyBuilder().
-		SetName(common.ClientID).
-		SetLabel(common.ClientIDLabel).
-		SetRequired().
-		IsString().
-		IsEncrypted()
-
-	secret := prov.NewSchemaPropertyBuilder().
-		SetName(common.ClientSecret).
-		SetLabel(common.ClientSecretLabel).
-		SetRequired().
-		IsString().
-		IsEncrypted()
-
-	return agent.NewCredentialRequestBuilder().
-		SetName(prov.APIKeyCRD).
-		SetProvisionSchema(
-			prov.NewSchemaBuilder().
-				AddProperty(id).
-				AddProperty(secret),
-		)
 }
