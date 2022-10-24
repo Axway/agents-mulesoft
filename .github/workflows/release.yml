@@ -12,7 +12,7 @@ jobs:
       run:
         working-directory: .
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Unshallow Fetch
         run: git fetch --prune --unshallow
       - uses: actions/setup-go@v2
@@ -34,7 +34,7 @@ jobs:
       run:
         working-directory: .
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Unshallow Fetch
         run: git fetch --prune --unshallow
       - uses: actions/setup-go@v2
