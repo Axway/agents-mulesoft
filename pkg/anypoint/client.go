@@ -397,7 +397,7 @@ func (c *AnypointClient) GetSLATiers(apiID int64) (*Tiers, error) {
 func (c *AnypointClient) CreateClientApplication(apiInstanceID string, app *AppRequestBody) (*Application, error) {
 	var application Application
 	query := map[string]string{
-		"apiInstanceID": apiInstanceID,
+		"apiInstanceId": apiInstanceID,
 	}
 
 	url := fmt.Sprintf("%s/exchange/api/v1/organizations/%s/applications", c.baseURL, c.auth.GetOrgID())
@@ -482,7 +482,7 @@ func (c *AnypointClient) RevokeContract(apiID, contractID string) error {
 	res := map[string]interface{}{}
 
 	url := fmt.Sprintf(
-		"%s/apimanager/xapi/v1/organizations/%s/environments/%s/apis/%s/contracts/%s/revoke",
+		"%s/apimanager/api/v1/organizations/%s/environments/%s/apis/%s/contracts/%s/revoke",
 		c.baseURL, c.auth.GetOrgID(), c.environment.ID, apiID, contractID,
 	)
 

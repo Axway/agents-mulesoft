@@ -158,98 +158,98 @@ func TestAccessRequestProvision(t *testing.T) {
 	}
 }
 
-func TestApplicationRequestDeprovision(t *testing.T) {
-	tests := []struct {
-		name   string
-		appID  string
-		status prov.Status
-		err    error
-	}{
-		{
-			name:   "should deprovision an application",
-			appID:  "65432",
-			status: prov.Success,
-		},
-		{
-			name:   "should fail to deprovision an application",
-			appID:  "65432",
-			status: prov.Error,
-			err:    fmt.Errorf("failed to deprovision"),
-		},
-		{
-			name:   "should return an error when the appID is not found",
-			appID:  "",
-			status: prov.Error,
-		},
-	}
+// func TestApplicationRequestDeprovision(t *testing.T) {
+// 	tests := []struct {
+// 		name   string
+// 		appID  string
+// 		status prov.Status
+// 		err    error
+// 	}{
+// 		{
+// 			name:   "should deprovision an application",
+// 			appID:  "65432",
+// 			status: prov.Success,
+// 		},
+// 		{
+// 			name:   "should fail to deprovision an application",
+// 			appID:  "65432",
+// 			status: prov.Error,
+// 			err:    fmt.Errorf("failed to deprovision"),
+// 		},
+// 		{
+// 			name:   "should return an error when the appID is not found",
+// 			appID:  "",
+// 			status: prov.Error,
+// 		},
+// 	}
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			client := &MockMuleSubscriptionClient{
-				err: tc.err,
-			}
-			prv := NewProvisioner(client, logrus.StandardLogger())
-			req := mock.MockApplicationRequest{
-				AppName: "app1",
-				Details: map[string]string{
-					common.AppID: tc.appID,
-				},
-			}
-			status := prv.ApplicationRequestDeprovision(req)
-			assert.Equal(t, tc.status.String(), status.GetStatus().String())
-		})
-	}
-}
+// 	for _, tc := range tests {
+// 		t.Run(tc.name, func(t *testing.T) {
+// 			client := &MockMuleSubscriptionClient{
+// 				err: tc.err,
+// 			}
+// 			prv := NewProvisioner(client, logrus.StandardLogger())
+// 			req := mock.MockApplicationRequest{
+// 				AppName: "app1",
+// 				Details: map[string]string{
+// 					common.AppID: tc.appID,
+// 				},
+// 			}
+// 			status := prv.ApplicationRequestDeprovision(req)
+// 			assert.Equal(t, tc.status.String(), status.GetStatus().String())
+// 		})
+// 	}
+// }
 
-func TestApplicationRequestProvision(t *testing.T) {
-	tests := []struct {
-		name    string
-		status  prov.Status
-		err     error
-		appName string
-	}{
-		{
-			name:    "should provision an application",
-			appName: "app1",
-			status:  prov.Success,
-		},
-		{
-			name:   "should return an error when the appName is not found",
-			status: prov.Error,
-		},
-		{
-			name:    "should return an error when the appName is not found",
-			err:     fmt.Errorf("fail to deprovision"),
-			appName: "app1",
-			status:  prov.Error,
-		},
-	}
+// func TestApplicationRequestProvision(t *testing.T) {
+// 	tests := []struct {
+// 		name    string
+// 		status  prov.Status
+// 		err     error
+// 		appName string
+// 	}{
+// 		{
+// 			name:    "should provision an application",
+// 			appName: "app1",
+// 			status:  prov.Success,
+// 		},
+// 		{
+// 			name:   "should return an error when the appName is not found",
+// 			status: prov.Error,
+// 		},
+// 		{
+// 			name:    "should return an error when the appName is not found",
+// 			err:     fmt.Errorf("fail to deprovision"),
+// 			appName: "app1",
+// 			status:  prov.Error,
+// 		},
+// 	}
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			app := &anypoint.Application{
-				APIEndpoints: false,
-				ID:           65432,
-				Name:         tc.appName,
-			}
-			client := &MockMuleSubscriptionClient{
-				err: tc.err,
-				app: app,
-			}
-			prv := NewProvisioner(client, logrus.StandardLogger())
-			req := mock.MockApplicationRequest{
-				AppName: tc.appName,
-			}
-			status := prv.ApplicationRequestProvision(req)
-			assert.Equal(t, tc.status.String(), status.GetStatus().String())
-			if tc.status == prov.Success {
-				assert.Contains(t, status.GetProperties(), common.AppID)
-			} else {
-				assert.Empty(t, status.GetProperties(), common.AppID)
-			}
-		})
-	}
-}
+// 	for _, tc := range tests {
+// 		t.Run(tc.name, func(t *testing.T) {
+// 			app := &anypoint.Application{
+// 				APIEndpoints: false,
+// 				ID:           65432,
+// 				Name:         tc.appName,
+// 			}
+// 			client := &MockMuleSubscriptionClient{
+// 				err: tc.err,
+// 				app: app,
+// 			}
+// 			prv := NewProvisioner(client, logrus.StandardLogger())
+// 			req := mock.MockApplicationRequest{
+// 				AppName: tc.appName,
+// 			}
+// 			status := prv.ApplicationRequestProvision(req)
+// 			assert.Equal(t, tc.status.String(), status.GetStatus().String())
+// 			if tc.status == prov.Success {
+// 				assert.Contains(t, status.GetProperties(), common.AppID)
+// 			} else {
+// 				assert.Empty(t, status.GetProperties(), common.AppID)
+// 			}
+// 		})
+// 	}
+// }
 
 func TestCredentialDeprovision(t *testing.T) {
 	client := &MockMuleSubscriptionClient{}
