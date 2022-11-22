@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/Axway/agent-sdk/pkg/agent"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/util"
@@ -65,8 +67,32 @@ func (p provisioner) AccessRequestProvision(req prov.AccessRequest) (prov.Reques
 	if stage == "" {
 		return p.failed(rs, notFound(defs.AttrExternalAPIStage)), nil
 	}
-
 	appID := req.GetApplicationDetailsValue(common.AppID)
+	if appID == "" {
+		// Create the application
+		appName := req.GetApplicationName()
+		if appName == "" {
+			return p.failed(rs, notFound("managed application name")), nil
+		}
+
+		app, err := p.client.CreateApp(appName, apiID, "Created by Amplify Mulesoft Agent")
+		if err != nil {
+			return p.failed(rs, fmt.Errorf("failed to create app: %s", err)), nil
+		}
+		appID = fmt.Sprintf("%d", app.ID)
+
+		// Update resource
+		managedApp := management.NewManagedApplication(appName, agent.GetCentralConfig().GetEnvironmentName())
+		ri, err := agent.GetCentralClient().GetResource(managedApp.GetSelfLink())
+		if err == nil {
+			util.SetAgentDetailsKey(ri, common.AppID, appID)
+			details := util.GetAgentDetails(ri)
+			util.SetAgentDetails(ri, details)
+
+			agent.GetCentralClient().CreateSubResource(ri.ResourceMeta, map[string]interface{}{defs.XAgentDetails: details})
+		}
+	}
+
 	appID64, err := strconv.ParseInt(appID, 10, 64)
 	if err != nil {
 		return p.failed(rs, fmt.Errorf("failed to convert appID to int64. %s", err)), nil
@@ -95,14 +121,17 @@ func (p provisioner) ApplicationRequestDeprovision(req prov.ApplicationRequest) 
 	rs := prov.NewRequestStatusBuilder()
 
 	appID := req.GetApplicationDetailsValue(common.AppID)
-	appID64, err := strconv.ParseInt(appID, 10, 64)
-	if err != nil {
-		return p.failed(rs, fmt.Errorf("failed to convert appID to int64. %s", err))
-	}
+	// Application not provisioned yet by the access request handler
+	if appID != "" {
+		appID64, err := strconv.ParseInt(appID, 10, 64)
+		if err != nil {
+			return p.failed(rs, fmt.Errorf("failed to convert appID to int64. %s", err))
+		}
 
-	err = p.client.DeleteApp(appID64)
-	if err != nil {
-		return p.failed(rs, fmt.Errorf("failed to delete app: %s", err))
+		err = p.client.DeleteApp(appID64)
+		if err != nil {
+			return p.failed(rs, fmt.Errorf("failed to delete app: %s", err))
+		}
 	}
 
 	p.log.
@@ -120,13 +149,6 @@ func (p provisioner) ApplicationRequestProvision(req prov.ApplicationRequest) pr
 	if appName == "" {
 		return p.failed(rs, notFound("managed application name"))
 	}
-
-	app, err := p.client.CreateApp(appName, "0", "Created by Amplify Mulesoft Agent")
-	if err != nil {
-		return p.failed(rs, fmt.Errorf("failed to create app: %s", err))
-	}
-
-	rs.AddProperty(common.AppID, fmt.Sprintf("%d", app.ID))
 
 	p.log.
 		WithField("appName", req.GetManagedApplicationName()).
