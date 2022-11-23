@@ -5,9 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Axway/agent-sdk/pkg/util"
-	"github.com/Axway/agents-mulesoft/pkg/common"
-
 	"github.com/Axway/agents-mulesoft/pkg/discovery"
 
 	"github.com/Axway/agent-sdk/pkg/transaction"
@@ -187,7 +184,7 @@ func Test_APIServiceNameAndTransactionProxyNameAreEqual(t *testing.T) {
 	transactionProxyID := le.TransactionSummary.Proxy.ID
 	assert.Contains(t, transactionProxyName, apiServiceName)
 
-	assert.True(t, strings.Contains(transactionProxyID, util.ToString(body.ServiceAgentDetails[common.AttrAPIID])))
+	assert.True(t, strings.Contains(transactionProxyID, event.APIID))
 	assert.Equal(t, event.ApplicationName, le.TransactionSummary.Application.Name)
 	assert.Equal(t, transutil.FormatApplicationID(event.Application), le.TransactionSummary.Application.ID)
 }

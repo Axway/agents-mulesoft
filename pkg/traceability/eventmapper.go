@@ -130,12 +130,11 @@ func (em *EventMapper) createSummaryEvent(
 	uri := event.ResourcePath
 
 	// must be the same as the the 'externalAPIID' attribute set on the APIService.
-	apiVersionID := event.APIVersionID
-
+	// apiVersionID := event.APIVersionID
 	builder := transaction.NewTransactionSummaryBuilder().
 		SetDuration(event.ResponseTime).
 		SetEntryPoint("http", method, uri, host).
-		SetProxy(transutil.FormatProxyID(apiVersionID), name, 1).
+		SetProxyWithStage(transutil.FormatProxyID(event.APIID), name, event.AssetVersion, 1).
 		SetStatus(getTransactionSummaryStatus(statusCode), strconv.Itoa(statusCode)).
 		SetTeam(teamID).
 		SetTransactionID(txID).

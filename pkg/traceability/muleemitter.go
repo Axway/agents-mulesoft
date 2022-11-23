@@ -82,6 +82,10 @@ func (me *MuleEventEmitter) Start() error {
 		logrus.WithFields(logrus.Fields{"strStartTime": strStartTime}).Warn("Unable to Parse Last Time")
 	}
 	for _, event := range events {
+		api, _ := me.client.GetAPI(event.APIVersionID)
+		if api != nil {
+			event.AssetVersion = api.AssetVersion
+		}
 		// Results are not sorted. We want the most recent time to bubble up
 		if event.Timestamp.After(lastTime) {
 			lastTime = event.Timestamp
