@@ -99,6 +99,10 @@ func (m mockAnalyticsClient) GetClientApplication(string) (*anypoint.Application
 func (m mockAnalyticsClient) OnConfigChange(_ *config.MulesoftConfig) {
 }
 
+func (m mockAnalyticsClient) GetAPI(_ string) (*anypoint.API, error) {
+	return nil, nil
+}
+
 type mockProcessor struct {
 	channel chan bool
 }
