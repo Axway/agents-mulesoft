@@ -227,6 +227,7 @@ type AnalyticsEvent struct {
 	UserAgentVersion   string    `json:"User Agent Version"`
 	Verb               string    `json:"Verb"`
 	ViolatedPolicyName string    `json:"Violated Policy Name"`
+	AssetVersion       string    `json:"AssetVersion"`
 }
 
 type Application struct {

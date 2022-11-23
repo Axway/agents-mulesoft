@@ -52,6 +52,7 @@ type AnalyticsClient interface {
 	GetAnalyticsWindow(string, string) ([]AnalyticsEvent, error)
 	OnConfigChange(mulesoftConfig *config.MulesoftConfig)
 	GetClientApplication(appId string) (*Application, error)
+	GetAPI(id string) (*API, error)
 }
 
 type AuthClient interface {
