@@ -57,13 +57,15 @@ var app = &anypoint.Application{
 	Name:         "foo",
 }
 
-func setupForTest() {
+func setupForTest() error {
 	setupRedaction()
-	setupConfig()
+	return setupConfig()
 }
 
 func TestEventMapper_processMapping(t *testing.T) {
-	setupForTest()
+	err := setupForTest()
+	assert.Nil(t, err)
+
 	client := &mockAnalyticsClient{
 		app: app,
 	}

@@ -109,7 +109,8 @@ func AddConfigProperties(props properties.Properties) {
 	props.AddStringProperty(pathDiscoveryTags, "", "APIs containing any of these tags are selected for discovery.")
 	props.AddStringProperty(pathDiscoveryIgnoreTags, "", "APIs containing any of these tags are ignored. Takes precedence over "+pathDiscoveryIgnoreTags+".")
 	props.AddStringProperty(pathCachePath, "/tmp", "Mulesoft Cache Path")
-	props.AddDurationProperty(pathPollInterval, 20*time.Second, "The interval at which Mulesoft is checked for updates.")
+	props.AddDurationProperty(pathPollInterval, 20*time.Second, "The interval at which Mulesoft is checked for updates.",
+		properties.WithLowerLimit(20*time.Second))
 
 	// ssl properties and command flags
 	props.AddStringSliceProperty(pathSSLNextProtos, []string{}, "List of supported application level protocols, comma separated.")
