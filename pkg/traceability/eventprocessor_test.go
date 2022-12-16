@@ -196,31 +196,17 @@ func (c *eventGeneratorMock) SetUseTrafficForAggregation(useTrafficForAggregatio
 	c.shouldUseTrafficForAggregation = useTrafficForAggregation
 }
 
-func setupConfig() {
+func setupConfig() error {
 	os.Setenv("CENTRAL_AUTH_PRIVATEKEY_DATA", "12345")
 	os.Setenv("CENTRAL_AUTH_PUBLICKEY_DATA", "12345")
-
+	cfg := corecfg.NewTestCentralConfig(corecfg.TraceabilityAgent)
+	centralCfg := cfg.(*corecfg.CentralConfiguration)
+	centralCfg.APICDeployment = APICDeployment
+	centralCfg.TenantID = TenantID
+	centralCfg.Environment = Environment
+	centralCfg.EnvironmentID = EnvID
 	agentConfig = &config.AgentConfig{
-		CentralConfig: &corecfg.CentralConfiguration{
-			AgentType:               corecfg.TraceabilityAgent,
-			URL:                     "http://foo.bar",
-			PlatformURL:             "http://foo.bar",
-			TenantID:                TenantID,
-			APICDeployment:          APICDeployment,
-			Environment:             Environment,
-			EnvironmentID:           EnvID,
-			UsageReporting:          corecfg.NewUsageReporting(),
-			ReportActivityFrequency: 1,
-			ClientTimeout:           1,
-			Auth: &corecfg.AuthConfiguration{
-				URL:        "https://login.axway.com/auth",
-				Realm:      "Broker",
-				ClientID:   "DOSA_123456789123456789",
-				PrivateKey: "/tmp/private_key.pem",
-				PublicKey:  "/tmp/public_key",
-				Timeout:    30 * time.Second,
-			},
-		},
+		CentralConfig: centralCfg,
 		MulesoftConfig: &config.MulesoftConfig{
 			PollInterval: 1 * time.Second,
 		},
@@ -228,7 +214,7 @@ func setupConfig() {
 	agentConfig.CentralConfig.SetEnvironmentID(EnvID)
 	agentConfig.CentralConfig.SetTeamID(TeamID)
 	config.SetConfig(agentConfig)
-	agent.Initialize(agentConfig.CentralConfig)
+	return agent.Initialize(agentConfig.CentralConfig)
 }
 
 type eventGenMockErr struct {
