@@ -1,8 +1,10 @@
 name: Release agents with goreleaser
 on:
   push:
-    tags:
-      - v*.*.*
+    branches:
+      - APIGOV-*
+    # tags:
+    #   - v*.*.*
 
 jobs:
   discovery:
@@ -20,12 +22,12 @@ jobs:
           go-version: 1.19
       - name: Export SDK Version # exports the SDK_VERSION to be used by the goreleaser
         run: echo "SDK_VERSION=$(make sdk-version)" >> $GITHUB_ENV
-      - name: Discovery Release
-        uses: goreleaser/goreleaser-action@v2.5.0
-        with:
-          args: release -f .goreleaser-da.yml
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # - name: Discovery Release
+      #   uses: goreleaser/goreleaser-action@v2.5.0
+      #   with:
+      #     args: release -f .goreleaser-da.yml
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   traceability:
     runs-on: ubuntu-latest
@@ -42,10 +44,22 @@ jobs:
           go-version: 1.19
       - name: Export SDK Version # exports the SDK_VERSION to be used by the goreleaser
         run: echo "SDK_VERSION=$(make sdk-version)" >> $GITHUB_ENV
-      - name: Traceability Release
-        uses: goreleaser/goreleaser-action@v2.5.0
-        with:
-          args: release -f .goreleaser-ta.yml
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # - name: Traceability Release
+      #   uses: goreleaser/goreleaser-action@v2.5.0
+      #   with:
+      #     args: release -f .goreleaser-ta.yml
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  notifyTeamsChannel:
+    env:
+      TEAMS_WEBHOOK_URL: "https://axwaysoftware.webhook.office.com/webhookb2/e859058b-5110-40a3-871e-7641a739e06a@300f59df-78e6-436f-9b27-b64973e34f7d/IncomingWebhook/cb060241bae943b2bfb6dab32d61a99d/d1ae36f4-0132-4a9c-943d-3541201d7aa3"
+
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Notify Teams channel
+        run: ./release.sh v.1.1.13
+#         run: ./release.sh ${{ github.ref }}
 
