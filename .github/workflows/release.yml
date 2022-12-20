@@ -50,9 +50,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   notifyTeamsChannel:
-    env:
-      TEAMS_WEBHOOK_URL: "https://axwaysoftware.webhook.office.com/webhookb2/e859058b-5110-40a3-871e-7641a739e06a@300f59df-78e6-436f-9b27-b64973e34f7d/IncomingWebhook/cb060241bae943b2bfb6dab32d61a99d/d1ae36f4-0132-4a9c-943d-3541201d7aa3"
-
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
