@@ -75,7 +75,7 @@ main() {
 
     # gather stats
     releaseStats="- SDK version: ${SDK}\n"
-    releaseStats+="- Mulesoft version: ${TAG}\n"
+    releaseStats+="- Mulesoft agents version: ${TAG}\n"
 
     echo -e "Full Release Info:\n"${releaseStats}
     post_to_teams "${releaseStats}"
