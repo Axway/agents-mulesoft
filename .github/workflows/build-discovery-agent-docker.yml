@@ -10,7 +10,7 @@ jobs:
       GOFLAGS: "-mod=mod"
       IMAGE_NAME: mulesoft_discovery_agent
       ORG_NAME: Axway
-      VERSION: ${{ github.ref }}
+      VERSION: ${{ github.ref_name }}
       COMMIT_ID: ${{ github.sha }}
     runs-on: ubuntu-latest
     steps:

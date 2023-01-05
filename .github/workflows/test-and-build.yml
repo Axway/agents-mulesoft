@@ -22,7 +22,7 @@ jobs:
   build:
     env:
       GOFLAGS: "-mod=mod"
-      VERSION: ${{ github.ref }}
+      VERSION: ${{ github.ref_name }}
       COMMIT_ID: ${{ github.sha }}
     runs-on: ubuntu-latest
     steps:
