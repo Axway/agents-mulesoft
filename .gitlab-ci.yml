@@ -109,6 +109,22 @@ whitesource:on-schedule:
     - echo "Checking out ${GIT_TAG_PREFIX}${LATEST_TAG}"
     - git checkout ${GIT_TAG_PREFIX}${LATEST_TAG}
 
+# overridden from csrjobs.yml because mirror repos like this one don't get merge events
+fetch-fortify:
+  only:
+    refs:
+      - /^APIGOV-.*$/
+
+run-csr:
+  only:
+    refs:
+      - /^APIGOV-.*$/
+
+whitesource:
+  only:
+    refs:
+      - /^APIGOV-.*$/
+
 ####################
 # CSR - overridden from csrjobs.yml to effectively not see these jobs ever. For some reason, probably multi-level
 # extends and overrides, using only-never for these csr jobs doesn't work. Had to do it like this.
