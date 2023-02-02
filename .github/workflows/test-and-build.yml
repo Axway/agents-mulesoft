@@ -35,7 +35,7 @@ jobs:
         working-directory: .
         run: |
           make build-discovery
-      - name: Build traceability agent
-        working-directory: .
-        run: |
-          make build-trace
+      # - name: Build traceability agent
+      #   working-directory: .
+      #   run: |
+      #     make build-trace
