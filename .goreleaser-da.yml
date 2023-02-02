@@ -19,7 +19,7 @@ builds:
       - -a
     ldflags:
       - -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildTime={{ .Date }}'
-      - -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildVersion={{ .Version }}'
+      - -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildVersion=1.2.3'
       - -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildCommitSha={{ .Commit }}'
       - -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildAgentName=MuleSoftDiscoveryAgent'
       - -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildAgentDescription=MuleSoft Discovery Agent'
