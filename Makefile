@@ -52,7 +52,7 @@ build-discovery:
 	export CGO_ENABLED=0
 	export TIME=`date +%Y%m%d%H%M%S`
 	echo "${TIME}"
-	echo "${VERSION}}"
+	echo "${VERSION}"
 	echo "${COMMIT_ID}"
 	echo "${SDK_VERSION}"
 	@go build \
