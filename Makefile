@@ -51,6 +51,9 @@ build-discovery:
 	@echo "building discovery agent with sdk version $(SDK_VERSION)"
 	export CGO_ENABLED=0
 	export TIME=`date +%Y%m%d%H%M%S`
+	@echo "date ${VERSION}"
+	@echo "version ${VERSION}"
+	@echo "commitid ${COMMIT_ID}"
 	@go build \
 		-ldflags="-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildTime=$${TIME}' \
 			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildVersion=$${VERSION}' \

@@ -3,12 +3,6 @@ before:
   hooks:
     - go mod download
     - go mod tidy
-    - echo "HELP"
-    - echo "{.Date}"
-    - echo "${.Date}"
-    - echo "${.Version}"
-    - echo "${.Commit}"
-    - echo "${.Env.SDK_VERSION}"
 
 builds:
   - id: mulesoft_discovery_agent
