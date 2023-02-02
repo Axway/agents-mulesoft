@@ -51,15 +51,11 @@ build-discovery:
 	@echo "building discovery agent with sdk version $(SDK_VERSION)"
 	export CGO_ENABLED=0
 	export TIME=`date +%Y%m%d%H%M%S`
-	echo "${TIME}"
-	echo "${VERSION}"
-	echo "${COMMIT_ID}"
-	echo "${SDK_VERSION}"
 	@go build \
-		-ldflags="-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildTime=${TIME}' \
-			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildVersion=${VERSION}' \
-			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildCommitSha=${COMMIT_ID}' \
-			-X 'github.com/Axway/agent-sdk/pkg/cmd.SDKBuildVersion=${SDK_VERSION}' \
+		-ldflags="-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildTime=$${TIME}' \
+			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildVersion=$${VERSION}' \
+			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildCommitSha=$${COMMIT_ID}' \
+			-X 'github.com/Axway/agent-sdk/pkg/cmd.SDKBuildVersion=$${SDK_VERSION}' \
 			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildAgentName=MuleSoftDiscoveryAgent'" \
 		-o bin/discovery ./cmd/discovery/main.go
 	@echo "discovery agent binary placed at bin/discovery"
@@ -69,10 +65,10 @@ build-trace:
 	export CGO_ENABLED=0
 	export TIME=`date +%Y%m%d%H%M%S`
 	@go build \
-		-ldflags="-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildTime=${TIME}' \
-			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildVersion=${VERSION}' \
-			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildCommitSha=${COMMIT_ID}' \
-			-X 'github.com/Axway/agent-sdk/pkg/cmd.SDKBuildVersion=${SDK_VERSION}' \
+		-ldflags="-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildTime=$${TIME}' \
+			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildVersion=$${VERSION}' \
+			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildCommitSha=$${COMMIT_ID}' \
+			-X 'github.com/Axway/agent-sdk/pkg/cmd.SDKBuildVersion=$${SDK_VERSION}' \
 			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildAgentName=MuleSoftTraceabilityAgent'" \
 		-o bin/traceability ./cmd/traceability/main.go
 	@echo "traceability agent binary placed at bin/traceability"
