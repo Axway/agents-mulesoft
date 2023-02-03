@@ -9,8 +9,6 @@ WORKDIR $APP_HOME
 COPY . .
 
 RUN make download
-#RUN make verify
-# RUN CGO_ENABLED=0  GOOS=linux GOARCH=amd64
 
 RUN export time=`date +%Y%m%d%H%M%S` && \
   export commit_id=`git rev-parse --short HEAD` && \
@@ -24,7 +22,7 @@ RUN export time=`date +%Y%m%d%H%M%S` && \
   -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildVersion=${version}' \
   -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildCommitSha=${commit_id}' \
   -X 'github.com/Axway/agent-sdk/pkg/cmd.SDKBuildVersion=${sdk_version}' \
-  -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildAgentName=ApigeeDiscoveryAgent'" \
+  -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildAgentName=MuleSoftDiscoveryAgent'" \
   -a -o bin/discovery ./cmd/discovery/main.go
 
 # Create non-root user
