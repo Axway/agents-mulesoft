@@ -5,8 +5,6 @@ before:
     - go mod tidy
 
 universal_binaries:
-  - id: app1
-    name_template: 'foo_{{.ProjectName}}_app1_{{.Version}}'
   - replace: true
 
 builds:
@@ -42,6 +40,7 @@ archives:
       windows: Windows
       386: i386
       amd64: x86_64
+      all: ALL
     wrap_in_directory: discovery_agent
     files:
       - README_discovery.md
