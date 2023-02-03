@@ -4,10 +4,10 @@ before:
     - go mod download
     - go mod tidy
 
-universal_binaries:
-  - id: discovery_agent_archives
-    name_template: "mulesoft_discovery_agent_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-  - replace: true
+# universal_binaries:
+#   - id: discovery_agent_archives
+#     name_template: "mulesoft_discovery_agent_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+#   - replace: true
 
 builds:
   - id: mulesoft_discovery_agent
