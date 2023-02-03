@@ -21,8 +21,11 @@ jobs:
       - name: Export SDK Version # exports the SDK_VERSION to be used by the goreleaser
         run: | 
           echo "SDK_VERSION=$(make sdk-version)" >> $GITHUB_ENV
+          echo "sdkversion is ${{ env.SDK_VERSION }}"
           echo "COMMIT_ID=git rev-parse --short HEAD" >> $GITHUB_ENV
+          echo "commitid is ${{ env.COMMIT_ID }}"
           echo "VERSION=$${ github.ref_name }}" >> $GITHUB_ENV
+          echo "version is ${{ env.VERSION }}"
       - name: Discovery Release
         uses: goreleaser/goreleaser-action@v4.2.0
         with:

@@ -4,6 +4,9 @@ before:
     - go mod download
     - go mod tidy
 
+universal_binaries:
+  - replace: true
+  
 builds:
   - id: mulesoft_discovery_agent
     binary: mulesoft_discovery_agent
