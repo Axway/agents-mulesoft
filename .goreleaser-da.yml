@@ -5,8 +5,10 @@ before:
     - go mod tidy
 
 universal_binaries:
+  - id: app1
+    name_template: 'foo_{{.ProjectName}}_app1_{{.Version}}'
   - replace: true
-  
+
 builds:
   - id: mulesoft_discovery_agent
     binary: mulesoft_discovery_agent
