@@ -2,6 +2,7 @@
 FROM golang:1.19.2 as builder
 ENV APP_HOME /build
 ENV APP_USER axway
+
 RUN mkdir -p $APP_HOME
 WORKDIR $APP_HOME
 

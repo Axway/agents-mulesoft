@@ -4,20 +4,20 @@ on:
     branches: [main, "APIGOV-*"]
 
 jobs:
-  # test:
-  #   env:
-  #     GOFLAGS: "-mod=mod"
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #     - name: Set up Go
-  #       uses: actions/setup-go@v3
-  #       with:
-  #         go-version: 1.17
-  #     - name: Test
-  #       working-directory: .
-  #       run: |
-  #         make test
+  test:
+    env:
+      GOFLAGS: "-mod=mod"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.17
+      - name: Test
+        working-directory: .
+        run: |
+          make test
 
   build:
     env:
@@ -35,7 +35,7 @@ jobs:
         working-directory: .
         run: |
           make build-discovery
-      # - name: Build traceability agent
-      #   working-directory: .
-      #   run: |
-      #     make build-trace
+      - name: Build traceability agent
+        working-directory: .
+        run: |
+          make build-trace
