@@ -4,6 +4,8 @@ WORKSPACE ?= $$(pwd)
 
 GO_PKG_LIST := $(shell go list ./... | grep -v *mock*.go)
 SDK_VERSION := $(shell go list -m github.com/Axway/agent-sdk | cut -d ' ' -f 2 | cut -c 2-)
+VERSION := $(shell git tag -l --sort="version:refname" | grep -Eo "[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,3}" | tail -1)
+COMMIT_ID := $(shell git rev-parse --short HEAD)
 
 download:
 	@go mod tidy && go mod download
@@ -49,26 +51,30 @@ run-trace:
 
 build-discovery:
 	@echo "building discovery agent with sdk version $(SDK_VERSION)"
-	export CGO_ENABLED=0
-	export TIME=`date +%Y%m%d%H%M%S`
-	@go build \
+	@ export CGO_ENABLED=0 && \
+	export GOOS=linux && \
+	export GOARCH=amd64 && \
+	export TIME=`date +%Y%m%d%H%M%S` && \
+	go build \
 		-ldflags="-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildTime=$${TIME}' \
-			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildVersion=$${VERSION}' \
-			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildCommitSha=$${COMMIT_ID}' \
-			-X 'github.com/Axway/agent-sdk/pkg/cmd.SDKBuildVersion=$${SDK_VERSION}' \
+			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildVersion=${VERSION}' \
+			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildCommitSha=${COMMIT_ID}' \
+			-X 'github.com/Axway/agent-sdk/pkg/cmd.SDKBuildVersion=${SDK_VERSION}' \
 			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildAgentName=MuleSoftDiscoveryAgent'" \
 		-o bin/discovery ./cmd/discovery/main.go
 	@echo "discovery agent binary placed at bin/discovery"
 
 build-trace:
 	@echo "building traceability agent with sdk version $(SDK_VERSION)"
-	export CGO_ENABLED=0
-	export TIME=`date +%Y%m%d%H%M%S`
-	@go build \
+	@ export CGO_ENABLED=0 && \
+	export GOOS=linux && \
+	export GOARCH=amd64 && \
+	export TIME=`date +%Y%m%d%H%M%S` && \
+	go build \
 		-ldflags="-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildTime=$${TIME}' \
-			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildVersion=$${VERSION}' \
-			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildCommitSha=$${COMMIT_ID}' \
-			-X 'github.com/Axway/agent-sdk/pkg/cmd.SDKBuildVersion=$${SDK_VERSION}' \
+			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildVersion=${VERSION}' \
+			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildCommitSha=${COMMIT_ID}' \
+			-X 'github.com/Axway/agent-sdk/pkg/cmd.SDKBuildVersion=${SDK_VERSION}' \
 			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildAgentName=MuleSoftTraceabilityAgent'" \
 		-o bin/traceability ./cmd/traceability/main.go
 	@echo "traceability agent binary placed at bin/traceability"
