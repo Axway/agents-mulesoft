@@ -54,7 +54,7 @@ build-discovery:
 	@ export CGO_ENABLED=0 && \
 	export TIME=`date +%Y%m%d%H%M%S` && \
 	go build \
-		-ldflags="-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildTime=$${TIME}' \
+		-ldflags="-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildTime=${TIME}' \
 			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildVersion=${VERSION}' \
 			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildCommitSha=${COMMIT_ID}' \
 			-X 'github.com/Axway/agent-sdk/pkg/cmd.SDKBuildVersion=${SDK_VERSION}' \
@@ -67,7 +67,7 @@ build-traceability:
 	@ export CGO_ENABLED=0 && \
 	export TIME=`date +%Y%m%d%H%M%S` && \
 	go build \
-		-ldflags="-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildTime=$${TIME}' \
+		-ldflags="-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildTime=${TIME}' \
 			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildVersion=${VERSION}' \
 			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildCommitSha=${COMMIT_ID}' \
 			-X 'github.com/Axway/agent-sdk/pkg/cmd.SDKBuildVersion=${SDK_VERSION}' \
