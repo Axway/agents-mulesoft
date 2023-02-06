@@ -38,4 +38,4 @@ jobs:
       - name: Build traceability agent
         working-directory: .
         run: |
-          make build-trace
+          make build-traceability

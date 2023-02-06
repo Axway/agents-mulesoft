@@ -81,7 +81,7 @@ After cloning the MuleSoft Agents, run `make download` to download all the proje
 * `make run-discovery` starts the discovery agent locally. 
 * `make run-trace` starts the traceability agent locally.
 * `make build-discovery` builds a binary for the discovery agent in `./bin/discovery`.
-* `make build-trace` builds a binary for the traceability agent in `./bin/traceability`.
+* `make ability` builds a binary for the traceability agent in `./bin/traceability`.
 
 ## Starting local development
 
