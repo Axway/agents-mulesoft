@@ -55,7 +55,7 @@ twistlock-discovery:
   extends: .twistlock
   before_script:
     - apk --no-cache update && apk add make
-    - make docker-build-disc 
+    - make docker-build-discovery 
     - export IMAGE_NAME=mulesoft_discovery_agent:latest
   except:
     refs:
@@ -67,7 +67,7 @@ twistlock-traceability:
   extends: .twistlock
   before_script:
     - apk --no-cache update && apk add make
-    - make docker-build-trace 
+    - make docker-build-traceability 
     - export IMAGE_NAME=mulesoft_traceability_agent:latest
   except:
     refs:

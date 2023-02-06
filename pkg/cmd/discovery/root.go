@@ -34,7 +34,7 @@ func init() {
 	// The first parameter identifies the name of the yaml file that agent will look for to load the config
 	RootCmd = corecmd.NewRootCmd(
 		"mulesoft_discovery_agent", // Name of the yaml file
-		"Mulesoft Discovery Agent", // Agent description
+		"MuleSoft Discovery Agent", // Agent description
 		initConfig,                 // Callback for initializing the agent config
 		run,                        // Callback for executing the agent
 		corecfg.DiscoveryAgent,     // Agent Type (Discovery or Traceability)

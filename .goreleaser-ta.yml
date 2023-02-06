@@ -12,9 +12,9 @@ builds:
       - -tags=static_all
       - -a
     ldflags:
-      - -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildTime={{.Date}}'
-      - -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildVersion={{.Version}}'
-      - -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildCommitSha={{.Commit}}'
+      - -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildTime={{ .Date }}'
+      - -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildVersion={{ .Version }}'
+      - -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildCommitSha={{ .Commit }}'
       - -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildAgentName=MuleSoftTraceabilityAgent'
       - -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildAgentDescription=MuleSoft Traceability Agent'
       - -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildDataPlaneType=MuleSoft'

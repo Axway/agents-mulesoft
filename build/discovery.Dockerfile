@@ -10,7 +10,6 @@ WORKDIR $APP_HOME
 COPY . .
 
 RUN make download
-#RUN make verify
 RUN CGO_ENABLED=0  GOOS=linux GOARCH=amd64  make build-discovery
 
 # Create non-root user
@@ -23,6 +22,7 @@ USER $APP_USER
 FROM scratch
 ENV APP_HOME /build
 ENV APP_USER axway
+
 # Copy binary, user, config file and certs from previous build step
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=builder $APP_HOME/build/mulesoft_discovery_agent.yml /mulesoft_discovery_agent.yml
