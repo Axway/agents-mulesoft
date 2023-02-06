@@ -21,11 +21,6 @@ jobs:
       - name: Export SDK Version # exports the SDK_VERSION to be used by the goreleaser
         run: | 
           echo "SDK_VERSION=$(make sdk-version)" >> $GITHUB_ENV
-          echo "sdkversion is ${{ env.SDK_VERSION }}"
-          echo "COMMIT_ID=git rev-parse --short HEAD" >> $GITHUB_ENV
-          echo "commitid is ${{ env.COMMIT_ID }}"
-          echo "VERSION=$${ github.ref_name }}" >> $GITHUB_ENV
-          echo "version is ${{ env.VERSION }}"
       - name: Discovery Release
         uses: goreleaser/goreleaser-action@v4.2.0
         with:
@@ -55,15 +50,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # notifyTeamsChannel:
-  #   needs: [discovery, traceability]
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v3
+  notifyTeamsChannel:
+    needs: [discovery, traceability]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
 
-  #     - name: Notify Teams channel
-  #       env:
-  #         TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
-  #         TAG: ${{ github.ref_name }}
-  #       run: ./release.sh
-
+      - name: Notify Teams channel
+        env:
+          TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
+          TAG: ${{ github.ref_name }}
+        run: ./release.sh
