@@ -1,5 +1,6 @@
 # Build image
-FROM golang:1.19.2 as builder
+# golang:1.19.6-alpine3.17 linux/amd64
+FROM docker.io/golang@sha256:f2e0acaf7c628cd819b73541d7c1ea8f888d51edb0a58935a3c46a084fa953fa as builder
 ENV APP_HOME /build
 ENV APP_USER axway
 
