@@ -57,11 +57,6 @@ twistlock-discovery:
     - apk --no-cache update && apk add make
     - make docker-build-discovery 
     - export IMAGE_NAME=mulesoft_discovery_agent:latest
-  except:
-    refs:
-      - schedules
-      - tags
-      - main
 
 twistlock-traceability:
   extends: .twistlock
@@ -71,11 +66,6 @@ twistlock-traceability:
     - apk --no-cache update && apk add make
     - make docker-build-traceability 
     - export IMAGE_NAME=mulesoft_traceability_agent:latest
-  except:
-    refs:
-      - schedules
-      - tags
-      - main
 
 twistlock-discovery:on-schedule:
   extends: .twistlock
@@ -87,9 +77,6 @@ twistlock-discovery:on-schedule:
     - *get-latest-tag
     - export IMAGE_NAME=ghcr.io/axway/mulesoft_discovery_agent:${GIT_TAG_PREFIX}${LATEST_TAG}
     - docker pull ${IMAGE_NAME}
-  only:
-    refs:
-      - schedules
 
 twistlock-traceability:on-schedule:
   extends: .twistlock
@@ -101,9 +88,6 @@ twistlock-traceability:on-schedule:
     - *get-latest-tag
     - export IMAGE_NAME=ghcr.io/axway/mulesoft_traceability_agent:${GIT_TAG_PREFIX}${LATEST_TAG}
     - docker pull ${IMAGE_NAME}
-  only:
-    refs:
-      - schedules
 
 whitesource:on-schedule:
   extends: .whitesource
