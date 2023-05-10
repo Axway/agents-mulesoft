@@ -16,23 +16,22 @@ variables:
 
 include:
   - project: "apigov/beano_cicd"
-    ref: master
+    ref: $BEANO_CICD_LATEST
     # the order of these include files is important
     file:
       - "/gitlabci/variables.yml"
       - "/gitlabci/restrictions.yml"
       - "/gitlabci/jobs.yml"
   - project: 'scurity/gitlabci'
-    ref: master
+    ref: $SCURITY_V2
     file:
-      - '/.gitlab-ci-prepcsr.yml'
       - '/.gitlab-ci-fortify.yml'
       - "/.gitlab-ci-twistlock.yml"
       - "/.gitlab-ci-iriusrisk.yml"
       - "/.gitlab-ci-whitesource.yml"
       - "/.gitlab-ci-csr.yml"
   - project: "apigov/beano_cicd"
-    ref: master
+    ref: $BEANO_CICD_LATEST
     # the order of these include files is important
     file:
       - "/gitlabci/csrjobs.yml"
@@ -52,6 +51,8 @@ stages:
 
 twistlock-discovery:
   extends: .twistlock
+  rules:
+    - !reference [.mirror-branch-csr-rules, rules]
   before_script:
     - apk --no-cache update && apk add make
     - make docker-build-discovery 
@@ -64,6 +65,8 @@ twistlock-discovery:
 
 twistlock-traceability:
   extends: .twistlock
+  rules:
+    - !reference [.mirror-branch-csr-rules, rules]
   before_script:
     - apk --no-cache update && apk add make
     - make docker-build-traceability 
@@ -76,6 +79,8 @@ twistlock-traceability:
 
 twistlock-discovery:on-schedule:
   extends: .twistlock
+  rules:
+    - !reference [.mirror-schedule-csr-rules, rules]
   dependencies: []
   before_script:
     - apk --no-cache update && apk add git
@@ -88,6 +93,8 @@ twistlock-discovery:on-schedule:
 
 twistlock-traceability:on-schedule:
   extends: .twistlock
+  rules:
+    - !reference [.mirror-schedule-csr-rules, rules]
   dependencies: []
   before_script:
     - apk --no-cache update && apk add git
@@ -100,6 +107,8 @@ twistlock-traceability:on-schedule:
 
 whitesource:on-schedule:
   extends: .whitesource
+  rules:
+    - !reference [.mirror-schedule-csr-rules, rules]
   before_script:
     - git config --global http.sslVerify false
     - git config --global url."ssh://git@git.ecd.axway.org".insteadOf "https://git.ecd.axway.org"''
@@ -108,66 +117,41 @@ whitesource:on-schedule:
     - echo "Checking out ${GIT_TAG_PREFIX}${LATEST_TAG}"
     - git checkout ${GIT_TAG_PREFIX}${LATEST_TAG}
 
-# overridden from csrjobs.yml because mirror repos like this one don't get merge events
+# overridden from csrjobs.yml because mirror repos like this one don't get merge events 
 fetch-fortify:
-  only:
-    refs:
-      - /^APIGOV-.*$/
-
-run-csr:
-  only:
-    refs:
-      - /^APIGOV-.*$/
+  rules:
+    - !reference [.mirror-branch-csr-rules, rules]
 
 whitesource:
-  only:
-    refs:
-      - /^APIGOV-.*$/
+  rules:
+    - !reference [.mirror-branch-csr-rules, rules]
+  before_script:
+    - export GOWORK=off
+
+run-csr:
+  rules:
+    - !reference [.mirror-branch-csr-rules, rules]
 
 ####################
 # CSR - overridden from csrjobs.yml to effectively not see these jobs ever. For some reason, probably multi-level
 # extends and overrides, using only-never for these csr jobs doesn't work. Had to do it like this.
 ####################
 fetch-iriusrisk:
-  only:
-    refs:
-      - never
-  except:
-    refs:
-      - neverever
+  rules:
+    - !reference [.only-never-rule, rules]
 
 fetch-iriusrisk:on-schedule:
-  only:
-    refs:
-      - never
-  except:
-    refs:
-      - neverever
+  rules:
+    - !reference [.only-never-rule, rules]
 
 twistlock:
-  only:
-    refs:
-      - never
-  except:
-    refs:
-      - neverever
+  rules:
+    - !reference [.only-never-rule, rules]
   dependencies:
 
 twistlock:on-schedule:
-  only:
-    refs:
-      - never
-  except:
-    refs:
-      - neverever
-
-twistlock-master:
-  only:
-    refs:
-      - never
-  except:
-    refs:
-      - neverever
+  rules:
+    - !reference [.only-never-rule, rules]
 
 ###################
 # These overridden from jobs.xml to never run      
