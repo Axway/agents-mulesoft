@@ -1,6 +1,6 @@
 # Build image
-# golang:1.19.8 linux/amd64
-FROM golang:1.19.8 as builder
+# golang:1.20.5 bullseye
+FROM golang:1.20.5-bullseye as builder
 ENV APP_HOME /build
 ENV APP_USER axway
 
