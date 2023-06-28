@@ -39,5 +39,5 @@ COPY --from=builder /etc/group /etc/group
 
 USER $APP_USER
 VOLUME ["/tmp"]
-HEALTHCHECK --retries=1 CMD curl --fail http://localhost:${STATUS_PORT:-8989}/status || exit 1
+HEALTHCHECK --retries=1 CMD /traceability --status || exit 1
 ENTRYPOINT ["/traceability"]
