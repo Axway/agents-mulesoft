@@ -8,7 +8,7 @@ require (
 	github.com/Axway/agent-sdk v1.1.56-0.20230628144902-eb9cb1e24647
 	github.com/elastic/beats/v7 v7.17.5
 	github.com/getkin/kin-openapi v0.76.0
-	github.com/sirupsen/logrus v1.8.1
+	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.8.4
 	github.com/tidwall/gjson v1.14.0
 	gopkg.in/yaml.v2 v2.4.0
@@ -145,7 +145,7 @@ require (
 	golang.org/x/mod v0.8.0 // indirect
 	golang.org/x/net v0.10.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20220411215720-9780585627b5 // indirect
-	golang.org/x/sys v0.8.0 // indirect
+	golang.org/x/sys v0.9.0 // indirect
 	golang.org/x/term v0.8.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
