@@ -30,13 +30,16 @@ builds:
 
 archives:
   - id: discovery_agent_archives
-    name_template: "mulesoft_discovery_agent_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    replacements:
-      darwin: Darwin
-      linux: Linux
-      windows: Windows
-      386: i386
-      amd64: x86_64
+    name_template: >-
+      mulesoft_discovery_agent_
+      {{ .Version }}_
+      {{ .Os }}_
+      {{- if eq .Arch "darwin" }}Darwin
+      {{- else if if eq .Arch "linux" }}Linux
+      {{- else if eq .Arch "windows" }}Windows
+      {{- else if eq .Arch "386" }}i386
+      {{- else if eq .Arch "amd64" }}x86_64
+      {{- else }}{{ .ARCH }}{{ end }}
     wrap_in_directory: discovery_agent
     files:
       - README_discovery.md
