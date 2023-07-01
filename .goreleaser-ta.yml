@@ -40,7 +40,7 @@ archives:
       {{- else if eq .Arch "windows" }}Windows
       {{- else if eq .Arch "386" }}i386
       {{- else if eq .Arch "amd64" }}x86_64
-      {{- else }}{{ .ARCH }}{{ end }}
+      {{- else }}{{ .Arch }}{{ end }}
     wrap_in_directory: traceability_agent
     files:
       - README_traceability.md
