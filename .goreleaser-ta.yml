@@ -32,9 +32,7 @@ builds:
 archives:
   - id: traceability_agent_archives
     name_template: >-
-      mulesoft_traceability_agent_
-      {{ .Version }}_
-      {{ .Os }}_
+      mulesoft_traceability_agent_{{ .Version }}_{{ .Os }}_
       {{- if eq .Arch "darwin" }}Darwin
       {{- else if eq .Arch "linux" }}Linux
       {{- else if eq .Arch "windows" }}Windows
