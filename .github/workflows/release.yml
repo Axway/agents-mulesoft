@@ -49,14 +49,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  notifyTeamsChannel:
-    needs: [discovery, traceability]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
+  # notifyTeamsChannel:
+  #   needs: [discovery, traceability]
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v3
 
-      - name: Notify Teams channel
-        env:
-          TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
-          TAG: ${{ github.ref_name }}
-        run: ./release.sh
+  #     - name: Notify Teams channel
+  #       env:
+  #         TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
+  #         TAG: ${{ github.ref_name }}
+  #       run: ./release.sh
