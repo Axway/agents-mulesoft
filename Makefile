@@ -77,7 +77,7 @@ build-traceability:
 
 test:
 	mkdir -p coverage
-	@go test -race -short -count=1 -coverprofile=coverage/coverage.cov ${GO_PKG_LIST}
+	@go test -race -short -count=1 -coverprofile=${WORKSPACE}/gocoverage.out ${GO_PKG_LIST}
 
 docker-build-discovery:
 	@docker build -t mulesoft_discovery_agent:latest -f ${WORKSPACE}/build/discovery.Dockerfile .
@@ -89,4 +89,4 @@ docker-build-traceability:
 
 test-sonar:
 	@go vet ${GO_PKG_LIST}
-	@go test -v -short -coverpkg=./... -coverprofile=./gocoverage.out -count=1 ${GO_PKG_LIST} -json > ./goreport.json
+	@go test -v -short -coverpkg=./... -coverprofile=${WORKSPACE}/gocoverage.out -count=1 ${GO_PKG_LIST} -json > ./goreport.json
