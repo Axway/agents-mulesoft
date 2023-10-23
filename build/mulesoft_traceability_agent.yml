@@ -47,6 +47,8 @@ mulesoft_traceability_agent:
     auth:
       username: "${MULESOFT_AUTH_USERNAME}"
       password: "${MULESOFT_AUTH_PASSWORD}"
+      clientID: "${MULESOFT_AUTH_CLIENTID}"
+      clientSecret: "${MULESOFT_AUTH_CLIENTSECRET}"
   agentFeatures:
     persistCache: ${AGENTFEATURES_PERSISTCACHE}
     marketplaceProvisioning: ${AGENTFEATURES_MARKETPLACEPROVISIONING}

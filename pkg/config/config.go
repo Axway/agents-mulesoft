@@ -21,6 +21,8 @@ const (
 	pathDiscoveryIgnoreTags   = "mulesoft.discoveryIgnoreTags"
 	pathAuthUsername          = "mulesoft.auth.username"
 	pathAuthPassword          = "mulesoft.auth.password"
+	pathAuthClientID          = "mulesoft.auth.clientID"
+	pathAuthClientSecret      = "mulesoft.auth.clientSecret"
 	pathAuthLifetime          = "mulesoft.auth.lifetime"
 	pathSSLNextProtos         = "mulesoft.ssl.nextProtos"
 	pathSSLInsecureSkipVerify = "mulesoft.ssl.insecureSkipVerify"
@@ -63,6 +65,8 @@ type MulesoftConfig struct {
 	SessionLifetime     time.Duration     `config:"auth.lifetime"`
 	TLS                 corecfg.TLSConfig `config:"ssl"`
 	Username            string            `config:"auth.username"`
+	ClientID            string            `config:"auth.clientID"`
+	ClientSecret        string            `config:"auth.clientSecret"`
 }
 
 // ValidateCfg - Validates the gateway config
@@ -71,12 +75,20 @@ func (c *MulesoftConfig) ValidateCfg() (err error) {
 		return errors.New("invalid mulesoft configuration: anypointExchangeUrl is not configured")
 	}
 
-	if c.Username == "" {
-		return errors.New("invalid mulesoft configuration: username is not configured")
+	if c.Username == "" && c.ClientID == "" {
+		return errors.New("invalid mulesoft configuration: username or client id must be configured")
 	}
 
-	if c.Password == "" {
+	if c.Username != "" && c.ClientID != "" {
+		return errors.New("invalid mulesoft configuration: both username or client id can not be configured")
+	}
+
+	if c.Username != "" && c.Password == "" {
 		return errors.New("invalid mulesoft configuration: password is not configured")
+	}
+
+	if c.ClientID != "" && c.ClientSecret == "" {
+		return errors.New("invalid mulesoft configuration: client secret is not configured")
 	}
 
 	if c.Environment == "" {
@@ -105,6 +117,8 @@ func AddConfigProperties(props properties.Properties) {
 	props.AddStringProperty(pathOrgName, "", "Mulesoft Anypoint Business Group.")
 	props.AddStringProperty(pathAuthUsername, "", "Mulesoft username.")
 	props.AddStringProperty(pathAuthPassword, "", "Mulesoft password.")
+	props.AddStringProperty(pathAuthClientID, "", "Mulesoft client id.")
+	props.AddStringProperty(pathAuthClientSecret, "", "Mulesoft client secret.")
 	props.AddDurationProperty(pathAuthLifetime, 60*time.Minute, "Mulesoft session lifetime.")
 	props.AddStringProperty(pathDiscoveryTags, "", "APIs containing any of these tags are selected for discovery.")
 	props.AddStringProperty(pathDiscoveryIgnoreTags, "", "APIs containing any of these tags are ignored. Takes precedence over "+pathDiscoveryIgnoreTags+".")
@@ -134,6 +148,8 @@ func NewMulesoftConfig(props properties.Properties) *MulesoftConfig {
 		ProxyURL:            props.StringPropertyValue(pathProxyURL),
 		SessionLifetime:     props.DurationPropertyValue(pathAuthLifetime),
 		Username:            props.StringPropertyValue(pathAuthUsername),
+		ClientID:            props.StringPropertyValue(pathAuthClientID),
+		ClientSecret:        props.StringPropertyValue(pathAuthClientSecret),
 		TLS: &corecfg.TLSConfiguration{
 			NextProtos:         props.StringSlicePropertyValue(pathSSLNextProtos),
 			InsecureSkipVerify: props.BoolPropertyValue(pathSSLInsecureSkipVerify),
