@@ -153,7 +153,7 @@ func (c *AnypointClient) GetAccessToken() (string, *User, time.Duration, error) 
 		"password": c.password,
 	}
 	if c.clientID != "" {
-		url = c.baseURL + "/accounts/oauth2/token"
+		url = c.baseURL + "/accounts/api/v2/oauth2/token"
 		body = map[string]string{
 			"grant_type":    "client_credentials",
 			"client_id":     c.clientID,
