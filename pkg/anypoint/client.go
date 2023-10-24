@@ -231,24 +231,12 @@ func (c *AnypointClient) getCurrentUser(token string) (*User, error) {
 		}
 
 	}
-	// user = CurrentUser{
-	// 	User: user.User{
-	// 		Organization: Organization{
-	// 			ID: "ff268afe-6c9e-4bb0-86e6-e50682c8661e"
-	// 		},
-	// 	},
-	// }
 
 	return &user.User, nil
 }
 
 // GetEnvironmentByName gets the Mulesoft environment with the specified name.
 func (c *AnypointClient) GetEnvironmentByName(name string) (*Environment, error) {
-
-	// return &Environment{
-	// 	ID:   "bdad79ce-5a7a-4e40-a803-1cea571a5d2a",
-	// 	Name: name,
-	// }, nil
 	headers := map[string]string{
 		"Authorization": c.getAuthString(c.auth.GetToken()),
 	}
