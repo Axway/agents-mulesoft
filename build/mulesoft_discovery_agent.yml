@@ -40,4 +40,6 @@ mulesoft:
   auth:
     username: <USERNAME>
     password: <PASSWORD>
+    clientID: <CLIENTID>
+    clientSecret: <CLIENTSECRET>
 

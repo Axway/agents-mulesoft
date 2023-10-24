@@ -65,14 +65,16 @@ type ListAssetClient interface {
 
 // AnypointClient is the client for interacting with Mulesoft Anypoint.
 type AnypointClient struct {
-	baseURL     string
-	username    string
-	password    string
-	lifetime    time.Duration
-	apiClient   coreapi.Client
-	auth        Auth
-	environment *Environment
-	orgName     string
+	baseURL      string
+	username     string
+	password     string
+	clientID     string
+	clientSecret string
+	lifetime     time.Duration
+	apiClient    coreapi.Client
+	auth         Auth
+	environment  *Environment
+	orgName      string
 }
 
 type ClientOptions func(*AnypointClient)
@@ -101,6 +103,8 @@ func (c *AnypointClient) OnConfigChange(mulesoftConfig *config.MulesoftConfig) {
 	c.baseURL = mulesoftConfig.AnypointExchangeURL
 	c.username = mulesoftConfig.Username
 	c.password = mulesoftConfig.Password
+	c.clientID = mulesoftConfig.ClientID
+	c.clientSecret = mulesoftConfig.ClientSecret
 	c.orgName = mulesoftConfig.OrgName
 	c.lifetime = mulesoftConfig.SessionLifetime
 
@@ -143,9 +147,18 @@ func (c *AnypointClient) healthcheck(name string) (status *hc.Status) {
 
 // GetAccessToken retrieves a token
 func (c *AnypointClient) GetAccessToken() (string, *User, time.Duration, error) {
+	url := c.baseURL + "/accounts/login"
 	body := map[string]string{
 		"username": c.username,
 		"password": c.password,
+	}
+	if c.clientID != "" {
+		url = c.baseURL + "/accounts/oauth2/token"
+		body = map[string]string{
+			"grant_type":    "client_credentials",
+			"client_id":     c.clientID,
+			"client_secret": c.clientSecret,
+		}
 	}
 	buffer, err := json.Marshal(body)
 	if err != nil {
@@ -158,7 +171,7 @@ func (c *AnypointClient) GetAccessToken() (string, *User, time.Duration, error) 
 
 	request := coreapi.Request{
 		Method:  coreapi.POST,
-		URL:     c.baseURL + "/accounts/login",
+		URL:     url,
 		Headers: headers,
 		Body:    buffer,
 	}
