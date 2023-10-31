@@ -73,10 +73,10 @@ func (m *MockAnypointClient) ListAssets(*Page) ([]Asset, error) {
 	return result.([]Asset), args.Error(1)
 }
 
-func (m *MockAnypointClient) GetPolicies(int64) (Policies, error) {
+func (m *MockAnypointClient) GetPolicies(int64) ([]Policy, error) {
 	args := m.Called()
 	result := args.Get(0)
-	return result.(Policies), args.Error(1)
+	return result.([]Policy), args.Error(1)
 }
 
 func (m *MockAnypointClient) GetExchangeAsset(_, _, _ string) (*ExchangeAsset, error) {

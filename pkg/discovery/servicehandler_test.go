@@ -18,10 +18,8 @@ import (
 
 	"github.com/Axway/agents-mulesoft/pkg/discovery/mocks"
 
-	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agents-mulesoft/pkg/subscription"
 	"github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/mock"
 
 	"github.com/Axway/agent-sdk/pkg/apic"
 
@@ -59,13 +57,11 @@ var exchangeAsset = anypoint.ExchangeAsset{
 
 func TestServiceHandler(t *testing.T) {
 	content := `{"openapi":"3.0.1","servers":[{"url":"https://abc.com"}], "paths":{}, "info":{"title":"petstore3"}}`
-	policies := anypoint.Policies{Policies: []anypoint.Policy{
+	policies := []anypoint.Policy{
 		{
-			Template: anypoint.Template{
-				AssetID: common.ClientIDEnforcement,
-			},
+			PolicyTemplateID: common.ClientIDEnforcement,
 		},
-	}}
+	}
 	mc := &anypoint.MockAnypointClient{}
 	mc.On("GetPolicies").Return(policies, nil)
 	mc.On("GetExchangeAsset").Return(&exchangeAsset, nil)
@@ -121,13 +117,11 @@ func TestServiceHandlerSLAPolicy(t *testing.T) {
 	agent.Initialize(&corecfg.CentralConfiguration{})
 	agent.InitializeForTest(cc)
 	content := `{"openapi":"3.0.1","servers":[{"url":"https://abc.com"}], "paths":{}, "info":{"title":"petstore3"}}`
-	policies := anypoint.Policies{Policies: []anypoint.Policy{
+	policies := []anypoint.Policy{
 		{
-			Template: anypoint.Template{
-				AssetID: common.SLABased,
-			},
+			PolicyTemplateID: common.SLABased,
 		},
-	}}
+	}
 	mc := &anypoint.MockAnypointClient{}
 	mc.On("GetPolicies").Return(policies, nil)
 	mc.On("GetExchangeAsset").Return(&exchangeAsset, nil)
@@ -152,13 +146,11 @@ func TestServiceHandlerSLAPolicy(t *testing.T) {
 }
 
 func TestServiceHandlerDidNotDiscoverAPI(t *testing.T) {
-	policies := anypoint.Policies{Policies: []anypoint.Policy{
+	policies := []anypoint.Policy{
 		{
-			Template: anypoint.Template{
-				AssetID: common.ClientIDEnforcement,
-			},
+			PolicyTemplateID: common.ClientIDEnforcement,
 		},
-	}}
+	}
 	mc := &anypoint.MockAnypointClient{}
 	mc.On("GetPolicies").Return(policies, nil)
 	sh := &serviceHandler{
@@ -176,7 +168,7 @@ func TestServiceHandlerDidNotDiscoverAPI(t *testing.T) {
 
 func TestServiceHandlerGetPolicyError(t *testing.T) {
 	stage := "Sandbox"
-	policies := anypoint.Policies{Policies: []anypoint.Policy{}}
+	policies := []anypoint.Policy{}
 	mc := &anypoint.MockAnypointClient{}
 	expectedErr := fmt.Errorf("failed to get policies")
 	mc.On("GetPolicies").Return(policies, expectedErr)
@@ -196,7 +188,7 @@ func TestServiceHandlerGetPolicyError(t *testing.T) {
 
 func TestServiceHandlerGetExchangeAssetError(t *testing.T) {
 	stage := "Sandbox"
-	policies := anypoint.Policies{Policies: []anypoint.Policy{}}
+	policies := []anypoint.Policy{}
 	mc := &anypoint.MockAnypointClient{}
 	expectedErr := fmt.Errorf("failed to get exchange asset")
 	mc.On("GetPolicies").Return(policies, nil)
@@ -366,73 +358,55 @@ func Test_getAuthPolicy(t *testing.T) {
 	tests := []struct {
 		name     string
 		expected string
-		policies anypoint.Policies
+		policies []anypoint.Policy
 	}{
 		{
 			name:     "should return the policy as APIKey when the mulesoft policy is client-id-enforcement",
 			expected: apic.Apikey,
-			policies: anypoint.Policies{
-				Policies: []anypoint.Policy{
-					{
-						Configuration: map[string]interface{}{},
-						Template: anypoint.Template{
-							AssetID: common.ClientIDEnforcement,
-						},
-					},
+			policies: []anypoint.Policy{
+				{
+					Configuration:    map[string]interface{}{},
+					PolicyTemplateID: common.ClientIDEnforcement,
 				},
 			},
 		},
 		{
 			name:     "should return the policy as OAuth when the mulesoft policy is oauth",
 			expected: apic.Oauth,
-			policies: anypoint.Policies{
-				Policies: []anypoint.Policy{
-					{
-						Configuration: map[string]interface{}{},
-						Template: anypoint.Template{
-							AssetID: common.ExternalOauth,
-						},
-					},
+			policies: []anypoint.Policy{
+				{
+					Configuration:    map[string]interface{}{},
+					PolicyTemplateID: common.ExternalOauth,
 				},
 			},
 		},
 		{
 			name:     "should return the first policy that matches 'client-id-enforcement'",
 			expected: apic.Apikey,
-			policies: anypoint.Policies{
-				Policies: []anypoint.Policy{
-					{
-						Configuration: map[string]interface{}{},
-						Template: anypoint.Template{
-							AssetID: "fake",
-						},
-					},
-					{
-						Configuration: map[string]interface{}{},
-						Template: anypoint.Template{
-							AssetID: common.ClientIDEnforcement,
-						},
-					},
+			policies: []anypoint.Policy{
+				{
+					Configuration:    map[string]interface{}{},
+					PolicyTemplateID: "fake",
+				},
+				{
+					Configuration:    map[string]interface{}{},
+					PolicyTemplateID: common.ClientIDEnforcement,
 				},
 			},
 		},
 		{
 			name:     "should return a map for the configuration when it is not set.'",
 			expected: apic.Apikey,
-			policies: anypoint.Policies{
-				Policies: []anypoint.Policy{
-					{
-						Template: anypoint.Template{
-							AssetID: common.ClientIDEnforcement,
-						},
-					},
+			policies: []anypoint.Policy{
+				{
+					PolicyTemplateID: common.ClientIDEnforcement,
 				},
 			},
 		},
 		{
 			name:     "should return the policy as pass-through when there are no policies in the array",
 			expected: apic.Passthrough,
-			policies: anypoint.Policies{},
+			policies: []anypoint.Policy{},
 		},
 	}
 	for _, tc := range tests {
@@ -780,16 +754,6 @@ func Test_setOAS3policies(t *testing.T) {
 			}
 		})
 	}
-}
-
-type mockConsumerInstanceGetter struct {
-	mock.Mock
-}
-
-func (m *mockConsumerInstanceGetter) GetConsumerInstanceByID(string) (*management.ConsumerInstance, error) {
-	args := m.Called()
-	ci := args.Get(0).(*management.ConsumerInstance)
-	return ci, args.Error(1)
 }
 
 func getSLATierInfo() (*anypoint.Tiers, *serviceHandler, *mocks.MockCentralClient) {

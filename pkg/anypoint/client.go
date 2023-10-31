@@ -39,7 +39,7 @@ type Client interface {
 	GetExchangeAsset(groupID, assetID, assetVersion string) (*ExchangeAsset, error)
 	GetExchangeAssetIcon(icon string) (string, string, error)
 	GetExchangeFileContent(link, packaging, mainFile string) ([]byte, error)
-	GetPolicies(apiID int64) (Policies, error)
+	GetPolicies(apiID int64) ([]Policy, error)
 	GetSLATiers(int642 int64) (*Tiers, error)
 	ListAssets(page *Page) ([]Asset, error)
 	OnConfigChange(mulesoftConfig *config.MulesoftConfig)
@@ -295,14 +295,10 @@ func (c *AnypointClient) GetAPI(id string) (*API, error) {
 }
 
 // GetPolicies lists the API policies.
-func (c *AnypointClient) GetPolicies(apiID int64) (Policies, error) {
-	var policies Policies
+func (c *AnypointClient) GetPolicies(apiID int64) ([]Policy, error) {
+	policies := []Policy{}
 	url := fmt.Sprintf("%s/apimanager/api/v1/organizations/%s/environments/%s/apis/%d/policies", c.baseURL, c.auth.GetOrgID(), c.environment.ID, apiID)
 	err := c.invokeJSONGet(url, nil, &policies, nil)
-
-	if err != nil {
-		return Policies{}, err
-	}
 
 	return policies, err
 }

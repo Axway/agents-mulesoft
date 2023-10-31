@@ -86,13 +86,11 @@ func TestClient(t *testing.T) {
 		},
 		"/apimanager/api/v1/organizations/444/environments/111/apis/10/policies": {
 			Code: 200,
-			Body: []byte(`{
-			"policies": [
-					{
-						"id": 0
-					}
-				]
-			}`),
+			Body: []byte(`[
+				{
+					"id": 0
+				}
+			]`),
 		},
 		"/exchange/api/v2/assets/1/2/3": {
 			Code: 200,
@@ -163,7 +161,7 @@ func TestClient(t *testing.T) {
 	assert.Nil(t, err)
 	py, err := client.GetPolicies(10)
 	assert.Nil(t, err)
-	assert.Equal(t, 1, len(py.Policies))
+	assert.Equal(t, 1, len(py))
 	a, err := client.GetExchangeAsset("1", "2", "3")
 	assert.Nil(t, err)
 	assert.Equal(t, "petstore", a.AssetID)

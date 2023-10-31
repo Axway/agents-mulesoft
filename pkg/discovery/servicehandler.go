@@ -191,7 +191,7 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 	}
 
 	status := apic.PublishedStatus
-	if api.Deprecated == true {
+	if api.Deprecated {
 		status = apic.DeprecatedStatus
 	}
 
@@ -308,7 +308,7 @@ func updateSpec(
 
 // getExchangeAssetSpecFile gets the file entry for the Assets spec.
 func getExchangeAssetSpecFile(exchangeFiles []anypoint.ExchangeFile) *anypoint.ExchangeFile {
-	if exchangeFiles == nil || len(exchangeFiles) == 0 {
+	if len(exchangeFiles) == 0 {
 		return nil
 	}
 
@@ -367,24 +367,24 @@ func getSpecType(file *anypoint.ExchangeFile, specContent []byte) (string, error
 }
 
 // getAuthPolicy gets the authentication policy type.
-func getAuthPolicy(policies anypoint.Policies, mode string) (string, map[string]interface{}, bool) {
+func getAuthPolicy(policies []anypoint.Policy, mode string) (string, map[string]interface{}, bool) {
 	authPolicy := apic.Apikey
 	if mode == marketplace {
 		authPolicy = apic.Oauth
 	}
 
-	for _, policy := range policies.Policies {
-		if policy.Template.AssetID == common.ClientIDEnforcement {
+	for _, policy := range policies {
+		if policy.PolicyTemplateID == common.ClientIDEnforcement {
 			conf := getMapFromInterface(policy.Configuration)
 			return authPolicy, conf, false
 		}
 
-		if strings.Contains(policy.Template.AssetID, common.SLABased) {
+		if strings.Contains(policy.PolicyTemplateID, common.SLABased) {
 			conf := getMapFromInterface(policy.Configuration)
 			return authPolicy, conf, true
 		}
 
-		if policy.Template.AssetID == common.ExternalOauth {
+		if policy.PolicyTemplateID == common.ExternalOauth {
 			conf := getMapFromInterface(policy.Configuration)
 			return apic.Oauth, conf, false
 		}
