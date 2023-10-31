@@ -96,25 +96,22 @@ type API struct {
 
 // Policy -
 type Policy struct {
-	APIID                int64       `json:"apiId"`
-	Audit                Audit       `json:"audit"`
-	Configuration        interface{} `json:"configuration"`
-	ID                   int64       `json:"id"`
-	MasterOrganizationID string      `json:"masterOrganizationId"`
-	Order                int         `json:"order"`
-	OrganizationID       string      `json:"organizationId"`
-	PointCutData         interface{} `json:"pointCutData"`
-	PolicyID             int         `json:"policyId"`
-	PolicyTemplateID     string      `json:"policyTemplateId"`
-	Template             Template    `json:"template"`
-	Type                 string      `json:"type"`
-	Version              int64       `json:"version"`
-}
-
-type Template struct {
-	AssetID      string `json:"assetId"`
-	AssetVersion string `json:"assetVersion"`
-	GroupID      string `json:"groupId"`
+	// APIID                int64       `json:"apiId,omitempty"`
+	// Audit                Audit       `json:"audit,omitempty"`
+	Configuration interface{} `json:"configurationData,omitempty"`
+	// ID                   int64       `json:"id,omitempty"`
+	// MasterOrganizationID string      `json:"masterOrganizationId,omitempty"`
+	// Order                int         `json:"order,omitempty"`
+	// OrganizationID       string      `json:"organizationId,omitempty"`
+	// PointCutData         interface{} `json:"pointCutData,omitempty"`
+	// PolicyID             int         `json:"policyId,omitempty"`
+	PolicyTemplateID string `json:"policyTemplateId,omitempty"`
+	// Template             string      `json:"template,omitempty"`
+	// Type                 string      `json:"type,omitempty"`
+	// Version              int64       `json:"version,omitempty"`
+	// AssetID              string      `json:"assetId,omitempty"`
+	// AssetVersion         string      `json:"assetVersion,omitempty"`
+	// GroupID              string      `json:"groupId,omitempty"`
 }
 
 type Policies struct {

@@ -50,11 +50,9 @@ func (d *discovery) Loop() {
 			select {
 			case <-ticker.C:
 				d.discoverAPIs()
-				break
 			case <-d.stopDiscovery:
 				log.Debug("stopping discovery loop")
 				ticker.Stop()
-				break
 			}
 		}
 	}()
@@ -76,10 +74,8 @@ func (d *discovery) discoverAPIs() {
 		for _, asset := range assets {
 			go func(asset anypoint.Asset) {
 				svcDetails := d.serviceHandler.ToServiceDetails(&asset)
-				if svcDetails != nil {
-					for _, svc := range svcDetails {
-						d.apiChan <- svc
-					}
+				for _, svc := range svcDetails {
+					d.apiChan <- svc
 				}
 			}(asset)
 		}
