@@ -115,6 +115,7 @@ func (me *MuleEventEmitter) getLastRun() (string, string) {
 	}
 	return tStamp.(string), tNow
 }
+
 func (me *MuleEventEmitter) saveLastRun(lastTime string) {
 	me.cache.Set(CacheKeyTimeStamp, lastTime)
 	me.cache.Save(me.cachePath)

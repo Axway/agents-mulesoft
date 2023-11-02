@@ -57,8 +57,7 @@ build-discovery:
 		-ldflags="-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildTime=${TIME}' \
 			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildVersion=${VERSION}' \
 			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildCommitSha=${COMMIT_ID}' \
-			-X 'github.com/Axway/agent-sdk/pkg/cmd.SDKBuildVersion=${SDK_VERSION}' \
-			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildAgentName=MuleSoftDiscoveryAgent'" \
+			-X 'github.com/Axway/agent-sdk/pkg/cmd.SDKBuildVersion=${SDK_VERSION}'" \
 		-o bin/discovery ./cmd/discovery/main.go
 	@echo "discovery agent binary placed at bin/discovery"
 
@@ -70,8 +69,7 @@ build-traceability:
 		-ldflags="-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildTime=${TIME}' \
 			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildVersion=${VERSION}' \
 			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildCommitSha=${COMMIT_ID}' \
-			-X 'github.com/Axway/agent-sdk/pkg/cmd.SDKBuildVersion=${SDK_VERSION}' \
-			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildAgentName=MuleSoftTraceabilityAgent'" \
+			-X 'github.com/Axway/agent-sdk/pkg/cmd.SDKBuildVersion=${SDK_VERSION}'" \
 		-o bin/traceability ./cmd/traceability/main.go
 	@echo "traceability agent binary placed at bin/traceability"
 
