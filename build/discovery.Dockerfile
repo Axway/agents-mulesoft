@@ -1,5 +1,5 @@
 # Build image
-FROM golang:1.21.3-bullseye AS builder
+FROM golang:1.21.5-bullseye AS builder
 ENV APP_HOME /build
 ENV APP_USER axway
 
