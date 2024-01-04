@@ -27,7 +27,7 @@ include:
       - "/gitlabci/restrictions.yml"
       - "/gitlabci/jobs.yml"
   - project: 'scurity/gitlabci'
-    ref: $SCURITY_V2
+    ref: $SCURITY_LATEST
     file:
       - '/.gitlab-ci-fortify.yml'
       - "/.gitlab-ci-twistlock.yml"
