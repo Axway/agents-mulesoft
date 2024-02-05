@@ -12,6 +12,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/util/oas"
 	"github.com/Axway/agents-mulesoft/pkg/common"
+	"gopkg.in/yaml.v2"
 
 	"github.com/sirupsen/logrus"
 
@@ -25,7 +26,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic"
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 	"github.com/Axway/agents-mulesoft/pkg/config"
-	"sigs.k8s.io/yaml"
 )
 
 const (
@@ -170,17 +170,11 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 		return nil, err
 	}
 
-	specContent := specYAMLToJSON(rawSpec) // SDK does not support YAML specifications
-	specType, err := getSpecType(exchFile, specContent)
-	if err != nil {
-		return nil, err
-	}
+	parser := apic.NewSpecResourceParser(rawSpec, "")
+	parser.Parse()
+	processor := parser.GetSpecProcessor()
 
-	if specType == "" {
-		return nil, fmt.Errorf("unknown spec type")
-	}
-
-	modifiedSpec, err := updateSpec(specType, api.EndpointURI, authPolicy, configuration, specContent)
+	modifiedSpec, err := updateSpec(processor.GetResourceType(), api.EndpointURI, authPolicy, configuration, processor.GetSpecBytes())
 	if err != nil {
 		return nil, err
 	}
@@ -206,7 +200,7 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 		ID:                fmt.Sprint(asset.ID),
 		Image:             icon,
 		ImageContentType:  iconContentType,
-		ResourceType:      specType,
+		ResourceType:      processor.GetResourceType(),
 		ServiceAttributes: map[string]string{},
 		AgentDetails: map[string]string{
 			common.AttrAssetID:        fmt.Sprint(asset.ID),
@@ -290,7 +284,6 @@ func updateSpec(
 			logrus.Debugf("failed to update the spec with the given endpoint: %s", endpointURI)
 		}
 		specContent, err = setOAS2policies(oas2Swagger, authPolicy, configuration)
-
 	case apic.Oas3:
 		oas3Swagger, err = oas.ParseOAS3(specContent)
 		if err != nil {
@@ -298,9 +291,8 @@ func updateSpec(
 		}
 		oas.SetOAS3Servers([]string{endpointURI}, oas3Swagger)
 		specContent, err = setOAS3policies(oas3Swagger, authPolicy, configuration)
-
-	case apic.Wsdl:
-		specContent, err = setWSDLEndpoint(endpointURI, specContent)
+	case apic.Raml:
+		specContent, err = setRamlEndpoints(specContent, endpointURI)
 	}
 
 	return specContent, err
@@ -320,50 +312,6 @@ func getExchangeAssetSpecFile(exchangeFiles []anypoint.ExchangeFile) *anypoint.E
 		return nil
 	}
 	return &exchangeFiles[0]
-}
-
-// specYAMLToJSON - if the spec is yaml convert it to json, SDK doesn't handle yaml.
-func specYAMLToJSON(specContent []byte) []byte {
-	specMap := make(map[string]interface{})
-	// check if the content is already json
-	err := json.Unmarshal(specContent, &specMap)
-	if err == nil {
-		return specContent
-	}
-
-	// check if the content is already yaml
-	err = yaml.Unmarshal(specContent, &specMap)
-	if err != nil {
-		// Not yaml, nothing more to be done
-		return specContent
-	}
-
-	bts, err := yaml.YAMLToJSON(specContent)
-	if err != nil {
-		return specContent
-	}
-	return bts
-}
-
-// getSpecType determines the correct resource type for the asset.
-func getSpecType(file *anypoint.ExchangeFile, specContent []byte) (string, error) {
-	if file.Classifier == apic.Wsdl {
-		return apic.Wsdl, nil
-	}
-
-	if specContent != nil {
-		jsonMap := make(map[string]interface{})
-		err := json.Unmarshal(specContent, &jsonMap)
-		if err != nil {
-			return "", err
-		}
-		if _, isSwagger := jsonMap["swagger"]; isSwagger {
-			return apic.Oas2, nil
-		} else if _, isOpenAPI := jsonMap["openapi"]; isOpenAPI {
-			return apic.Oas3, nil
-		}
-	}
-	return "", nil
 }
 
 // getAuthPolicy gets the authentication policy type.
@@ -393,8 +341,16 @@ func getAuthPolicy(policies []anypoint.Policy, mode string) (string, map[string]
 	return apic.Passthrough, map[string]interface{}{}, false
 }
 
-func setWSDLEndpoint(_ string, specContent []byte) ([]byte, error) {
-	return specContent, nil
+func setRamlEndpoints(spec []byte, endpoints string) ([]byte, error) {
+	var ramlDef map[string]interface{}
+	yaml.Unmarshal(spec, &ramlDef)
+	ramlDef["baseUri"] = endpoints
+
+	modifiedSpec, err := yaml.Marshal(ramlDef)
+	if err != nil {
+		return spec, err
+	}
+	return modifiedSpec, nil
 }
 
 // makeChecksum generates a makeChecksum for the api for change detection
