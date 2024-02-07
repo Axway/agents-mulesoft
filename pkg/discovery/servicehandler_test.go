@@ -307,9 +307,10 @@ func TestShouldDiscoverAPIBasedOnTags(t *testing.T) {
 
 func TestGetExchangeAssetSpecFile(t *testing.T) {
 	tests := []struct {
-		name     string
-		files    []anypoint.ExchangeFile
-		expected *anypoint.ExchangeFile
+		name                 string
+		files                []anypoint.ExchangeFile
+		expected             *anypoint.ExchangeFile
+		discoverOriginalRaml bool
 	}{
 		{
 			name:     "Should return nil if the Exchange asset has no files",
@@ -360,11 +361,31 @@ func TestGetExchangeAssetSpecFile(t *testing.T) {
 				Classifier: "oas",
 			},
 		},
+		{
+			name: "Should sort files and return first non-empty mainFile",
+			files: []anypoint.ExchangeFile{
+				{
+					Classifier: "wsdl",
+				},
+				{
+					Classifier: "oas",
+				},
+				{
+					Classifier: "raml",
+					MainFile:   "1",
+				},
+			},
+			expected: &anypoint.ExchangeFile{
+				Classifier: "raml",
+				MainFile:   "1",
+			},
+			discoverOriginalRaml: true,
+		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			sd := getExchangeAssetSpecFile(tc.files)
+			sd := getExchangeAssetSpecFile(tc.files, tc.discoverOriginalRaml)
 			assert.Equal(t, tc.expected, sd)
 		})
 	}
@@ -486,8 +507,8 @@ func Test_updateSpec(t *testing.T) {
 			name:            "should update a Raml spec",
 			specType:        apic.Raml,
 			endpoint:        "https://abc.com",
-			content:         []byte("baseUri: https://na1.salesforce.com:4000/services/data/{version}/chatter"),
-			expectedContent: []byte("baseUri: https://abc.com\n"),
+			content:         []byte("#%RAML 1.0\nbaseUri: https://na1.salesforce.com:4000/services/data/{version}/chatter"),
+			expectedContent: []byte("#%RAML 1.0\nbaseUri: https://abc.com\n"),
 		},
 	}
 	for _, tc := range tests {

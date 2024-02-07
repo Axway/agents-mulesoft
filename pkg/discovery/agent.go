@@ -43,12 +43,13 @@ func NewAgent(cfg *config.AgentConfig, client anypoint.Client, sm subscription.S
 	c := cache.New()
 
 	svcHandler := &serviceHandler{
-		muleEnv:             cfg.MulesoftConfig.Environment,
-		discoveryTags:       cleanTags(cfg.MulesoftConfig.DiscoveryTags),
-		discoveryIgnoreTags: cleanTags(cfg.MulesoftConfig.DiscoveryIgnoreTags),
-		client:              client,
-		schemas:             sm,
-		cache:               c,
+		muleEnv:              cfg.MulesoftConfig.Environment,
+		discoveryTags:        cleanTags(cfg.MulesoftConfig.DiscoveryTags),
+		discoveryIgnoreTags:  cleanTags(cfg.MulesoftConfig.DiscoveryIgnoreTags),
+		client:               client,
+		schemas:              sm,
+		cache:                c,
+		discoverOriginalRaml: cfg.MulesoftConfig.DiscoverOriginalRaml,
 	}
 
 	if util.IsNil(sm) {

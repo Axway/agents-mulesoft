@@ -40,13 +40,14 @@ type ServiceHandler interface {
 }
 
 type serviceHandler struct {
-	muleEnv             string
-	discoveryTags       []string
-	discoveryIgnoreTags []string
-	client              anypoint.Client
-	schemas             subs.SchemaStore
-	cache               cache.Cache
-	mode                string
+	muleEnv              string
+	discoveryTags        []string
+	discoveryIgnoreTags  []string
+	client               anypoint.Client
+	schemas              subs.SchemaStore
+	cache                cache.Cache
+	mode                 string
+	discoverOriginalRaml bool
 }
 
 func (s *serviceHandler) OnConfigChange(cfg *config.MulesoftConfig) {
@@ -159,7 +160,7 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 		return nil, err
 	}
 
-	exchFile := getExchangeAssetSpecFile(exchangeAsset.Files)
+	exchFile := getExchangeAssetSpecFile(exchangeAsset.Files, s.discoverOriginalRaml)
 	if exchFile == nil {
 		logger.Debugf("no supported specification file found")
 		return nil, nil
@@ -299,12 +300,16 @@ func updateSpec(
 }
 
 // getExchangeAssetSpecFile gets the file entry for the Assets spec.
-func getExchangeAssetSpecFile(exchangeFiles []anypoint.ExchangeFile) *anypoint.ExchangeFile {
+func getExchangeAssetSpecFile(exchangeFiles []anypoint.ExchangeFile, discoverOriginalRaml bool) *anypoint.ExchangeFile {
 	if len(exchangeFiles) == 0 {
 		return nil
 	}
-
 	sort.Sort(BySpecType(exchangeFiles))
+
+	if discoverOriginalRaml {
+		return getExchangeAssetWithRamlSpecFile(exchangeFiles)
+	}
+	// By default, the RAML spec will have a download link with it as already converted to OAS but have an empty MainFile field
 	if exchangeFiles[0].Classifier != "oas" &&
 		exchangeFiles[0].Classifier != "fat-oas" &&
 		exchangeFiles[0].Classifier != "wsdl" {
@@ -312,6 +317,18 @@ func getExchangeAssetSpecFile(exchangeFiles []anypoint.ExchangeFile) *anypoint.E
 		return nil
 	}
 	return &exchangeFiles[0]
+}
+
+func getExchangeAssetWithRamlSpecFile(exchangeFiles []anypoint.ExchangeFile) *anypoint.ExchangeFile {
+	for i := range exchangeFiles {
+		c := exchangeFiles[i].Classifier
+		if (c == "oas" || c == "fat-oas" || c == "raml" || c == "fat-raml" || c == "wsdl") &&
+			exchangeFiles[i].MainFile != "" {
+			return &exchangeFiles[i]
+		}
+	}
+	// Unsupported spec type
+	return nil
 }
 
 // getAuthPolicy gets the authentication policy type.
@@ -343,6 +360,8 @@ func getAuthPolicy(policies []anypoint.Policy, mode string) (string, map[string]
 
 func setRamlEndpoints(spec []byte, endpoints string) ([]byte, error) {
 	var ramlDef map[string]interface{}
+	// We know that this is a valid raml file from the parser, so this is never fails. We need this because yaml unmarshal drops the version line
+	ramlVersion := append(spec[0:10], []byte("\n")...)
 	yaml.Unmarshal(spec, &ramlDef)
 	ramlDef["baseUri"] = endpoints
 
@@ -350,7 +369,7 @@ func setRamlEndpoints(spec []byte, endpoints string) ([]byte, error) {
 	if err != nil {
 		return spec, err
 	}
-	return modifiedSpec, nil
+	return append(ramlVersion, modifiedSpec...), nil
 }
 
 // makeChecksum generates a makeChecksum for the api for change detection

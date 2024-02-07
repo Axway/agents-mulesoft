@@ -6,7 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"time"
 
@@ -296,11 +296,11 @@ func (c *AnypointClient) GetAPI(id string) (*API, error) {
 
 // GetPolicies lists the API policies.
 func (c *AnypointClient) GetPolicies(apiID int64) ([]Policy, error) {
-	policies := []Policy{}
+	policies := Policies{}
 	url := fmt.Sprintf("%s/apimanager/api/v1/organizations/%s/environments/%s/apis/%d/policies", c.baseURL, c.auth.GetOrgID(), c.environment.ID, apiID)
 	err := c.invokeJSONGet(url, nil, &policies, nil)
 
-	return policies, err
+	return policies.Policies, err
 }
 
 // GetExchangeAsset creates the AssetDetail form the Asset API.
@@ -336,8 +336,11 @@ func (c *AnypointClient) GetExchangeAssetIcon(icon string) (string, string, erro
 // and thre is a MainFile set then the content of the MainFile is returned.
 func (c *AnypointClient) GetExchangeFileContent(link, packaging, mainFile string) (fileContent []byte, err error) {
 	fileContent, _, err = c.invokeGet(link)
-
-	if packaging == "zip" && mainFile != "" {
+	// In case of RAML spec, this gets automatically converted and is renamed to api.json
+	if mainFile == "" {
+		mainFile = "api.json"
+	}
+	if packaging == "zip" {
 		zipReader, err := zip.NewReader(bytes.NewReader(fileContent), int64(len(fileContent)))
 		if err != nil {
 			return nil, err
@@ -350,7 +353,7 @@ func (c *AnypointClient) GetExchangeFileContent(link, packaging, mainFile string
 					return nil, err
 				}
 
-				fileContent, err = ioutil.ReadAll(content)
+				fileContent, err = io.ReadAll(content)
 				content.Close()
 				if err != nil {
 					return nil, err

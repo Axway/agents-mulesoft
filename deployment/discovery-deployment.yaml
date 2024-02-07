@@ -61,6 +61,8 @@ spec:
               value:
             - name: MULESOFT_POLLINTERVAL
               value: 20s
+            - name: MULESOFT_DISCOVERORIGINALRAML
+              value: false
             - name: STATUS_PORT
               value: "8989"
           image: <Path_To_Image>
