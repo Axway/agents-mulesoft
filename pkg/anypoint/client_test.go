@@ -86,11 +86,13 @@ func TestClient(t *testing.T) {
 		},
 		"/apimanager/api/v1/organizations/444/environments/111/apis/10/policies": {
 			Code: 200,
-			Body: []byte(`[
+			Body: []byte(`{
+				"policies": [
 				{
 					"id": 0
 				}
-			]`),
+			]
+			}`),
 		},
 		"/exchange/api/v2/assets/1/2/3": {
 			Code: 200,
