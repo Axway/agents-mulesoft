@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -299,7 +300,10 @@ func (c *AnypointClient) GetPolicies(apiID int64) ([]Policy, error) {
 	policies := Policies{}
 	url := fmt.Sprintf("%s/apimanager/api/v1/organizations/%s/environments/%s/apis/%d/policies", c.baseURL, c.auth.GetOrgID(), c.environment.ID, apiID)
 	err := c.invokeJSONGet(url, nil, &policies, nil)
-
+	// Older versions of mulesoft may return []Policy JSON format instead.
+	if err != nil && strings.HasPrefix(err.Error(), "json: cannot unmarshal") {
+		err = c.invokeJSONGet(url, nil, &(policies.Policies), nil)
+	}
 	return policies.Policies, err
 }
 

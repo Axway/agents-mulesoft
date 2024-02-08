@@ -322,8 +322,7 @@ func getExchangeAssetSpecFile(exchangeFiles []anypoint.ExchangeFile, discoverOri
 func getExchangeAssetWithRamlSpecFile(exchangeFiles []anypoint.ExchangeFile) *anypoint.ExchangeFile {
 	for i := range exchangeFiles {
 		c := exchangeFiles[i].Classifier
-		if (c == "oas" || c == "fat-oas" || c == "raml" || c == "fat-raml" || c == "wsdl") &&
-			exchangeFiles[i].MainFile != "" {
+		if _, found := specPreference[c]; found && exchangeFiles[i].MainFile != "" {
 			return &exchangeFiles[i]
 		}
 	}
