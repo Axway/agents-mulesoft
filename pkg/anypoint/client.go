@@ -39,7 +39,7 @@ type Client interface {
 	GetEnvironmentByName(name string) (*Environment, error)
 	GetExchangeAsset(groupID, assetID, assetVersion string) (*ExchangeAsset, error)
 	GetExchangeAssetIcon(icon string) (string, string, error)
-	GetExchangeFileContent(link, packaging, mainFile string, useOriginalRaml bool) ([]byte, error, bool)
+	GetExchangeFileContent(link, packaging, mainFile string, useOriginalRaml bool) ([]byte, bool, error)
 	GetPolicies(apiID int64) ([]Policy, error)
 	GetSLATiers(int642 int64) (*Tiers, error)
 	ListAssets(page *Page) ([]Asset, error)
@@ -344,14 +344,14 @@ func (c *AnypointClient) GetExchangeAssetIcon(icon string) (string, string, erro
 
 // GetExchangeFileContent download the file from the ExternalLink reference. If the file is a zip file
 // and there is a MainFile set then the content of the MainFile is returned.
-func (c *AnypointClient) GetExchangeFileContent(link, packaging, mainFile string, useOriginalRaml bool) (fileContent []byte, err error, wasConverted bool) {
+func (c *AnypointClient) GetExchangeFileContent(link, packaging, mainFile string, useOriginalRaml bool) (fileContent []byte, wasConverted bool, err error) {
 	fileContent, _, err = c.invokeGet(link)
 	if packaging != "zip" {
-		return fileContent, err, wasConverted
+		return fileContent, wasConverted, err
 	}
 	zipReader, err := zip.NewReader(bytes.NewReader(fileContent), int64(len(fileContent)))
 	if err != nil {
-		return nil, err, wasConverted
+		return nil, wasConverted, err
 	}
 
 	for _, f := range zipReader.File {
@@ -361,20 +361,20 @@ func (c *AnypointClient) GetExchangeFileContent(link, packaging, mainFile string
 		}
 		content, err := f.Open()
 		if err != nil {
-			return nil, err, wasConverted
+			return nil, wasConverted, err
 		}
 
 		fileContent, err = io.ReadAll(content)
 		content.Close()
 		if err != nil {
-			return nil, err, wasConverted
+			return nil, wasConverted, err
 		}
 		if !useOriginalRaml && f.Name == "api.json" {
-			return fileContent, err, true
+			return fileContent, true, err
 		}
 		break
 	}
-	return fileContent, err, wasConverted
+	return fileContent, wasConverted, err
 }
 
 // GetAnalyticsWindow lists the managed assets in Mulesoft: https://docs.qax.mulesoft.com/api-manager/2.x/analytics-event-api

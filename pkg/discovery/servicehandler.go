@@ -166,7 +166,7 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 		return nil, nil
 	}
 
-	rawSpec, err, wasConverted := s.client.GetExchangeFileContent(exchFile.ExternalLink, exchFile.Packaging, exchFile.MainFile, s.discoverOriginalRaml)
+	rawSpec, wasConverted, err := s.client.GetExchangeFileContent(exchFile.ExternalLink, exchFile.Packaging, exchFile.MainFile, s.discoverOriginalRaml)
 	if err != nil {
 		return nil, err
 	}

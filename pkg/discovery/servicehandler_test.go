@@ -87,7 +87,7 @@ func TestServiceHandler(t *testing.T) {
 		mc := &anypoint.MockAnypointClient{}
 		mc.On("GetPolicies").Return(c.policies, nil)
 		mc.On("GetExchangeAsset").Return(c.exchangeAsset, nil)
-		mc.On("GetExchangeFileContent").Return([]byte(c.content), nil, true)
+		mc.On("GetExchangeFileContent").Return([]byte(c.content), true, nil)
 		mc.On("GetExchangeAssetIcon").Return("", "", nil)
 
 		msh := &mockSchemaHandler{}
@@ -148,7 +148,7 @@ func TestServiceHandlerSLAPolicy(t *testing.T) {
 	mc := &anypoint.MockAnypointClient{}
 	mc.On("GetPolicies").Return(policies, nil)
 	mc.On("GetExchangeAsset").Return(&exchangeAsset, nil)
-	mc.On("GetExchangeFileContent").Return([]byte(content), nil, true)
+	mc.On("GetExchangeFileContent").Return([]byte(content), true, nil)
 	mc.On("GetExchangeAssetIcon").Return("", "", nil)
 
 	msh := &mockSchemaHandler{}
