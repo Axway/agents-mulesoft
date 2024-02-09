@@ -39,7 +39,7 @@ type Client interface {
 	GetEnvironmentByName(name string) (*Environment, error)
 	GetExchangeAsset(groupID, assetID, assetVersion string) (*ExchangeAsset, error)
 	GetExchangeAssetIcon(icon string) (string, string, error)
-	GetExchangeFileContent(link, packaging, mainFile string) ([]byte, error)
+	GetExchangeFileContent(link, packaging, mainFile string, useOriginalRaml bool) ([]byte, error, bool)
 	GetPolicies(apiID int64) ([]Policy, error)
 	GetSLATiers(int642 int64) (*Tiers, error)
 	ListAssets(page *Page) ([]Asset, error)
@@ -304,6 +304,12 @@ func (c *AnypointClient) GetPolicies(apiID int64) ([]Policy, error) {
 	if err != nil && strings.HasPrefix(err.Error(), "json: cannot unmarshal") {
 		err = c.invokeJSONGet(url, nil, &(policies.Policies), nil)
 	}
+	// Same issue, but with ConfigurationData and Configuration
+	for i, pCfg := range policies.Policies {
+		if pCfg.ConfigurationData != nil {
+			policies.Policies[i].Configuration = pCfg.Configuration
+		}
+	}
 	return policies.Policies, err
 }
 
@@ -337,36 +343,38 @@ func (c *AnypointClient) GetExchangeAssetIcon(icon string) (string, string, erro
 }
 
 // GetExchangeFileContent download the file from the ExternalLink reference. If the file is a zip file
-// and thre is a MainFile set then the content of the MainFile is returned.
-func (c *AnypointClient) GetExchangeFileContent(link, packaging, mainFile string) (fileContent []byte, err error) {
+// and there is a MainFile set then the content of the MainFile is returned.
+func (c *AnypointClient) GetExchangeFileContent(link, packaging, mainFile string, useOriginalRaml bool) (fileContent []byte, err error, wasConverted bool) {
 	fileContent, _, err = c.invokeGet(link)
-	// In case of RAML spec, this gets automatically converted and is renamed to api.json
-	if mainFile == "" {
-		mainFile = "api.json"
+	if packaging != "zip" {
+		return fileContent, err, wasConverted
 	}
-	if packaging == "zip" {
-		zipReader, err := zip.NewReader(bytes.NewReader(fileContent), int64(len(fileContent)))
+	zipReader, err := zip.NewReader(bytes.NewReader(fileContent), int64(len(fileContent)))
+	if err != nil {
+		return nil, err, wasConverted
+	}
+
+	for _, f := range zipReader.File {
+		// In case of RAML spec, this gets automatically converted and is renamed to api.json
+		if f.Name != mainFile && f.Name != "api.json" {
+			continue
+		}
+		content, err := f.Open()
 		if err != nil {
-			return nil, err
+			return nil, err, wasConverted
 		}
 
-		for _, f := range zipReader.File {
-			if f.Name == mainFile {
-				content, err := f.Open()
-				if err != nil {
-					return nil, err
-				}
-
-				fileContent, err = io.ReadAll(content)
-				content.Close()
-				if err != nil {
-					return nil, err
-				}
-				break
-			}
+		fileContent, err = io.ReadAll(content)
+		content.Close()
+		if err != nil {
+			return nil, err, wasConverted
 		}
+		if !useOriginalRaml && f.Name == "api.json" {
+			return fileContent, err, true
+		}
+		break
 	}
-	return fileContent, err
+	return fileContent, err, wasConverted
 }
 
 // GetAnalyticsWindow lists the managed assets in Mulesoft: https://docs.qax.mulesoft.com/api-manager/2.x/analytics-event-api

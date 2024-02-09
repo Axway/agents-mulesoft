@@ -98,7 +98,8 @@ type API struct {
 type Policy struct {
 	// APIID                int64       `json:"apiId,omitempty"`
 	// Audit                Audit       `json:"audit,omitempty"`
-	Configuration interface{} `json:"configurationData,omitempty"`
+	Configuration     interface{} `json:"configuration,omitempty"`
+	ConfigurationData interface{} `json:"configurationData,omitempty"`
 	// ID                   int64       `json:"id,omitempty"`
 	// MasterOrganizationID string      `json:"masterOrganizationId,omitempty"`
 	// Order                int         `json:"order,omitempty"`

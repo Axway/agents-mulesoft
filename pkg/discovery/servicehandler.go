@@ -166,9 +166,12 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 		return nil, nil
 	}
 
-	rawSpec, err := s.client.GetExchangeFileContent(exchFile.ExternalLink, exchFile.Packaging, exchFile.MainFile)
+	rawSpec, err, wasConverted := s.client.GetExchangeFileContent(exchFile.ExternalLink, exchFile.Packaging, exchFile.MainFile, s.discoverOriginalRaml)
 	if err != nil {
 		return nil, err
+	}
+	if wasConverted {
+		api.Tags = append(api.Tags, "converted-from-raml")
 	}
 
 	parser := apic.NewSpecResourceParser(rawSpec, "")
