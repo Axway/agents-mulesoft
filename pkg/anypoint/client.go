@@ -344,8 +344,9 @@ func (c *AnypointClient) GetExchangeAssetIcon(icon string) (string, string, erro
 
 // GetExchangeFileContent download the file from the ExternalLink reference. If the file is a zip file
 // and there is a MainFile set then the content of the MainFile is returned.
-func (c *AnypointClient) GetExchangeFileContent(link, packaging, mainFile string, useOriginalRaml bool) (fileContent []byte, wasConverted bool, err error) {
-	fileContent, _, err = c.invokeGet(link)
+func (c *AnypointClient) GetExchangeFileContent(link, packaging, mainFile string, useOriginalRaml bool) ([]byte, bool, error) {
+	wasConverted := false
+	fileContent, _, err := c.invokeGet(link)
 	if packaging != "zip" {
 		return fileContent, wasConverted, err
 	}
