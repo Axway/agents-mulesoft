@@ -23,6 +23,7 @@ services:
       MULESOFT_POLLINTERVAL: 20s
       MULESOFT_AUTH_USERNAME: <USERNAME>
       MULESOFT_AUTH_PASSWORD: <PASSWORD>
+      MULESOFT_DISCOVERORIGINALRAML: false
   traceability:
     image: mulesoft-traceability
     # ports:

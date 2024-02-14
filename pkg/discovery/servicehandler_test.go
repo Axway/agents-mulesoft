@@ -56,59 +56,82 @@ var exchangeAsset = anypoint.ExchangeAsset{
 }
 
 func TestServiceHandler(t *testing.T) {
-	content := `{"openapi":"3.0.1","servers":[{"url":"https://abc.com"}], "paths":{}, "info":{"title":"petstore3"}}`
-	policies := []anypoint.Policy{
+	type testCase struct {
+		content              string
+		policies             []anypoint.Policy
+		exchangeAsset        *anypoint.ExchangeAsset
+		exchangeAssetIcon    string
+		expectedResourceType string
+		expectedTitle        string
+		expectedVersion      string
+	}
+	cases := []testCase{
 		{
-			PolicyTemplateID: common.ClientIDEnforcement,
+			content: "#%RAML 1.0\ntitle: API with Examples\ndescription: Grand Theft Auto:Vice City\nversion: v3\nprotocols: [HTTP,HTTPS]\nbaseUri: https://na1.salesforce.com:4000/services/data/{version}/chatter",
+			policies: []anypoint.Policy{
+				{PolicyTemplateID: common.ClientIDEnforcement},
+			},
+			exchangeAsset:        &exchangeAsset,
+			expectedResourceType: apic.Raml,
+		},
+		{
+			content: `{"openapi":"3.0.1","servers":[{"url":"https://abc.com"}], "paths":{}, "info":{"title":"petstore3"}}`,
+			policies: []anypoint.Policy{
+				{PolicyTemplateID: common.ClientIDEnforcement},
+			},
+			exchangeAsset:        &exchangeAsset,
+			expectedResourceType: apic.Oas3,
 		},
 	}
-	mc := &anypoint.MockAnypointClient{}
-	mc.On("GetPolicies").Return(policies, nil)
-	mc.On("GetExchangeAsset").Return(&exchangeAsset, nil)
-	mc.On("GetExchangeFileContent").Return([]byte(content), nil)
-	mc.On("GetExchangeAssetIcon").Return("", "", nil)
+	for _, c := range cases {
+		mc := &anypoint.MockAnypointClient{}
+		mc.On("GetPolicies").Return(c.policies, nil)
+		mc.On("GetExchangeAsset").Return(c.exchangeAsset, nil)
+		mc.On("GetExchangeFileContent").Return([]byte(c.content), true, nil)
+		mc.On("GetExchangeAssetIcon").Return("", "", nil)
 
-	msh := &mockSchemaHandler{}
-	sh := &serviceHandler{
-		muleEnv:             "Sandbox",
-		discoveryTags:       []string{"tag1"},
-		discoveryIgnoreTags: []string{"nah"},
-		client:              mc,
-		schemas:             msh,
-		cache:               cache.New(),
+		msh := &mockSchemaHandler{}
+		sh := &serviceHandler{
+			muleEnv:             "Sandbox",
+			discoveryTags:       []string{"tag1"},
+			discoveryIgnoreTags: []string{"nah"},
+			client:              mc,
+			schemas:             msh,
+			cache:               cache.New(),
+		}
+		list := sh.ToServiceDetails(&asset)
+		api := asset.APIs[0]
+		assert.Equal(t, 1, len(list))
+		item := list[0]
+
+		assert.Equal(t, asset.APIs[0].AssetID, item.APIName)
+		assert.Equal(t, apic.Apikey, item.AuthPolicy)
+		assert.Equal(t, fmt.Sprint(asset.ID), item.ID)
+		assert.Equal(t, c.expectedResourceType, item.ResourceType)
+		assert.Equal(t, api.AssetVersion, item.Stage)
+		assert.Equal(t, asset.ExchangeAssetName, item.Title)
+		assert.Equal(t, api.AssetVersion, item.Version)
+		assert.Equal(t, api.Tags, item.Tags)
+		assert.NotEmpty(t, item.AgentDetails[common.AttrChecksum])
+		assert.Equal(t, fmt.Sprint(api.ID), item.AgentDetails[common.AttrAPIID])
+		assert.Equal(t, fmt.Sprint(asset.ID), item.AgentDetails[common.AttrAssetID])
+		assert.Equal(t, api.AssetVersion, item.AgentDetails[common.AttrAssetVersion])
+		assert.Equal(t, api.ProductVersion, item.AgentDetails[common.AttrProductVersion])
+
+		// Should find the api in the cache
+		cachedItem, err := sh.cache.Get(item.AgentDetails[common.AttrChecksum])
+		assert.Nil(t, err)
+		assert.Equal(t, api, cachedItem)
+
+		// Should find the api in the cache by the secondary key
+		cachedItem, err = sh.cache.GetBySecondaryKey(common.FormatAPICacheKey(fmt.Sprint(api.ID), api.ProductVersion))
+		assert.Nil(t, err)
+		assert.Equal(t, api, cachedItem)
+
+		// Should not discover an API that is saved in the cache.
+		list = sh.ToServiceDetails(&asset)
+		assert.Equal(t, 0, len(list))
 	}
-
-	list := sh.ToServiceDetails(&asset)
-	api := asset.APIs[0]
-	assert.Equal(t, 1, len(list))
-	item := list[0]
-	assert.Equal(t, asset.APIs[0].AssetID, item.APIName)
-	assert.Equal(t, apic.Apikey, item.AuthPolicy)
-	assert.Equal(t, fmt.Sprint(asset.ID), item.ID)
-	assert.Equal(t, apic.Oas3, item.ResourceType)
-	assert.Equal(t, api.AssetVersion, item.Stage)
-	assert.Equal(t, asset.ExchangeAssetName, item.Title)
-	assert.Equal(t, api.AssetVersion, item.Version)
-	assert.Equal(t, api.Tags, item.Tags)
-	assert.NotEmpty(t, item.AgentDetails[common.AttrChecksum])
-	assert.Equal(t, fmt.Sprint(api.ID), item.AgentDetails[common.AttrAPIID])
-	assert.Equal(t, fmt.Sprint(asset.ID), item.AgentDetails[common.AttrAssetID])
-	assert.Equal(t, api.AssetVersion, item.AgentDetails[common.AttrAssetVersion])
-	assert.Equal(t, api.ProductVersion, item.AgentDetails[common.AttrProductVersion])
-
-	// Should find the api in the cache
-	cachedItem, err := sh.cache.Get(item.AgentDetails[common.AttrChecksum])
-	assert.Nil(t, err)
-	assert.Equal(t, api, cachedItem)
-
-	// Should find the api in the cache by the secondary key
-	cachedItem, err = sh.cache.GetBySecondaryKey(common.FormatAPICacheKey(fmt.Sprint(api.ID), api.ProductVersion))
-	assert.Nil(t, err)
-	assert.Equal(t, api, cachedItem)
-
-	// Should not discover an API that is saved in the cache.
-	list = sh.ToServiceDetails(&asset)
-	assert.Equal(t, 0, len(list))
 }
 
 func TestServiceHandlerSLAPolicy(t *testing.T) {
@@ -125,7 +148,7 @@ func TestServiceHandlerSLAPolicy(t *testing.T) {
 	mc := &anypoint.MockAnypointClient{}
 	mc.On("GetPolicies").Return(policies, nil)
 	mc.On("GetExchangeAsset").Return(&exchangeAsset, nil)
-	mc.On("GetExchangeFileContent").Return([]byte(content), nil)
+	mc.On("GetExchangeFileContent").Return([]byte(content), true, nil)
 	mc.On("GetExchangeAssetIcon").Return("", "", nil)
 
 	msh := &mockSchemaHandler{}
@@ -284,9 +307,10 @@ func TestShouldDiscoverAPIBasedOnTags(t *testing.T) {
 
 func TestGetExchangeAssetSpecFile(t *testing.T) {
 	tests := []struct {
-		name     string
-		files    []anypoint.ExchangeFile
-		expected *anypoint.ExchangeFile
+		name                 string
+		files                []anypoint.ExchangeFile
+		expected             *anypoint.ExchangeFile
+		discoverOriginalRaml bool
 	}{
 		{
 			name:     "Should return nil if the Exchange asset has no files",
@@ -337,11 +361,31 @@ func TestGetExchangeAssetSpecFile(t *testing.T) {
 				Classifier: "oas",
 			},
 		},
+		{
+			name: "Should sort files and return first non-empty mainFile",
+			files: []anypoint.ExchangeFile{
+				{
+					Classifier: "wsdl",
+				},
+				{
+					Classifier: "oas",
+				},
+				{
+					Classifier: "raml",
+					MainFile:   "1",
+				},
+			},
+			expected: &anypoint.ExchangeFile{
+				Classifier: "raml",
+				MainFile:   "1",
+			},
+			discoverOriginalRaml: true,
+		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			sd := getExchangeAssetSpecFile(tc.files)
+			sd := getExchangeAssetSpecFile(tc.files, tc.discoverOriginalRaml)
 			assert.Equal(t, tc.expected, sd)
 		})
 	}
@@ -418,102 +462,6 @@ func Test_getAuthPolicy(t *testing.T) {
 	}
 }
 
-func Test_getSpecType(t *testing.T) {
-	tests := []struct {
-		name         string
-		file         *anypoint.ExchangeFile
-		specContent  []byte
-		expectedType string
-		expectedErr  error
-	}{
-		{
-			name: "should return the spec type as WSDL",
-			file: &anypoint.ExchangeFile{
-				Classifier: apic.Wsdl,
-			},
-			specContent:  []byte(""),
-			expectedType: apic.Wsdl,
-		},
-		{
-			name: "should return the spec type as OAS2",
-			file: &anypoint.ExchangeFile{
-				Classifier: apic.Oas2,
-			},
-			specContent:  []byte(`{"basePath":"google.com","host":"","schemes":[""],"swagger":"2.0"}`),
-			expectedType: apic.Oas2,
-		},
-		{
-			name: "should return the spec type as OAS3",
-			file: &anypoint.ExchangeFile{
-				Classifier: apic.Oas3,
-			},
-			specContent:  []byte(`{"openapi": "3.0.1"}`),
-			expectedType: apic.Oas3,
-		},
-		{
-			name: "should return the specType as an empty string when the specContent is nil",
-			file: &anypoint.ExchangeFile{
-				Classifier: apic.Oas3,
-			},
-			specContent:  nil,
-			expectedType: "",
-		},
-		{
-			name: "should return an error when given an invalid spec",
-			file: &anypoint.ExchangeFile{
-				Classifier: apic.Oas3,
-			},
-			specContent:  []byte("abc"),
-			expectedType: "",
-			expectedErr:  fmt.Errorf("error"),
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			specType, err := getSpecType(tc.file, tc.specContent)
-			if tc.expectedErr != nil {
-				assert.NotNil(t, err)
-			} else {
-				assert.Nil(t, err)
-			}
-			assert.Equal(t, tc.expectedType, specType)
-		})
-	}
-}
-
-func Test_specYAMLToJSON(t *testing.T) {
-	tests := []struct {
-		name   string
-		input  string
-		output []byte
-	}{
-		{
-			name: "should convert yaml to json",
-			input: `---
-openapi: 3.0.1
-`,
-			output: []byte(`{"openapi":"3.0.1"}`),
-		},
-		{
-			name:   "should return the content when it is already json",
-			input:  `{"openapi":"3.0.1"}`,
-			output: []byte(`{"openapi":"3.0.1"}`),
-		},
-		{
-			name:   "should return the content when it is not yaml or json",
-			input:  `nope`,
-			output: []byte(`nope`),
-		},
-	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			res := specYAMLToJSON([]byte(tc.input))
-			assert.Equal(t, tc.output, res)
-		})
-	}
-}
-
 func Test_updateSpec(t *testing.T) {
 	tests := []struct {
 		name            string
@@ -556,11 +504,11 @@ func Test_updateSpec(t *testing.T) {
 			authPolicy:      apic.Apikey,
 		},
 		{
-			name:            "should update a WSDL spec",
-			specType:        apic.Wsdl,
+			name:            "should update a Raml spec",
+			specType:        apic.Raml,
 			endpoint:        "https://abc.com",
-			content:         []byte(""),
-			expectedContent: []byte(""),
+			content:         []byte("#%RAML 1.0\nbaseUri: https://na1.salesforce.com:4000/services/data/{version}/chatter"),
+			expectedContent: []byte("#%RAML 1.0\nbaseUri: https://abc.com\n"),
 		},
 	}
 	for _, tc := range tests {

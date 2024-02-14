@@ -6,8 +6,9 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -38,7 +39,7 @@ type Client interface {
 	GetEnvironmentByName(name string) (*Environment, error)
 	GetExchangeAsset(groupID, assetID, assetVersion string) (*ExchangeAsset, error)
 	GetExchangeAssetIcon(icon string) (string, string, error)
-	GetExchangeFileContent(link, packaging, mainFile string) ([]byte, error)
+	GetExchangeFileContent(link, packaging, mainFile string, useOriginalRaml bool) ([]byte, bool, error)
 	GetPolicies(apiID int64) ([]Policy, error)
 	GetSLATiers(int642 int64) (*Tiers, error)
 	ListAssets(page *Page) ([]Asset, error)
@@ -296,11 +297,20 @@ func (c *AnypointClient) GetAPI(id string) (*API, error) {
 
 // GetPolicies lists the API policies.
 func (c *AnypointClient) GetPolicies(apiID int64) ([]Policy, error) {
-	policies := []Policy{}
+	policies := Policies{}
 	url := fmt.Sprintf("%s/apimanager/api/v1/organizations/%s/environments/%s/apis/%d/policies", c.baseURL, c.auth.GetOrgID(), c.environment.ID, apiID)
 	err := c.invokeJSONGet(url, nil, &policies, nil)
-
-	return policies, err
+	// Older versions of mulesoft may return []Policy JSON format instead.
+	if err != nil && strings.HasPrefix(err.Error(), "json: cannot unmarshal") {
+		err = c.invokeJSONGet(url, nil, &(policies.Policies), nil)
+	}
+	// Same issue, but with ConfigurationData and Configuration
+	for i, pCfg := range policies.Policies {
+		if pCfg.ConfigurationData != nil {
+			policies.Policies[i].Configuration = pCfg.Configuration
+		}
+	}
+	return policies.Policies, err
 }
 
 // GetExchangeAsset creates the AssetDetail form the Asset API.
@@ -333,33 +343,39 @@ func (c *AnypointClient) GetExchangeAssetIcon(icon string) (string, string, erro
 }
 
 // GetExchangeFileContent download the file from the ExternalLink reference. If the file is a zip file
-// and thre is a MainFile set then the content of the MainFile is returned.
-func (c *AnypointClient) GetExchangeFileContent(link, packaging, mainFile string) (fileContent []byte, err error) {
-	fileContent, _, err = c.invokeGet(link)
-
-	if packaging == "zip" && mainFile != "" {
-		zipReader, err := zip.NewReader(bytes.NewReader(fileContent), int64(len(fileContent)))
-		if err != nil {
-			return nil, err
-		}
-
-		for _, f := range zipReader.File {
-			if f.Name == mainFile {
-				content, err := f.Open()
-				if err != nil {
-					return nil, err
-				}
-
-				fileContent, err = ioutil.ReadAll(content)
-				content.Close()
-				if err != nil {
-					return nil, err
-				}
-				break
-			}
-		}
+// and there is a MainFile set then the content of the MainFile is returned.
+func (c *AnypointClient) GetExchangeFileContent(link, packaging, mainFile string, useOriginalRaml bool) ([]byte, bool, error) {
+	wasConverted := false
+	fileContent, _, err := c.invokeGet(link)
+	if packaging != "zip" {
+		return fileContent, wasConverted, err
 	}
-	return fileContent, err
+	zipReader, err := zip.NewReader(bytes.NewReader(fileContent), int64(len(fileContent)))
+	if err != nil {
+		return nil, wasConverted, err
+	}
+
+	for _, f := range zipReader.File {
+		// In case of RAML spec, this gets automatically converted and is renamed to api.json
+		if f.Name != mainFile && f.Name != "api.json" {
+			continue
+		}
+		content, err := f.Open()
+		if err != nil {
+			return nil, wasConverted, err
+		}
+
+		fileContent, err = io.ReadAll(content)
+		content.Close()
+		if err != nil {
+			return nil, wasConverted, err
+		}
+		if !useOriginalRaml && f.Name == "api.json" {
+			return fileContent, true, err
+		}
+		break
+	}
+	return fileContent, wasConverted, err
 }
 
 // GetAnalyticsWindow lists the managed assets in Mulesoft: https://docs.qax.mulesoft.com/api-manager/2.x/analytics-event-api

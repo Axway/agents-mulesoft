@@ -6,6 +6,8 @@
 *.test
 *.out
 
+file
+__debug_bin**
 dist/
 coverage/
 **/local-values.yaml

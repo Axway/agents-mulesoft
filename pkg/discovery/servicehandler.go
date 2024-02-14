@@ -12,6 +12,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/util/oas"
 	"github.com/Axway/agents-mulesoft/pkg/common"
+	"gopkg.in/yaml.v2"
 
 	"github.com/sirupsen/logrus"
 
@@ -25,7 +26,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic"
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 	"github.com/Axway/agents-mulesoft/pkg/config"
-	"sigs.k8s.io/yaml"
 )
 
 const (
@@ -40,13 +40,14 @@ type ServiceHandler interface {
 }
 
 type serviceHandler struct {
-	muleEnv             string
-	discoveryTags       []string
-	discoveryIgnoreTags []string
-	client              anypoint.Client
-	schemas             subs.SchemaStore
-	cache               cache.Cache
-	mode                string
+	muleEnv              string
+	discoveryTags        []string
+	discoveryIgnoreTags  []string
+	client               anypoint.Client
+	schemas              subs.SchemaStore
+	cache                cache.Cache
+	mode                 string
+	discoverOriginalRaml bool
 }
 
 func (s *serviceHandler) OnConfigChange(cfg *config.MulesoftConfig) {
@@ -159,28 +160,25 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 		return nil, err
 	}
 
-	exchFile := getExchangeAssetSpecFile(exchangeAsset.Files)
+	exchFile := getExchangeAssetSpecFile(exchangeAsset.Files, s.discoverOriginalRaml)
 	if exchFile == nil {
 		logger.Debugf("no supported specification file found")
 		return nil, nil
 	}
 
-	rawSpec, err := s.client.GetExchangeFileContent(exchFile.ExternalLink, exchFile.Packaging, exchFile.MainFile)
+	rawSpec, wasConverted, err := s.client.GetExchangeFileContent(exchFile.ExternalLink, exchFile.Packaging, exchFile.MainFile, s.discoverOriginalRaml)
 	if err != nil {
 		return nil, err
 	}
-
-	specContent := specYAMLToJSON(rawSpec) // SDK does not support YAML specifications
-	specType, err := getSpecType(exchFile, specContent)
-	if err != nil {
-		return nil, err
+	if wasConverted {
+		api.Tags = append(api.Tags, "converted-from-raml")
 	}
 
-	if specType == "" {
-		return nil, fmt.Errorf("unknown spec type")
-	}
+	parser := apic.NewSpecResourceParser(rawSpec, "")
+	parser.Parse()
+	processor := parser.GetSpecProcessor()
 
-	modifiedSpec, err := updateSpec(specType, api.EndpointURI, authPolicy, configuration, specContent)
+	modifiedSpec, err := updateSpec(processor.GetResourceType(), api.EndpointURI, authPolicy, configuration, processor.GetSpecBytes())
 	if err != nil {
 		return nil, err
 	}
@@ -206,7 +204,7 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 		ID:                fmt.Sprint(asset.ID),
 		Image:             icon,
 		ImageContentType:  iconContentType,
-		ResourceType:      specType,
+		ResourceType:      processor.GetResourceType(),
 		ServiceAttributes: map[string]string{},
 		AgentDetails: map[string]string{
 			common.AttrAssetID:        fmt.Sprint(asset.ID),
@@ -290,7 +288,6 @@ func updateSpec(
 			logrus.Debugf("failed to update the spec with the given endpoint: %s", endpointURI)
 		}
 		specContent, err = setOAS2policies(oas2Swagger, authPolicy, configuration)
-
 	case apic.Oas3:
 		oas3Swagger, err = oas.ParseOAS3(specContent)
 		if err != nil {
@@ -298,21 +295,24 @@ func updateSpec(
 		}
 		oas.SetOAS3Servers([]string{endpointURI}, oas3Swagger)
 		specContent, err = setOAS3policies(oas3Swagger, authPolicy, configuration)
-
-	case apic.Wsdl:
-		specContent, err = setWSDLEndpoint(endpointURI, specContent)
+	case apic.Raml:
+		specContent, err = setRamlEndpoints(specContent, endpointURI)
 	}
 
 	return specContent, err
 }
 
 // getExchangeAssetSpecFile gets the file entry for the Assets spec.
-func getExchangeAssetSpecFile(exchangeFiles []anypoint.ExchangeFile) *anypoint.ExchangeFile {
+func getExchangeAssetSpecFile(exchangeFiles []anypoint.ExchangeFile, discoverOriginalRaml bool) *anypoint.ExchangeFile {
 	if len(exchangeFiles) == 0 {
 		return nil
 	}
-
 	sort.Sort(BySpecType(exchangeFiles))
+
+	if discoverOriginalRaml {
+		return getExchangeAssetWithRamlSpecFile(exchangeFiles)
+	}
+	// By default, the RAML spec will have a download link with it as already converted to OAS but have an empty MainFile field
 	if exchangeFiles[0].Classifier != "oas" &&
 		exchangeFiles[0].Classifier != "fat-oas" &&
 		exchangeFiles[0].Classifier != "wsdl" {
@@ -322,48 +322,15 @@ func getExchangeAssetSpecFile(exchangeFiles []anypoint.ExchangeFile) *anypoint.E
 	return &exchangeFiles[0]
 }
 
-// specYAMLToJSON - if the spec is yaml convert it to json, SDK doesn't handle yaml.
-func specYAMLToJSON(specContent []byte) []byte {
-	specMap := make(map[string]interface{})
-	// check if the content is already json
-	err := json.Unmarshal(specContent, &specMap)
-	if err == nil {
-		return specContent
-	}
-
-	// check if the content is already yaml
-	err = yaml.Unmarshal(specContent, &specMap)
-	if err != nil {
-		// Not yaml, nothing more to be done
-		return specContent
-	}
-
-	bts, err := yaml.YAMLToJSON(specContent)
-	if err != nil {
-		return specContent
-	}
-	return bts
-}
-
-// getSpecType determines the correct resource type for the asset.
-func getSpecType(file *anypoint.ExchangeFile, specContent []byte) (string, error) {
-	if file.Classifier == apic.Wsdl {
-		return apic.Wsdl, nil
-	}
-
-	if specContent != nil {
-		jsonMap := make(map[string]interface{})
-		err := json.Unmarshal(specContent, &jsonMap)
-		if err != nil {
-			return "", err
-		}
-		if _, isSwagger := jsonMap["swagger"]; isSwagger {
-			return apic.Oas2, nil
-		} else if _, isOpenAPI := jsonMap["openapi"]; isOpenAPI {
-			return apic.Oas3, nil
+func getExchangeAssetWithRamlSpecFile(exchangeFiles []anypoint.ExchangeFile) *anypoint.ExchangeFile {
+	for i := range exchangeFiles {
+		c := exchangeFiles[i].Classifier
+		if _, found := specPreference[c]; found && exchangeFiles[i].MainFile != "" {
+			return &exchangeFiles[i]
 		}
 	}
-	return "", nil
+	// Unsupported spec type
+	return nil
 }
 
 // getAuthPolicy gets the authentication policy type.
@@ -393,8 +360,18 @@ func getAuthPolicy(policies []anypoint.Policy, mode string) (string, map[string]
 	return apic.Passthrough, map[string]interface{}{}, false
 }
 
-func setWSDLEndpoint(_ string, specContent []byte) ([]byte, error) {
-	return specContent, nil
+func setRamlEndpoints(spec []byte, endpoints string) ([]byte, error) {
+	var ramlDef map[string]interface{}
+	// We know that this is a valid raml file from the parser, so this is never fails. We need this because yaml unmarshal drops the version line
+	ramlVersion := append(spec[0:10], []byte("\n")...)
+	yaml.Unmarshal(spec, &ramlDef)
+	ramlDef["baseUri"] = endpoints
+
+	modifiedSpec, err := yaml.Marshal(ramlDef)
+	if err != nil {
+		return spec, err
+	}
+	return append(ramlVersion, modifiedSpec...), nil
 }
 
 // makeChecksum generates a makeChecksum for the api for change detection

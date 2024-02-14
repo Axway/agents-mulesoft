@@ -92,10 +92,10 @@ func (m *MockAnypointClient) GetExchangeAssetIcon(_ string) (string, string, err
 	return icon, contentType, args.Error(2)
 }
 
-func (m *MockAnypointClient) GetExchangeFileContent(_, _, _ string) ([]byte, error) {
+func (m *MockAnypointClient) GetExchangeFileContent(_, _, _ string, shouldConvert bool) ([]byte, bool, error) {
 	args := m.Called()
 	result := args.Get(0)
-	return result.([]byte), args.Error(1)
+	return result.([]byte), shouldConvert, args.Error(2)
 }
 
 func (m *MockAnypointClient) GetAnalyticsWindow() ([]AnalyticsEvent, error) {
