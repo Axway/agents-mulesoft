@@ -7,7 +7,7 @@ toolchain go1.21.3
 //replace github.com/Axway/agent-sdk => /home/ubuntu/go/src/github.com/Axway/agent-sdk
 
 require (
-	github.com/Axway/agent-sdk v1.1.74-0.20240131154839-8ccbdd686492
+	github.com/Axway/agent-sdk v1.1.75-0.20240214174555-1fb7a381a58e
 	github.com/elastic/beats/v7 v7.17.17
 	github.com/getkin/kin-openapi v0.76.0
 	github.com/sirupsen/logrus v1.9.3
@@ -120,6 +120,7 @@ require (
 	github.com/santhosh-tekuri/jsonschema v1.2.4 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
 	github.com/shirou/gopsutil v3.20.12+incompatible // indirect
+	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/snowzach/rotatefilehook v0.0.0-20220211133110-53752135082d // indirect
 	github.com/spf13/afero v1.8.2 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
