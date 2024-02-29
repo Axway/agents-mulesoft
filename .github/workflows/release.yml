@@ -21,7 +21,7 @@ jobs:
       - name: Export SDK Version # exports the SDK_VERSION to be used by the goreleaser
         run: echo "SDK_VERSION=$(make sdk-version)" >> $GITHUB_ENV
       - name: Discovery Release
-        uses: goreleaser/goreleaser-action@v4.2.0
+        uses: goreleaser/goreleaser-action@v5
         with:
           args: release -f .goreleaser-da.yml
         env:
@@ -43,7 +43,7 @@ jobs:
       - name: Export SDK Version # exports the SDK_VERSION to be used by the goreleaser
         run: echo "SDK_VERSION=$(make sdk-version)" >> $GITHUB_ENV
       - name: Traceability Release
-        uses: goreleaser/goreleaser-action@v4.2.0
+        uses: goreleaser/goreleaser-action@v5
         with:
           args: release -f .goreleaser-ta.yml
         env:
