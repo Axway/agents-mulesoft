@@ -91,5 +91,6 @@ func BuildServiceBody(service *ServiceDetail) (apic.ServiceBody, error) {
 		SetVersion(service.Version).
 		SetAccessRequestDefinitionName(service.AccessRequestDefinition, false).
 		SetCredentialRequestDefinitions(service.CRDs).
+		SetSourceDataplaneType(apic.Mulesoft, false).
 		Build()
 }
