@@ -93,6 +93,8 @@ blackduck:on-schedule:
   rules:
     # - !reference [.mirror-schedule-csr-rules, rules]
     - when: always
+  before_script:
+    - !reference [.csr-get-last-git-tag, gettag]
 
 # overridden from csrjobs.yml because mirror repos like this one don't get merge events 
 fortify:
