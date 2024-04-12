@@ -77,12 +77,10 @@ func newConfig() *config.AgentConfig {
 			DiscoveryIgnoreTags: "",
 			DiscoveryTags:       "",
 			Environment:         "mule",
-			Password:            "123",
 			PollInterval:        1 * time.Second,
 			ProxyURL:            "",
 			SessionLifetime:     60 * time.Minute,
 			TLS:                 nil,
-			Username:            "abc",
 		},
 	}
 }

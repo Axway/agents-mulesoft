@@ -3,16 +3,18 @@ package common
 import "fmt"
 
 const (
-	AccessCode          = "accessCode"
-	APIKey              = "apiKey"
-	AppID               = "appID"
-	AppName             = "appName"
-	AttrAPIID           = "API ID"
-	AttrAssetID         = "Asset ID"
-	AttrAssetVersion    = "Asset Version"
-	AttrChecksum        = "checksum"
-	AttrProductVersion  = "Product Version"
-	Authorization       = "authorization"
+	AccessCode    = "accessCode"
+	APIKey        = "apiKey"
+	AppID         = "appID"
+	AppName       = "appName"
+	Authorization = "authorization"
+
+	AttrAPIID          = "API ID"
+	AttrAssetID        = "Asset ID"
+	AttrAssetVersion   = "Asset Version"
+	AttrChecksum       = "checksum"
+	AttrProductVersion = "Product Version"
+
 	ClientID            = "client-id"
 	ClientIDEnforcement = "client-id-enforcement"
 	ClientIDLabel       = "Client ID"
@@ -20,17 +22,40 @@ const (
 	ClientSecretLabel   = "Client Secret"
 	ContractID          = "contractID"
 	CredOrigin          = "credentialsOriginHasHttpBasicAuthenticationHeader"
-	DescClientCred      = "Provided as: client_id:<INSERT_VALID_CLIENTID_HERE> \n\n client_secret:<INSERT_VALID_SECRET_HERE>\n\n"
-	DescOauth2          = "This API supports OAuth 2.0 for authenticating all API requests"
-	Description         = "description"
-	ExternalOauth       = "external-oauth2-access-token-enforcement"
-	Header              = "header"
-	Oauth2              = "oauth2"
-	Scopes              = "scopes"
-	SLABased            = "sla-based"
-	SlaTier             = "sla-tier"
-	TierLabel           = "SLA Tier"
-	TokenURL            = "tokenUrl"
+
+	ClientCredDesc = "This API supports client credentials for authenticating all API requests"
+	Description    = "description"
+	ExternalOauth  = "external-oauth2-access-token-enforcement"
+	Header         = "header"
+
+	Oauth2Desc     = "This API supports OAuth 2.0 for authenticating all API requests"
+	Oauth2OASType  = "oauth2"
+	Oauth2RAMLType = "OAuth 2.0"
+	Oauth2Name     = "o_auth_2"
+
+	BasicAuthDesc     = "This API supports Basic Authentication for authenticating all API requests"
+	BasicAuthName     = "basicAuth"
+	BasicAuthScheme   = "basic"
+	BasicAuthOASType  = "http"
+	BasicAuthRAMLType = "Basic Authentication"
+
+	Scopes    = "scopes"
+	SLABased  = "sla-based"
+	SlaTier   = "sla-tier"
+	TierLabel = "SLA Tier"
+	TokenURL  = "tokenUrl"
+)
+
+const (
+	RateLimitingSLABasedPolicy    = "348742"
+	BasicAuthSimplePolicy         = "341474"
+	OAuth2MuleOauthProviderPolicy = "386072"
+	HeaderRemovalPolicy           = "341469"
+	MessageLoggingPolicy          = "345754"
+	JWTValidationPolicy           = "385922"
+	RateLimitingPolicy            = "348741"
+	BasicAuthLDAPPolicy           = "345188"
+	ClientIDEnforcementPolicy     = "341473"
 )
 
 // FormatAPICacheKey ensure consistent naming of the cache key for an API.

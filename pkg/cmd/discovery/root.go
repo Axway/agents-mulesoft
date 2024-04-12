@@ -1,8 +1,6 @@
 package discovery
 
 import (
-	"fmt"
-
 	"github.com/Axway/agent-sdk/pkg/migrate"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
@@ -10,7 +8,6 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 
-	"github.com/Axway/agent-sdk/pkg/apic"
 	corecmd "github.com/Axway/agent-sdk/pkg/cmd"
 	"github.com/Axway/agent-sdk/pkg/cmd/service"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
@@ -72,46 +69,14 @@ func initConfig(centralConfig corecfg.CentralConfig) (interface{}, error) {
 		client = anypoint.NewClient(conf.MulesoftConfig)
 		muleSubClient := subs.NewMuleSubscriptionClient(client)
 		entry := logrus.NewEntry(log.Get())
-		var sm *subs.Manager
 
 		if centralConfig.IsMarketplaceSubsEnabled() {
 			agent.RegisterProvisioner(subs.NewProvisioner(muleSubClient, entry))
 			agent.NewAPIKeyAccessRequestBuilder().Register()
 			agent.NewOAuthCredentialRequestBuilder(agent.WithCRDOAuthSecret()).IsRenewable().Register()
-		} else {
-			var err error
-			sm, err = initUCSubscriptionManager(client, agent.GetCentralClient())
-			if err != nil {
-				return nil, fmt.Errorf("error while initializing the subscription manager %s", err)
-			}
 		}
 
-		discoveryAgent = discovery.NewAgent(conf, client, sm)
+		discoveryAgent = discovery.NewAgent(conf, client, &subs.Manager{})
 	}
 	return conf, nil
-}
-
-func initUCSubscriptionManager(apc anypoint.Client, central apic.Client) (*subs.Manager, error) {
-	entry := logrus.NewEntry(log.Get())
-	muleSubClient := subs.NewMuleSubscriptionClient(apc)
-	clientID := subs.NewClientIDContract()
-	sm := subs.NewManager(entry, muleSubClient, clientID)
-
-	schema := clientID.Schema()
-	err := central.RegisterSubscriptionSchema(schema, true)
-	if err != nil {
-		return nil, fmt.Errorf("failed to register subscription schema %s: %w", schema.GetSubscriptionName(), err)
-	}
-
-	subManager := central.GetSubscriptionManager()
-
-	// register validator and handlers
-	subManager.RegisterValidator(sm.ValidateSubscription)
-	subManager.RegisterProcessor(apic.SubscriptionApproved, sm.ProcessSubscribe)
-	subManager.RegisterProcessor(apic.SubscriptionUnsubscribeInitiated, sm.ProcessUnsubscribe)
-
-	// start polling for subscriptions
-	subManager.Start()
-
-	return sm, nil
 }

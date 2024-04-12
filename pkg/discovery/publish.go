@@ -67,12 +67,10 @@ func BuildServiceBody(service *ServiceDetail) (apic.ServiceBody, error) {
 			tags[tag] = true
 		}
 	}
-
-	return apic.NewServiceBodyBuilder().
+	builder := apic.NewServiceBodyBuilder().
 		SetAPIName(service.APIName).
 		SetAPISpec(service.APISpec).
 		SetAPIUpdateSeverity(service.APIUpdateSeverity).
-		SetAuthPolicy(service.AuthPolicy).
 		SetDescription(service.Description).
 		SetDocumentation(service.Documentation).
 		SetID(service.ID).
@@ -88,9 +86,12 @@ func BuildServiceBody(service *ServiceDetail) (apic.ServiceBody, error) {
 		SetTags(tags).
 		SetTitle(service.Title).
 		SetURL(service.URL).
-		SetVersion(service.Version).
-		SetAccessRequestDefinitionName(service.AccessRequestDefinition, false).
-		SetCredentialRequestDefinitions(service.CRDs).
-		SetSourceDataplaneType(apic.Mulesoft, false).
-		Build()
+		SetVersion(service.Version)
+
+	if len(service.CRDs) > 0 {
+		return builder.SetAccessRequestDefinitionName(service.ARD, false).
+			SetCredentialRequestDefinitions(service.CRDs).Build()
+	}
+	return builder.SetAuthPolicy(apic.Passthrough).Build()
+
 }
