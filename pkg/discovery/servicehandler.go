@@ -99,7 +99,7 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 	if err != nil {
 		return nil, err
 	}
-	apicAuths, configuration, err := getApicAuthsAndConfigs(policies)
+	apicAuths, configuration, err := getApicAuthsAndConfig(policies)
 	if err != nil {
 		return nil, err
 	}
@@ -284,8 +284,8 @@ func getExchangeAssetWithRamlSpecFile(exchangeFiles []anypoint.ExchangeFile) *an
 	return nil
 }
 
-// getApicAuths gets the API Central Authentication types based on the Mulesoft policy type.
-func getApicAuthsAndConfigs(policies []anypoint.Policy) ([]string, map[string]interface{}, error) {
+// gets the API Central Authentication types based on the Mulesoft policy type.
+func getApicAuthsAndConfig(policies []anypoint.Policy) ([]string, map[string]interface{}, error) {
 	apicAuths := []string{}
 	configs := map[string]interface{}{}
 	for _, policy := range policies {
@@ -311,64 +311,6 @@ func getApicAuthsAndConfigs(policies []anypoint.Policy) ([]string, map[string]in
 	}
 
 	return sdkUtil.RemoveDuplicateValuesFromStringSlice(apicAuths), configs, nil
-}
-
-func setRamlHostAndAuth(spec []byte, endpoint string, configuration map[string]interface{}) ([]byte, error) {
-	var ramlDef map[string]interface{}
-	// We know that this is a valid raml file from the parser, so this never fails. We need this because yaml unmarshal drops the version line
-	ramlVersion := append(spec[0:10], []byte("\n")...)
-	yaml.Unmarshal(spec, &ramlDef)
-
-	securitySchemes := map[string]interface{}{}
-	securedBy := []string{}
-	for auth, config := range configuration {
-		switch auth {
-		case apic.Basic:
-			securitySchemes[common.BasicAuthName] = map[string]interface{}{
-				"description": common.BasicAuthDesc,
-				"type":        common.BasicAuthRAMLType,
-			}
-			securedBy = append(securedBy, common.BasicAuthName)
-		case apic.Oauth:
-			tokenURL := ""
-			scopes := make(map[string]string)
-			if config.(map[string]interface{})[common.TokenURL] != nil {
-				tokenURL = configuration[common.TokenURL].(string)
-			}
-
-			oAuthSettings := map[string]interface{}{
-				"accessTokenUri": tokenURL,
-			}
-			if config.(map[string]interface{})[common.Scopes] != nil {
-				scopes[common.Scopes] = configuration[common.Scopes].(string)
-				oAuthSettings["scopes"] = scopes
-			}
-
-			ramlDef["securitySchemes"].(map[string]interface{})[common.Oauth2Name] = map[string]interface{}{
-				"description": common.Oauth2Desc,
-				"type":        common.Oauth2RAMLType,
-				"settings":    oAuthSettings,
-				"describedBy": map[string]interface{}{
-					"headers": map[string]interface{}{
-						"Authorization": map[string]interface{}{
-							"description": common.Oauth2Desc,
-							"type":        "string",
-						},
-					},
-				},
-			}
-			securedBy = append(securedBy, common.Oauth2Name)
-		}
-	}
-	ramlDef["baseUri"] = endpoint
-	ramlDef["securitySchemes"] = securitySchemes
-	ramlDef["securedBy"] = securedBy
-
-	modifiedSpec, err := yaml.Marshal(ramlDef)
-	if err != nil {
-		return spec, err
-	}
-	return append(ramlVersion, modifiedSpec...), nil
 }
 
 // makeChecksum generates a makeChecksum for the api for change detection
@@ -413,7 +355,18 @@ func setOAS2policies(swagger *openapi2.T, configuration map[string]interface{}) 
 				tokenURL = cfg.(string)
 			}
 			if cfg := config.(map[string]interface{})[common.Scopes]; cfg != nil {
-				scopes[common.Oauth2Name] = cfg.(string)
+				// Mulesoft scopes should come separated by space (it's specified when you add scopes in the UI)
+				scopesSlice := strings.Split(cfg.(string), " ")
+				for _, scope := range scopesSlice {
+					scopes[scope] = ""
+				}
+				swagger.Security = append(swagger.Security, map[string][]string{
+					common.Oauth2Name: scopesSlice,
+				})
+			} else {
+				swagger.Security = append(swagger.Security, map[string][]string{
+					common.Oauth2Name: []string{},
+				})
 			}
 
 			ss := openapi2.SecurityScheme{
@@ -425,9 +378,6 @@ func setOAS2policies(swagger *openapi2.T, configuration map[string]interface{}) 
 				Scopes:           scopes,
 			}
 			swagger.SecurityDefinitions[common.Oauth2Name] = &ss
-			swagger.Security = append(swagger.Security, map[string][]string{
-				common.Oauth2Name: []string{},
-			})
 		}
 	}
 
@@ -441,13 +391,12 @@ func setOAS3policies(spec *openapi3.T, configuration map[string]interface{}) ([]
 	for auth, config := range configuration {
 		switch auth {
 		case apic.Basic:
-			ss := openapi3.SecurityScheme{
-				Type:        common.BasicAuthOASType,
-				Scheme:      common.BasicAuthScheme,
-				Description: common.BasicAuthDesc,
-			}
 			ssr := openapi3.SecuritySchemeRef{
-				Value: &ss,
+				Value: &openapi3.SecurityScheme{
+					Type:        common.BasicAuthOASType,
+					Scheme:      common.BasicAuthScheme,
+					Description: common.BasicAuthDesc,
+				},
 			}
 
 			spec.Components.SecuritySchemes[common.BasicAuthName] = &ssr
@@ -460,32 +409,103 @@ func setOAS3policies(spec *openapi3.T, configuration map[string]interface{}) ([]
 				tokenURL = cfg.(string)
 			}
 			if cfg := config.(map[string]interface{})[common.Scopes]; cfg != nil {
-				scopes[common.Oauth2Name] = cfg.(string)
+				// Mulesoft scopes should come separated by space (it's defined when you add scopes in the UI)
+				scopesSlice := strings.Split(cfg.(string), " ")
+				for _, scope := range scopesSlice {
+					scopes[scope] = ""
+				}
+				spec.Security = *spec.Security.With(
+					openapi3.NewSecurityRequirement().Authenticate(
+						common.Oauth2Name, scopesSlice...),
+				)
 			}
 
-			ac := openapi3.OAuthFlow{
-				TokenURL:         tokenURL,
-				AuthorizationURL: tokenURL,
-				Scopes:           scopes,
-			}
-			oAuthFlow := openapi3.OAuthFlows{
-				AuthorizationCode: &ac,
-			}
-			ss := openapi3.SecurityScheme{
-				Type:        common.Oauth2OASType,
-				Description: common.Oauth2Desc,
-				Flows:       &oAuthFlow,
-			}
 			ssr := openapi3.SecuritySchemeRef{
-				Value: &ss,
+				Value: &openapi3.SecurityScheme{
+					Type:        common.Oauth2OASType,
+					Description: common.Oauth2Desc,
+					Flows: &openapi3.OAuthFlows{
+						AuthorizationCode: &openapi3.OAuthFlow{
+							TokenURL:         tokenURL,
+							AuthorizationURL: tokenURL,
+							Scopes:           scopes,
+						},
+					},
+				},
 			}
-
 			spec.Components.SecuritySchemes[common.Oauth2Name] = &ssr
-			spec.Security = *spec.Security.With(openapi3.NewSecurityRequirement().Authenticate(common.Oauth2Name, ""))
 		}
 	}
 
 	return json.Marshal(spec)
+}
+
+func setRamlHostAndAuth(spec []byte, endpoint string, configuration map[string]interface{}) ([]byte, error) {
+	var ramlDef map[string]interface{}
+	// We know that this is a valid raml file from the parser, so this never fails. We need this because yaml unmarshal drops the version line
+	ramlVersion := append(spec[0:10], []byte("\n")...)
+	yaml.Unmarshal(spec, &ramlDef)
+
+	securitySchemes := map[string]interface{}{}
+	securedBy := []interface{}{}
+	for auth, config := range configuration {
+		switch auth {
+		case apic.Basic:
+			securitySchemes[common.BasicAuthName] = map[string]interface{}{
+				"description": common.BasicAuthDesc,
+				"type":        common.BasicAuthRAMLType,
+			}
+			securedBy = append(securedBy, common.BasicAuthName)
+		case apic.Oauth:
+			tokenURL := ""
+			if token := config.(map[string]interface{})[common.TokenURL]; token != nil {
+				tokenURL = token.(string)
+			}
+
+			oAuthSettings := map[string]interface{}{
+				"accessTokenUri":   tokenURL,
+				"authorizationUri": tokenURL,
+			}
+			if s := config.(map[string]interface{})[common.Scopes]; s != nil {
+				// formats correctly for raml securedBy format
+				scopesStr := s.(string)
+				scopesSlice := strings.Split(scopesStr, " ")
+				securedBy = append(securedBy,
+					map[string]interface{}{
+						common.Oauth2Name: map[string]interface{}{
+							"scopes": scopesSlice,
+						},
+					},
+				)
+			} else {
+				// if no scopes defined, this means that the security is applied globally
+				securedBy = append(securedBy, common.Oauth2Name)
+			}
+
+			securitySchemes[common.Oauth2Name] = map[string]interface{}{
+				"description": common.Oauth2Desc,
+				"type":        common.Oauth2RAMLType,
+				"settings":    oAuthSettings,
+				"describedBy": map[string]interface{}{
+					"headers": map[string]interface{}{
+						"Authorization": map[string]interface{}{
+							"description": common.Oauth2Desc,
+							"type":        "string",
+						},
+					},
+				},
+			}
+		}
+	}
+	ramlDef["baseUri"] = endpoint
+	ramlDef["securitySchemes"] = securitySchemes
+	ramlDef["securedBy"] = securedBy
+
+	modifiedSpec, err := yaml.Marshal(ramlDef)
+	if err != nil {
+		return spec, err
+	}
+	return append(ramlVersion, modifiedSpec...), nil
 }
 
 // isPublished checks if an api is published with the latest changes. Returns true if it is, and false if it is not.
