@@ -63,6 +63,12 @@ mulesoft_traceability_agent:
     level: ${LOG_LEVEL:info}
     format: ${LOG_FORMAT:json}
     output: ${LOG_OUTPUT:stdout}
+    metricfile:
+      enabled: ${LOG_METRICFILE_ENABLED:true}
+      name: ${LOG_METRICFILE_NAME:metrics.log}
+      keepfiles: ${LOG_METRICFILE_KEEPFILES:7}
+      rotateeverybytes: ${LOG_METRICFILE_ROTATEEVERYBYTES:10485760}
+      cleanbackups: ${LOG_METRICFILE_CLEANBACKUPS:0}
 
 # Send output to Central Database
 output.traceability:
@@ -107,7 +113,6 @@ output.traceability:
     per_subscription: ${TRACEABILITY_SAMPLING_PER_SUBSCRIPTION:true}
     reportAllErrors: ${TRACEABILITY_SAMPLING_REPORTALLERRORS:true}
   apiExceptionsList: ${TRACEABILITY_EXCEPTION_LIST:[]}
-
 
 logging:
   metrics:
