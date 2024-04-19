@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
@@ -21,9 +20,8 @@ import (
 
 	"github.com/getkin/kin-openapi/openapi3"
 
-	"github.com/Axway/agent-sdk/pkg/agent"
-
 	"github.com/Axway/agent-sdk/pkg/apic"
+	sdkUtil "github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 	"github.com/Axway/agents-mulesoft/pkg/config"
 )
@@ -46,7 +44,6 @@ type serviceHandler struct {
 	client               anypoint.Client
 	schemas              subs.SchemaStore
 	cache                cache.Cache
-	mode                 string
 	discoverOriginalRaml bool
 }
 
@@ -102,15 +99,18 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 	if err != nil {
 		return nil, err
 	}
-	authPolicy, configuration, isSLABased := getAuthPolicy(policies, s.mode)
-	logger = logger.WithField("policy", authPolicy)
+	apicAuths, configuration, err := getApicAuthsAndConfig(policies)
+	if err != nil {
+		return nil, err
+	}
 
-	isAlreadyPublished, checksum := isPublished(api, authPolicy, s.cache)
+	isAlreadyPublished, checksum := isPublished(api, configuration, s.cache)
 	// If true, then the api is published and there were no changes detected
 	if isAlreadyPublished {
 		logger.Debug("api is already published")
 		return nil, nil
 	}
+	logger = logger.WithField("authTypes", apicAuths)
 
 	secondaryKey := common.FormatAPICacheKey(fmt.Sprint(api.ID), api.ProductVersion)
 	// Setting with the checksum allows a way to see if the item changed.
@@ -120,38 +120,16 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 		logger.Errorf("failed to save api to cache: %s", err)
 	}
 
-	apiID := strconv.FormatInt(api.ID, 10)
-
-	var crds []string
-	subSchName := ""
+	crds := []string{}
 	ard := ""
-	if s.mode == marketplace {
-		if authPolicy == apic.Oauth {
+	apicAuthsToCRDMapper := map[string]string{
+		apic.Oauth: provisioning.OAuthSecretCRD,
+		apic.Basic: provisioning.BasicAuthCRD,
+	}
+	for _, auth := range apicAuths {
+		if crd, ok := apicAuthsToCRDMapper[auth]; ok {
 			ard = provisioning.APIKeyARD
-			crds = []string{provisioning.OAuthSecretCRD}
-		}
-	} else {
-		subSchName = s.schemas.GetSubscriptionSchemaName(common.PolicyDetail{
-			Policy:     authPolicy,
-			IsSLABased: isSLABased,
-			APIId:      apiID,
-		})
-
-		// If the API has a new SLA Tier policy, create a new subscription schema for it
-		if subSchName == "" && isSLABased {
-			// Get details of the SLA tiers
-			tiers, err1 := s.client.GetSLATiers(api.ID)
-			if err1 != nil {
-				return nil, err1
-			}
-			schema, err1 := s.createSLATierSchema(apiID, tiers, agent.GetCentralClient())
-			if err1 != nil {
-				return nil, err1
-			}
-
-			logger.Infof("schema registered")
-
-			subSchName = schema.GetSubscriptionName()
+			crds = []string{crd}
 		}
 	}
 
@@ -176,9 +154,8 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 
 	parser := apic.NewSpecResourceParser(rawSpec, "")
 	parser.Parse()
-	processor := parser.GetSpecProcessor()
 
-	modifiedSpec, err := updateSpec(processor.GetResourceType(), api.EndpointURI, authPolicy, configuration, processor.GetSpecBytes())
+	modifiedSpec, err := updateSpec(parser.GetSpecProcessor(), api.EndpointURI, configuration)
 	if err != nil {
 		return nil, err
 	}
@@ -194,17 +171,16 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 	}
 
 	return &ServiceDetail{
-		AccessRequestDefinition: ard,
-		CRDs:                    crds,
-		APIName:                 api.AssetID,
-		APISpec:                 modifiedSpec,
-		AuthPolicy:              authPolicy,
-		Description:             api.Description,
+		ARD:         ard,
+		CRDs:        crds,
+		APIName:     api.AssetID,
+		APISpec:     modifiedSpec,
+		Description: api.Description,
 		// Use the Asset ID for the externalAPIID so that apis linked to the asset are created as a revision
 		ID:                fmt.Sprint(asset.ID),
 		Image:             icon,
 		ImageContentType:  iconContentType,
-		ResourceType:      processor.GetResourceType(),
+		ResourceType:      parser.GetSpecProcessor().GetResourceType(),
 		ServiceAttributes: map[string]string{},
 		AgentDetails: map[string]string{
 			common.AttrAssetID:        fmt.Sprint(asset.ID),
@@ -217,36 +193,9 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 		Tags:             api.Tags,
 		Title:            asset.ExchangeAssetName,
 		Version:          api.AssetVersion,
-		SubscriptionName: subSchName,
+		SubscriptionName: "",
 		Status:           status,
 	}, nil
-}
-
-func (s *serviceHandler) createSLATierSchema(
-	apiID string, tiers *anypoint.Tiers, client apic.Client,
-) (apic.SubscriptionSchema, error) {
-	var tierNames []string
-	for _, tier := range tiers.Tiers {
-		t := fmt.Sprintf("%v-%s", tier.ID, tier.Name)
-		tierNames = append(tierNames, t)
-	}
-
-	slaSchema := subs.NewSLATierContractSchemaUC(apiID, tierNames)
-	s.schemas.RegisterNewSchema(slaSchema)
-	schema := slaSchema.Schema()
-
-	// Register the consumer subscription definition with the agent-sdk subscription manager
-	if err := client.RegisterSubscriptionSchema(schema, true); err != nil {
-		return nil, fmt.Errorf("failed to register sla tier subscription schema for api %s: %w", apiID, err)
-	}
-
-	mpSchema := subs.NewSLATierContractSchemaMP(apiID, tierNames)
-	agent.NewAccessRequestBuilder().
-		SetName(schema.GetSubscriptionName()).
-		SetRequestSchema(mpSchema).
-		Register()
-
-	return schema, nil
 }
 
 // shouldDiscoverAPI determines if the API should be pushed to Central or not
@@ -270,16 +219,16 @@ func shouldDiscoverAPI(endpoint string, discoveryTags, ignoreTags, apiTags []str
 }
 
 // updateSpec Updates the spec endpoints based on the given type.
-func updateSpec(
-	specType, endpointURI, authPolicy string, configuration map[string]interface{}, specContent []byte,
-) ([]byte, error) {
+func updateSpec(processor apic.SpecProcessor, endpointURI string, configuration map[string]interface{}) ([]byte, error) {
 	var err error
 	var oas2Swagger *openapi2.T
 	var oas3Swagger *openapi3.T
+	specType := processor.GetResourceType()
+	specBytes := processor.GetSpecBytes()
 
 	switch specType {
 	case apic.Oas2:
-		oas2Swagger, err = oas.ParseOAS2(specContent)
+		oas2Swagger, err = oas.ParseOAS2(specBytes)
 		if err != nil {
 			return nil, err
 		}
@@ -287,19 +236,21 @@ func updateSpec(
 		if err != nil {
 			logrus.Debugf("failed to update the spec with the given endpoint: %s", endpointURI)
 		}
-		specContent, err = setOAS2policies(oas2Swagger, authPolicy, configuration)
+		specBytes, err = setOAS2policies(oas2Swagger, configuration)
+
 	case apic.Oas3:
-		oas3Swagger, err = oas.ParseOAS3(specContent)
+		oas3Swagger, err = oas.ParseOAS3(specBytes)
 		if err != nil {
 			return nil, err
 		}
 		oas.SetOAS3Servers([]string{endpointURI}, oas3Swagger)
-		specContent, err = setOAS3policies(oas3Swagger, authPolicy, configuration)
+		specBytes, err = setOAS3policies(oas3Swagger, configuration)
+
 	case apic.Raml:
-		specContent, err = setRamlEndpoints(specContent, endpointURI)
+		specBytes, err = setRamlHostAndAuth(specBytes, endpointURI, configuration)
 	}
 
-	return specContent, err
+	return specBytes, err
 }
 
 // getExchangeAssetSpecFile gets the file entry for the Assets spec.
@@ -333,50 +284,38 @@ func getExchangeAssetWithRamlSpecFile(exchangeFiles []anypoint.ExchangeFile) *an
 	return nil
 }
 
-// getAuthPolicy gets the authentication policy type.
-func getAuthPolicy(policies []anypoint.Policy, mode string) (string, map[string]interface{}, bool) {
-	authPolicy := apic.Apikey
-	if mode == marketplace {
-		authPolicy = apic.Oauth
-	}
-
+// gets the API Central Authentication types based on the Mulesoft policy type.
+func getApicAuthsAndConfig(policies []anypoint.Policy) ([]string, map[string]interface{}, error) {
+	apicAuths := []string{}
+	configs := map[string]interface{}{}
 	for _, policy := range policies {
-		if policy.PolicyTemplateID == common.ClientIDEnforcement {
-			conf := getMapFromInterface(policy.Configuration)
-			return authPolicy, conf, false
-		}
-
-		if strings.Contains(policy.PolicyTemplateID, common.SLABased) {
-			conf := getMapFromInterface(policy.Configuration)
-			return authPolicy, conf, true
-		}
-
-		if policy.PolicyTemplateID == common.ExternalOauth {
-			conf := getMapFromInterface(policy.Configuration)
-			return apic.Oauth, conf, false
+		if policy.PolicyTemplateID == common.OAuth2MuleOauthProviderPolicy {
+			configs[apic.Oauth] = getMapFromInterface(policy.Configuration)
+			apicAuths = append(apicAuths, apic.Oauth)
+		} else if policy.PolicyTemplateID == common.BasicAuthSimplePolicy {
+			configs[apic.Basic] = getMapFromInterface(policy.Configuration)
+			apicAuths = append(apicAuths, apic.Basic)
+		} else if policy.PolicyTemplateID == common.ClientIDEnforcementPolicy {
+			config := getMapFromInterface(policy.Configuration)
+			val, ok := config[common.CredOrigin]
+			if !ok {
+				continue
+			}
+			if v, ok := val.(string); ok && v != "customExpression" {
+				configs[apic.Basic] = config
+				apicAuths = append(apicAuths, apic.Basic)
+			} else {
+				return nil, nil, fmt.Errorf("incompatible Mulesoft Policies provided")
+			}
 		}
 	}
 
-	return apic.Passthrough, map[string]interface{}{}, false
-}
-
-func setRamlEndpoints(spec []byte, endpoints string) ([]byte, error) {
-	var ramlDef map[string]interface{}
-	// We know that this is a valid raml file from the parser, so this is never fails. We need this because yaml unmarshal drops the version line
-	ramlVersion := append(spec[0:10], []byte("\n")...)
-	yaml.Unmarshal(spec, &ramlDef)
-	ramlDef["baseUri"] = endpoints
-
-	modifiedSpec, err := yaml.Marshal(ramlDef)
-	if err != nil {
-		return spec, err
-	}
-	return append(ramlVersion, modifiedSpec...), nil
+	return sdkUtil.RemoveDuplicateValuesFromStringSlice(apicAuths), configs, nil
 }
 
 // makeChecksum generates a makeChecksum for the api for change detection
-func makeChecksum(val interface{}, authPolicy string) string {
-	sum := sha256.Sum256([]byte(fmt.Sprintf("%v%s", val, authPolicy)))
+func makeChecksum(val interface{}, cfg interface{}) string {
+	sum := sha256.Sum256([]byte(fmt.Sprintf("%v%s", val, cfg)))
 	return fmt.Sprintf("%x", sum)
 }
 
@@ -393,128 +332,192 @@ func doesAPIContainAnyMatchingTag(tags, apiTags []string) bool {
 	return false
 }
 
-func setOAS2policies(swagger *openapi2.T, authPolicy string, configuration map[string]interface{}) ([]byte, error) {
+func setOAS2policies(swagger *openapi2.T, configuration map[string]interface{}) ([]byte, error) {
 	// remove existing security
 	swagger.SecurityDefinitions = make(map[string]*openapi2.SecurityScheme)
-	switch authPolicy {
-	case apic.Apikey:
-		desc := common.DescClientCred
-		if configuration[common.CredOrigin] != nil {
-			desc += configuration[common.CredOrigin].(string)
+	swagger.Security = openapi2.SecurityRequirements{}
+	for auth, config := range configuration {
+		switch auth {
+		case apic.Basic:
+			ss := openapi2.SecurityScheme{
+				Type:        common.BasicAuthScheme,
+				Description: common.BasicAuthDesc,
+			}
+			swagger.SecurityDefinitions[common.BasicAuthName] = &ss
+			swagger.Security = append(swagger.Security, map[string][]string{
+				common.BasicAuthName: []string{},
+			})
+
+		case apic.Oauth:
+			tokenURL := ""
+			scopes := make(map[string]string)
+			if cfg := config.(map[string]interface{})[common.TokenURL]; cfg != nil {
+				tokenURL = cfg.(string)
+			}
+			if cfg := config.(map[string]interface{})[common.Scopes]; cfg != nil {
+				// Mulesoft scopes should come separated by space (it's specified when you add scopes in the UI)
+				scopesSlice := strings.Split(cfg.(string), " ")
+				for _, scope := range scopesSlice {
+					scopes[scope] = ""
+				}
+				swagger.Security = append(swagger.Security, map[string][]string{
+					common.Oauth2Name: scopesSlice,
+				})
+			} else {
+				swagger.Security = append(swagger.Security, map[string][]string{
+					common.Oauth2Name: []string{},
+				})
+			}
+
+			ss := openapi2.SecurityScheme{
+				Description:      common.Oauth2Desc,
+				Type:             common.Oauth2OASType,
+				Flow:             common.AccessCode,
+				AuthorizationURL: tokenURL,
+				TokenURL:         tokenURL,
+				Scopes:           scopes,
+			}
+			swagger.SecurityDefinitions[common.Oauth2Name] = &ss
 		}
-
-		ss := openapi2.SecurityScheme{
-			Type:        common.APIKey,
-			Name:        common.Authorization,
-			In:          common.Header,
-			Description: desc,
-		}
-
-		sd := map[string]*openapi2.SecurityScheme{
-			common.ClientIDEnforcement: &ss,
-		}
-		swagger.SecurityDefinitions = sd
-
-	case apic.Oauth:
-		var tokenURL string
-		scopes := make(map[string]string)
-
-		if configuration[common.TokenURL] != nil {
-			tokenURL = configuration[common.TokenURL].(string)
-		}
-
-		if configuration[common.Scopes] != nil {
-			scopes[common.Scopes] = configuration[common.Scopes].(string)
-		}
-
-		ssp := openapi2.SecurityScheme{
-			Description:      common.DescOauth2,
-			Type:             common.Oauth2,
-			Flow:             common.AccessCode,
-			TokenURL:         tokenURL,
-			AuthorizationURL: tokenURL,
-			Scopes:           scopes,
-		}
-
-		sd := map[string]*openapi2.SecurityScheme{
-			common.Oauth2: &ssp,
-		}
-
-		swagger.SecurityDefinitions = sd
 	}
+
 	return json.Marshal(swagger)
 }
 
-func setOAS3policies(spec *openapi3.T, authPolicy string, configuration map[string]interface{}) ([]byte, error) {
+func setOAS3policies(spec *openapi3.T, configuration map[string]interface{}) ([]byte, error) {
 	// remove existing security
 	spec.Components.SecuritySchemes = make(openapi3.SecuritySchemes)
-	switch authPolicy {
-	case apic.Apikey:
-		desc := common.DescClientCred
-		if configuration[common.CredOrigin] != nil {
-			desc += configuration[common.CredOrigin].(string)
-		}
-
-		ss := openapi3.SecurityScheme{
-			Type:        common.APIKey,
-			Name:        common.Authorization,
-			In:          common.Header,
-			Description: desc}
-
-		ssr := openapi3.SecuritySchemeRef{
-			Value: &ss,
-		}
-
-		spec.Components.SecuritySchemes = openapi3.SecuritySchemes{common.ClientIDEnforcement: &ssr}
-	case apic.Oauth:
-		var tokenURL string
-		scopes := make(map[string]string)
-
-		if configuration[common.TokenURL] != nil {
-			var ok bool
-			tokenURL, ok = configuration[common.TokenURL].(string)
-			if !ok {
-				return nil, fmt.Errorf("unable to perform type assertion on %#v", configuration[common.TokenURL])
+	spec.Security = *openapi3.NewSecurityRequirements()
+	for auth, config := range configuration {
+		switch auth {
+		case apic.Basic:
+			ssr := openapi3.SecuritySchemeRef{
+				Value: &openapi3.SecurityScheme{
+					Type:        common.BasicAuthOASType,
+					Scheme:      common.BasicAuthScheme,
+					Description: common.BasicAuthDesc,
+				},
 			}
-		}
 
-		if configuration[common.Scopes] != nil {
-			scopes[common.Scopes] = configuration[common.Scopes].(string)
-		}
+			spec.Components.SecuritySchemes[common.BasicAuthName] = &ssr
+			spec.Security = *spec.Security.With(openapi3.NewSecurityRequirement().Authenticate(common.BasicAuthName, ""))
+		case apic.Oauth:
+			tokenURL := ""
+			scopes := make(map[string]string)
 
-		ac := openapi3.OAuthFlow{
-			TokenURL:         tokenURL,
-			AuthorizationURL: tokenURL,
-			Scopes:           scopes,
-		}
-		oAuthFlow := openapi3.OAuthFlows{
-			AuthorizationCode: &ac,
-		}
-		ss := openapi3.SecurityScheme{
-			Type:        common.Oauth2,
-			Description: common.DescOauth2,
-			Flows:       &oAuthFlow,
-		}
-		ssr := openapi3.SecuritySchemeRef{
-			Value: &ss,
-		}
+			if cfg := config.(map[string]interface{})[common.TokenURL]; cfg != nil {
+				tokenURL = cfg.(string)
+			}
+			if cfg := config.(map[string]interface{})[common.Scopes]; cfg != nil {
+				// Mulesoft scopes should come separated by space (it's defined when you add scopes in the UI)
+				scopesSlice := strings.Split(cfg.(string), " ")
+				for _, scope := range scopesSlice {
+					scopes[scope] = ""
+				}
+				spec.Security = *spec.Security.With(
+					openapi3.NewSecurityRequirement().Authenticate(
+						common.Oauth2Name, scopesSlice...),
+				)
+			}
 
-		spec.Components.SecuritySchemes = openapi3.SecuritySchemes{common.Oauth2: &ssr}
+			ssr := openapi3.SecuritySchemeRef{
+				Value: &openapi3.SecurityScheme{
+					Type:        common.Oauth2OASType,
+					Description: common.Oauth2Desc,
+					Flows: &openapi3.OAuthFlows{
+						AuthorizationCode: &openapi3.OAuthFlow{
+							TokenURL:         tokenURL,
+							AuthorizationURL: tokenURL,
+							Scopes:           scopes,
+						},
+					},
+				},
+			}
+			spec.Components.SecuritySchemes[common.Oauth2Name] = &ssr
+		}
 	}
 
 	return json.Marshal(spec)
 }
 
+func setRamlHostAndAuth(spec []byte, endpoint string, configuration map[string]interface{}) ([]byte, error) {
+	var ramlDef map[string]interface{}
+	// We know that this is a valid raml file from the parser, so this never fails. We need this because yaml unmarshal drops the version line
+	ramlVersion := append(spec[0:10], []byte("\n")...)
+	yaml.Unmarshal(spec, &ramlDef)
+
+	securitySchemes := map[string]interface{}{}
+	securedBy := []interface{}{}
+	for auth, config := range configuration {
+		switch auth {
+		case apic.Basic:
+			securitySchemes[common.BasicAuthName] = map[string]interface{}{
+				"description": common.BasicAuthDesc,
+				"type":        common.BasicAuthRAMLType,
+			}
+			securedBy = append(securedBy, common.BasicAuthName)
+		case apic.Oauth:
+			tokenURL := ""
+			if token := config.(map[string]interface{})[common.TokenURL]; token != nil {
+				tokenURL = token.(string)
+			}
+
+			oAuthSettings := map[string]interface{}{
+				"accessTokenUri":   tokenURL,
+				"authorizationUri": tokenURL,
+			}
+			if s := config.(map[string]interface{})[common.Scopes]; s != nil {
+				// formats correctly for raml securedBy format
+				scopesStr := s.(string)
+				scopesSlice := strings.Split(scopesStr, " ")
+				securedBy = append(securedBy,
+					map[string]interface{}{
+						common.Oauth2Name: map[string]interface{}{
+							"scopes": scopesSlice,
+						},
+					},
+				)
+			} else {
+				// if no scopes defined, this means that the security is applied globally
+				securedBy = append(securedBy, common.Oauth2Name)
+			}
+
+			securitySchemes[common.Oauth2Name] = map[string]interface{}{
+				"description": common.Oauth2Desc,
+				"type":        common.Oauth2RAMLType,
+				"settings":    oAuthSettings,
+				"describedBy": map[string]interface{}{
+					"headers": map[string]interface{}{
+						"Authorization": map[string]interface{}{
+							"description": common.Oauth2Desc,
+							"type":        "string",
+						},
+					},
+				},
+			}
+		}
+	}
+	ramlDef["baseUri"] = endpoint
+	ramlDef["securitySchemes"] = securitySchemes
+	ramlDef["securedBy"] = securedBy
+
+	modifiedSpec, err := yaml.Marshal(ramlDef)
+	if err != nil {
+		return spec, err
+	}
+	return append(ramlVersion, modifiedSpec...), nil
+}
+
 // isPublished checks if an api is published with the latest changes. Returns true if it is, and false if it is not.
-func isPublished(api *anypoint.API, authPolicy string, c cache.Cache) (bool, string) {
+func isPublished(api *anypoint.API, configuration map[string]interface{}, c cache.Cache) (bool, string) {
 	// Change detection (asset + policies)
-	checksum := makeChecksum(api, authPolicy)
+	checksum := makeChecksum(api, configuration)
 	item, err := c.Get(checksum)
 	if err != nil || item == nil {
 		return false, checksum
 	}
 
-	return true, checksum
+	return true, ""
 }
 
 func getMapFromInterface(item interface{}) map[string]interface{} {

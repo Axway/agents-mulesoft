@@ -19,17 +19,17 @@ func TestClient(t *testing.T) {
 		CachePath:           "/tmp",
 		Environment:         "Sandbox",
 		OrgName:             "BusinessOrg1",
-		Password:            "abc",
 		PollInterval:        10,
 		ProxyURL:            "",
 		SessionLifetime:     60,
-		Username:            "123",
+		ClientID:            "1",
+		ClientSecret:        "2",
 	}
 	mcb := &MockClientBase{}
 	mcb.Reqs = map[string]*api.Response{
-		"/accounts/login": {
+		"/accounts/api/v2/oauth2/token": {
 			Code:    200,
-			Body:    []byte(`{"access_token":"abc123"}`),
+			Body:    []byte(`{"access_token":"abc123","expires_in":3600}`),
 			Headers: nil,
 		},
 		"/accounts/api/me": {
@@ -67,6 +67,19 @@ func TestClient(t *testing.T) {
 						"id": "111",
 						"name": "Sandbox",
 						"organizationId": "444",
+						"type": "fake",
+						"clientId": "abc123"
+					}],
+					"total": 1
+				}`),
+		},
+		"/accounts/api/organizations/333/environments": {
+			Code: 200,
+			Body: []byte(`{
+					"data": [{
+						"id": "111",
+						"name": "name",
+						"organizationId": "333",
 						"type": "fake",
 						"clientId": "abc123"
 					}],
@@ -147,8 +160,8 @@ func TestClient(t *testing.T) {
 	logrus.Info(token, user, duration, err)
 	assert.Equal(t, "abc123", token)
 	assert.Equal(t, "123", user.ID)
-	assert.Equal(t, "444", user.Organization.ID)
-	assert.Equal(t, time.Duration(60), duration)
+	assert.Equal(t, "333", user.Organization.ID)
+	assert.Equal(t, time.Hour, duration)
 	assert.Equal(t, nil, err)
 	env, err := client.GetEnvironmentByName("/env1")
 	assert.Nil(t, err)

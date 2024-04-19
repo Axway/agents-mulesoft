@@ -108,7 +108,7 @@ func (me *MuleEventEmitter) Start() error {
 func (me *MuleEventEmitter) getLastRun() (string, string) {
 	tStamp, _ := me.cache.Get(CacheKeyTimeStamp)
 	now := time.Now()
-	tNow := now.Format(time.RFC3339)
+	tNow := now.Format(time.RFC3339Nano)
 	if tStamp == nil {
 		tStamp = tNow
 		me.saveLastRun(tNow)

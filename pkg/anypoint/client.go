@@ -102,8 +102,6 @@ func (c *AnypointClient) OnConfigChange(mulesoftConfig *config.MulesoftConfig) {
 	}
 
 	c.baseURL = mulesoftConfig.AnypointExchangeURL
-	c.username = mulesoftConfig.Username
-	c.password = mulesoftConfig.Password
 	c.clientID = mulesoftConfig.ClientID
 	c.clientSecret = mulesoftConfig.ClientSecret
 	c.orgName = mulesoftConfig.OrgName
@@ -148,19 +146,16 @@ func (c *AnypointClient) healthcheck(name string) (status *hc.Status) {
 
 // GetAccessToken retrieves a token
 func (c *AnypointClient) GetAccessToken() (string, *User, time.Duration, error) {
-	url := c.baseURL + "/accounts/login"
+	if c.clientID == "" || c.clientSecret == "" {
+		return "", nil, 0, fmt.Errorf("authentication only available through clientID and clientSecret")
+	}
+	url := c.baseURL + "/accounts/api/v2/oauth2/token"
 	body := map[string]string{
-		"username": c.username,
-		"password": c.password,
+		"grant_type":    "client_credentials",
+		"client_id":     c.clientID,
+		"client_secret": c.clientSecret,
 	}
-	if c.clientID != "" {
-		url = c.baseURL + "/accounts/api/v2/oauth2/token"
-		body = map[string]string{
-			"grant_type":    "client_credentials",
-			"client_id":     c.clientID,
-			"client_secret": c.clientSecret,
-		}
-	}
+
 	buffer, err := json.Marshal(body)
 	if err != nil {
 		return "", nil, 0, agenterrors.Wrap(ErrMarshallingBody, err.Error())
@@ -190,8 +185,16 @@ func (c *AnypointClient) GetAccessToken() (string, *User, time.Duration, error) 
 	if err != nil {
 		return "", nil, 0, agenterrors.Wrap(ErrAuthentication, err.Error())
 	}
-	token := respMap["access_token"].(string)
+	token, ok := respMap["access_token"].(string)
+	if !ok {
+		return "", nil, 0, ErrMarshallingBody
+	}
+	lifetime, ok := respMap["expires_in"].(float64)
+	if !ok {
+		return "", nil, 0, ErrMarshallingBody
+	}
 
+	c.lifetime = time.Second * time.Duration(lifetime)
 	user, err := c.getCurrentUser(token)
 	if err != nil {
 		return "", nil, 0, agenterrors.Wrap(ErrAuthentication, err.Error())
@@ -226,7 +229,7 @@ func (c *AnypointClient) getCurrentUser(token string) (*User, error) {
 
 	// this sets the User.Organization.ID as the Org ID of the Business Unit specified in Config
 	for _, value := range user.User.MemberOfOrganizations {
-		if value.Name == c.orgName {
+		if value.ID == c.orgName {
 			user.User.Organization.ID = value.ID
 			user.User.Organization.Name = value.Name
 		}

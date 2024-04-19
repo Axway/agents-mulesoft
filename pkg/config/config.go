@@ -30,8 +30,6 @@ const (
 	pathOrgName               = "mulesoft.orgName"
 	pathDiscoveryTags         = "mulesoft.discoveryTags"
 	pathDiscoveryIgnoreTags   = "mulesoft.discoveryIgnoreTags"
-	pathAuthUsername          = "mulesoft.auth.username"
-	pathAuthPassword          = "mulesoft.auth.password"
 	pathAuthClientID          = "mulesoft.auth.clientID"
 	pathAuthClientSecret      = "mulesoft.auth.clientSecret"
 	pathAuthLifetime          = "mulesoft.auth.lifetime"
@@ -48,10 +46,7 @@ const (
 
 const (
 	anypointExchangeUrlErr = "invalid mulesoft configuration: anypointExchangeUrl is not configured"
-	usernameOrClientIDErr  = "invalid mulesoft configuration: username or client id must be configured"
-	usernameAndClientIDErr = "invalid mulesoft configuration: cannot use both non-empty username and client id"
-	passwordErr            = "invalid mulesoft configuration: password is not configured"
-	clientSecretErr        = "invalid mulesoft configuration: client secret is not configured"
+	clientCredentialsErr   = "invalid mulesoft configuration: clientID and clientSecret are required. Using Username and password is deprecated"
 	envErr                 = "invalid mulesoft configuration: environment is not configured"
 	orgNameErr             = "invalid mulesoft configuration: OrgName is not configured"
 	pollIntervalErr        = "invalid mulesoft configuration: pollInterval is invalid"
@@ -83,12 +78,10 @@ type MulesoftConfig struct {
 	DiscoveryTags        string            `config:"discoveryTags"`
 	Environment          string            `config:"environment"`
 	OrgName              string            `config:"orgname"`
-	Password             string            `config:"auth.password"`
 	PollInterval         time.Duration     `config:"pollInterval"`
 	ProxyURL             string            `config:"proxyUrl"`
 	SessionLifetime      time.Duration     `config:"auth.lifetime"`
 	TLS                  corecfg.TLSConfig `config:"ssl"`
-	Username             string            `config:"auth.username"`
 	ClientID             string            `config:"auth.clientID"`
 	ClientSecret         string            `config:"auth.clientSecret"`
 	DiscoverOriginalRaml bool              `config:"discoverOriginalRaml"`
@@ -100,20 +93,8 @@ func (c *MulesoftConfig) ValidateCfg() (err error) {
 		return errors.New(anypointExchangeUrlErr)
 	}
 
-	if c.Username == "" && c.ClientID == "" {
-		return errors.New(usernameOrClientIDErr)
-	}
-
-	if c.Username != "" && c.ClientID != "" {
-		return errors.New(usernameAndClientIDErr)
-	}
-
-	if c.Username != "" && c.Password == "" {
-		return errors.New(passwordErr)
-	}
-
-	if c.ClientID != "" && c.ClientSecret == "" {
-		return errors.New(clientSecretErr)
+	if c.ClientID == "" || c.ClientSecret == "" {
+		return errors.New(clientCredentialsErr)
 	}
 
 	if c.Environment == "" {
@@ -140,8 +121,6 @@ func AddConfigProperties(rootProps props) {
 	rootProps.AddStringProperty(pathAnypointExchangeURL, "https://anypoint.mulesoft.com", "Mulesoft Anypoint Exchange URL.")
 	rootProps.AddStringProperty(pathEnvironment, "", "Mulesoft Anypoint environment.")
 	rootProps.AddStringProperty(pathOrgName, "", "Mulesoft Anypoint Business Group.")
-	rootProps.AddStringProperty(pathAuthUsername, "", "Mulesoft username.")
-	rootProps.AddStringProperty(pathAuthPassword, "", "Mulesoft password.")
 	rootProps.AddStringProperty(pathAuthClientID, "", "Mulesoft client id.")
 	rootProps.AddStringProperty(pathAuthClientSecret, "", "Mulesoft client secret.")
 	rootProps.AddDurationProperty(pathAuthLifetime, 60*time.Minute, "Mulesoft session lifetime.")
@@ -169,11 +148,9 @@ func NewMulesoftConfig(rootProps props) *MulesoftConfig {
 		DiscoveryTags:       rootProps.StringPropertyValue(pathDiscoveryTags),
 		Environment:         rootProps.StringPropertyValue(pathEnvironment),
 		OrgName:             rootProps.StringPropertyValue(pathOrgName),
-		Password:            rootProps.StringPropertyValue(pathAuthPassword),
 		PollInterval:        rootProps.DurationPropertyValue(pathPollInterval),
 		ProxyURL:            rootProps.StringPropertyValue(pathProxyURL),
 		SessionLifetime:     rootProps.DurationPropertyValue(pathAuthLifetime),
-		Username:            rootProps.StringPropertyValue(pathAuthUsername),
 		ClientID:            rootProps.StringPropertyValue(pathAuthClientID),
 		ClientSecret:        rootProps.StringPropertyValue(pathAuthClientSecret),
 		TLS: &corecfg.TLSConfiguration{
