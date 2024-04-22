@@ -6,8 +6,6 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/Axway/agents-mulesoft/pkg/subscription"
-
 	coreAgent "github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
@@ -29,7 +27,7 @@ type Agent struct {
 }
 
 // NewAgent creates a new agent
-func NewAgent(cfg *config.AgentConfig, client anypoint.Client, sm subscription.SchemaStore) (agent *Agent) {
+func NewAgent(cfg *config.AgentConfig, client anypoint.Client) (agent *Agent) {
 	buffer := 5
 	apiChan := make(chan *ServiceDetail, buffer)
 
@@ -46,7 +44,6 @@ func NewAgent(cfg *config.AgentConfig, client anypoint.Client, sm subscription.S
 		discoveryTags:        cleanTags(cfg.MulesoftConfig.DiscoveryTags),
 		discoveryIgnoreTags:  cleanTags(cfg.MulesoftConfig.DiscoveryIgnoreTags),
 		client:               client,
-		schemas:              sm,
 		cache:                c,
 		discoverOriginalRaml: cfg.MulesoftConfig.DiscoverOriginalRaml,
 	}

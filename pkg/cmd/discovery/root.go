@@ -73,10 +73,11 @@ func initConfig(centralConfig corecfg.CentralConfig) (interface{}, error) {
 		if centralConfig.IsMarketplaceSubsEnabled() {
 			agent.RegisterProvisioner(subs.NewProvisioner(muleSubClient, entry))
 			agent.NewAPIKeyAccessRequestBuilder().Register()
-			agent.NewOAuthCredentialRequestBuilder(agent.WithCRDOAuthSecret()).IsRenewable().Register()
+			agent.NewOAuthCredentialRequestBuilder(agent.WithCRDOAuthSecret(), agent.WithCRDIsSuspendable()).Register()
+			agent.NewBasicAuthCredentialRequestBuilder(agent.WithCRDIsSuspendable()).Register()
 		}
 
-		discoveryAgent = discovery.NewAgent(conf, client, &subs.Manager{})
+		discoveryAgent = discovery.NewAgent(conf, client)
 	}
 	return conf, nil
 }

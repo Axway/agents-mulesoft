@@ -84,13 +84,11 @@ func TestServiceHandler(t *testing.T) {
 		mc.On("GetExchangeFileContent").Return([]byte(c.content), true, nil)
 		mc.On("GetExchangeAssetIcon").Return("", "", nil)
 
-		msh := &mockSchemaHandler{}
 		sh := &serviceHandler{
 			muleEnv:             "Sandbox",
 			discoveryTags:       []string{"tag1"},
 			discoveryIgnoreTags: []string{"nah"},
 			client:              mc,
-			schemas:             msh,
 			cache:               cache.New(),
 		}
 		list := sh.ToServiceDetails(&asset)
@@ -142,7 +140,6 @@ func TestServiceHandlerDidNotDiscoverAPI(t *testing.T) {
 		discoveryIgnoreTags: []string{"nah"},
 		client:              mc,
 		cache:               cache.New(),
-		schemas:             &mockSchemaHandler{},
 	}
 	details := sh.ToServiceDetails(&asset)
 	assert.Equal(t, 0, len(details))
@@ -161,7 +158,6 @@ func TestServiceHandlerGetExchangeAssetError(t *testing.T) {
 		discoveryTags:       []string{},
 		discoveryIgnoreTags: []string{},
 		client:              mc,
-		schemas:             &mockSchemaHandler{},
 		cache:               cache.New(),
 	}
 	sd, err := sh.getServiceDetail(&asset, &asset.APIs[0])

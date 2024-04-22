@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
@@ -15,7 +16,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	subs "github.com/Axway/agents-mulesoft/pkg/subscription"
 	"github.com/getkin/kin-openapi/openapi2"
 
 	"github.com/getkin/kin-openapi/openapi3"
@@ -24,11 +24,6 @@ import (
 	sdkUtil "github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 	"github.com/Axway/agents-mulesoft/pkg/config"
-)
-
-const (
-	marketplace = "marketplace"
-	catalog     = "unified-catalog"
 )
 
 // ServiceHandler converts a mulesoft asset to an array of ServiceDetails
@@ -42,7 +37,6 @@ type serviceHandler struct {
 	discoveryTags        []string
 	discoveryIgnoreTags  []string
 	client               anypoint.Client
-	schemas              subs.SchemaStore
 	cache                cache.Cache
 	discoverOriginalRaml bool
 }
@@ -95,7 +89,7 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 	})
 
 	// Get the policies associated with the API
-	policies, err := s.client.GetPolicies(api.ID)
+	policies, err := s.client.GetPolicies(strconv.Itoa(api.ID))
 	if err != nil {
 		return nil, err
 	}

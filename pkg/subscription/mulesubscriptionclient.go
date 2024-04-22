@@ -2,18 +2,21 @@ package subscription
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
+	"github.com/Axway/agents-mulesoft/pkg/common"
 )
 
 // MuleSubscriptionClient interface for managing mulesoft subscriptions
 type MuleSubscriptionClient interface {
-	CreateApp(appName, apiID, description string) (*anypoint.Application, error)
-	CreateContract(apiID, tier string, appID int64) (*anypoint.Contract, error)
-	DeleteApp(appID int64) error
+	CreateApp(appName string, apiID string, description string) (*anypoint.Application, error)
+	CreateContract(apiID, tierID, appID string) (*anypoint.Contract, error)
+	DeleteApp(appID string) error
 	DeleteContract(apiID, contractID string) error
-	GetApp(id string) (*anypoint.Application, error)
-	ResetAppSecret(appID int64) (*anypoint.Application, error)
+	GetApp(appID string) (*anypoint.Application, error)
+	ResetAppSecret(appID string) (*anypoint.Application, error)
+	CreateIfNotExistingSLATier(apiID string) (string, error)
 }
 
 type muleSubscription struct {
@@ -28,17 +31,17 @@ func NewMuleSubscriptionClient(client anypoint.Client) MuleSubscriptionClient {
 }
 
 // ResetAppSecret resets the secret for an app
-func (c muleSubscription) ResetAppSecret(appID int64) (*anypoint.Application, error) {
+func (c muleSubscription) ResetAppSecret(appID string) (*anypoint.Application, error) {
 	return c.client.ResetAppSecret(appID)
 }
 
 // GetApp gets a mulesoft app by id
-func (c muleSubscription) GetApp(id string) (*anypoint.Application, error) {
-	return c.client.GetClientApplication(id)
+func (c muleSubscription) GetApp(appID string) (*anypoint.Application, error) {
+	return c.client.GetClientApplication(appID)
 }
 
 // CreateApp creates an app in Mulesoft
-func (c muleSubscription) CreateApp(appName, apiID, description string) (*anypoint.Application, error) {
+func (c muleSubscription) CreateApp(appName string, apiID string, description string) (*anypoint.Application, error) {
 
 	body := &anypoint.AppRequestBody{
 		Name:        appName,
@@ -54,13 +57,11 @@ func (c muleSubscription) CreateApp(appName, apiID, description string) (*anypoi
 }
 
 // CreateContract creates a contract between an API and an app
-func (c muleSubscription) CreateContract(apiID, tier string, appID int64) (*anypoint.Contract, error) {
+func (c muleSubscription) CreateContract(apiID, tierID, appID string) (*anypoint.Contract, error) {
 	api, err := c.client.GetAPI(apiID)
 	if err != nil {
 		return nil, err
 	}
-
-	tID := parseTierID(tier)
 
 	// Need to fetch the exchange asset to get the version group
 	exchangeAsset, err := c.client.GetExchangeAsset(api.GroupID, api.AssetID, api.AssetVersion)
@@ -68,13 +69,12 @@ func (c muleSubscription) CreateContract(apiID, tier string, appID int64) (*anyp
 		return nil, err
 	}
 
-	contract := newContract(apiID, exchangeAsset.VersionGroup, tID, api)
-
+	contract := newContract(apiID, exchangeAsset.VersionGroup, tierID, api)
 	return c.client.CreateContract(appID, contract)
 }
 
 // DeleteApp deletes the mulesoft app
-func (c muleSubscription) DeleteApp(appID int64) error {
+func (c muleSubscription) DeleteApp(appID string) error {
 	return c.client.DeleteClientApplication(appID)
 }
 
@@ -87,10 +87,29 @@ func (c muleSubscription) DeleteContract(apiID, contractID string) error {
 	return c.client.DeleteContract(apiID, contractID)
 }
 
-func newContract(apiID, versionGroup string, tID int64, api *anypoint.API) *anypoint.Contract {
+func (c muleSubscription) CreateIfNotExistingSLATier(apiID string) (string, error) {
+	existingTiers, err := c.client.GetSLATiers(apiID, common.AxwayAgentSLATierName)
+	if err != nil {
+		return "", fmt.Errorf("error getting SLA tiers: %s", err)
+	}
+	for _, tier := range existingTiers.Tiers {
+		if tier.Name == common.AxwayAgentSLATierName {
+			return strconv.Itoa(*tier.ID), nil
+		}
+	}
+
+	tierID, err := c.client.CreateSLATier(apiID)
+	if err != nil {
+		return "", err
+	}
+	return strconv.Itoa(tierID), nil
+}
+
+func newContract(apiID, versionGroup string, tierID string, api *anypoint.API) *anypoint.Contract {
+	tID, _ := strconv.Atoi(tierID)
 	return &anypoint.Contract{
 		AcceptedTerms:   true,
-		APIID:           apiID,
+		ApiID:           apiID,
 		AssetID:         api.AssetID,
 		EnvironmentID:   api.EnvironmentID,
 		GroupID:         api.GroupID,

@@ -16,11 +16,11 @@ func (m *MockMuleSubscriptionClient) CreateApp(appName, apiID, description strin
 	return m.app, m.err
 }
 
-func (m *MockMuleSubscriptionClient) CreateContract(apiID, tier string, appID int64) (*anypoint.Contract, error) {
+func (m *MockMuleSubscriptionClient) CreateContract(_, _, _ string) (*anypoint.Contract, error) {
 	return m.contract, m.err
 }
 
-func (m *MockMuleSubscriptionClient) DeleteApp(appName int64) error {
+func (m *MockMuleSubscriptionClient) DeleteApp(appName string) error {
 	return m.err
 }
 
@@ -28,10 +28,14 @@ func (m *MockMuleSubscriptionClient) DeleteContract(apiID, contractID string) er
 	return m.err
 }
 
-func (m *MockMuleSubscriptionClient) GetApp(id string) (*anypoint.Application, error) {
+func (m *MockMuleSubscriptionClient) GetApp(appID string) (*anypoint.Application, error) {
 	return m.app, m.err
 }
 
-func (m *MockMuleSubscriptionClient) ResetAppSecret(appID int64) (*anypoint.Application, error) {
+func (m *MockMuleSubscriptionClient) ResetAppSecret(appID string) (*anypoint.Application, error) {
 	return m.newApp, m.rotateErr
+}
+
+func (m *MockMuleSubscriptionClient) CreateIfNotExistingSLATier(appID string) (string, error) {
+	return "", nil
 }
