@@ -3,7 +3,6 @@ package traceability
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"testing"
 	"time"
 
@@ -14,18 +13,12 @@ import (
 	"github.com/Axway/agent-sdk/pkg/traceability/redaction"
 	"gopkg.in/yaml.v2"
 
-	"github.com/Axway/agent-sdk/pkg/agent"
-
 	"github.com/Axway/agent-sdk/pkg/transaction"
 	"github.com/elastic/beats/v7/libbeat/beat"
 	"github.com/elastic/beats/v7/libbeat/common"
 
-	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	transutil "github.com/Axway/agent-sdk/pkg/transaction/util"
-	"github.com/Axway/agents-mulesoft/pkg/config"
 )
-
-var agentConfig *config.AgentConfig
 
 const (
 	TenantID       = "332211"
@@ -193,27 +186,6 @@ func (c *eventGeneratorMock) CreateEvent(
 
 func (c *eventGeneratorMock) SetUseTrafficForAggregation(useTrafficForAggregation bool) {
 	c.shouldUseTrafficForAggregation = useTrafficForAggregation
-}
-
-func setupConfig() error {
-	os.Setenv("CENTRAL_AUTH_PRIVATEKEY_DATA", "12345")
-	os.Setenv("CENTRAL_AUTH_PUBLICKEY_DATA", "12345")
-	cfg := corecfg.NewTestCentralConfig(corecfg.TraceabilityAgent)
-	centralCfg := cfg.(*corecfg.CentralConfiguration)
-	centralCfg.APICDeployment = APICDeployment
-	centralCfg.TenantID = TenantID
-	centralCfg.Environment = Environment
-	centralCfg.EnvironmentID = EnvID
-	agentConfig = &config.AgentConfig{
-		CentralConfig: centralCfg,
-		MulesoftConfig: &config.MulesoftConfig{
-			PollInterval: 1 * time.Second,
-		},
-	}
-	agentConfig.CentralConfig.SetEnvironmentID(EnvID)
-	agentConfig.CentralConfig.SetTeamID(TeamID)
-	config.SetConfig(agentConfig)
-	return agent.Initialize(agentConfig.CentralConfig)
 }
 
 type eventGenMockErr struct {

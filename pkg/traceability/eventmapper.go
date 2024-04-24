@@ -9,7 +9,7 @@ import (
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 	"github.com/google/uuid"
 
-	"github.com/Axway/agent-sdk/pkg/agent"
+	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/transaction"
 	transutil "github.com/Axway/agent-sdk/pkg/transaction/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
@@ -25,13 +25,21 @@ type Mapper interface {
 	ProcessMapping(event anypoint.AnalyticsEvent) ([]*transaction.LogEvent, error)
 }
 
+func NewEventMapper(client anypoint.AnalyticsClient, centralCfg config.CentralConfig) *EventMapper {
+	return &EventMapper{
+		client:     client,
+		centralCfg: centralCfg,
+	}
+}
+
 // EventMapper -
 type EventMapper struct {
-	client anypoint.AnalyticsClient
+	client     anypoint.AnalyticsClient
+	centralCfg config.CentralConfig
 }
 
 func (em *EventMapper) ProcessMapping(event anypoint.AnalyticsEvent) ([]*transaction.LogEvent, error) {
-	centralCfg := agent.GetCentralConfig()
+	centralCfg := em.centralCfg
 
 	eventTime := event.Timestamp.UnixNano() / 1000000
 	txID := uuid.New().String()

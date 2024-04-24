@@ -1,13 +1,17 @@
 package traceability
 
 import (
+	"os"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/Axway/agents-mulesoft/pkg/config"
 	"github.com/Axway/agents-mulesoft/pkg/discovery"
 	"github.com/google/uuid"
 
+	"github.com/Axway/agent-sdk/pkg/agent"
+	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/traceability/redaction"
 	"github.com/Axway/agent-sdk/pkg/transaction"
 
@@ -17,8 +21,10 @@ import (
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 )
 
+var agentConfig *config.AgentConfig
+
 var event = anypoint.AnalyticsEvent{
-	Application:        "4321",
+	Application:        "43210",
 	APIID:              "211799904",
 	APIName:            "petstore-3",
 	APIVersionID:       "16810512",
@@ -59,19 +65,76 @@ var app = &anypoint.Application{
 	Name:         "foo",
 }
 
-func setupForTest() error {
-	setupRedaction()
-	return setupConfig()
+func setupConfig() {
+	os.Setenv("CENTRAL_AUTH_PRIVATEKEY_DATA", "12345")
+	os.Setenv("CENTRAL_AUTH_PUBLICKEY_DATA", "12345")
+	cfg := corecfg.NewTestCentralConfig(corecfg.TraceabilityAgent)
+	centralCfg := cfg.(*corecfg.CentralConfiguration)
+	centralCfg.APICDeployment = APICDeployment
+	centralCfg.TenantID = TenantID
+	centralCfg.Environment = Environment
+	centralCfg.EnvironmentID = EnvID
+	agentConfig = &config.AgentConfig{
+		CentralConfig: centralCfg,
+		MulesoftConfig: &config.MulesoftConfig{
+			PollInterval: 1 * time.Second,
+		},
+	}
+	agentConfig.CentralConfig.SetEnvironmentID(EnvID)
+	agentConfig.CentralConfig.SetTeamID(TeamID)
+	config.SetConfig(agentConfig)
+	agent.Initialize(agentConfig.CentralConfig)
+}
+
+func setupForTest() {
+	cfg := redaction.Config{
+		Path: redaction.Path{
+			Allowed: []redaction.Show{
+				redaction.Show{
+					KeyMatch: ".*",
+				},
+			},
+		},
+		Args: redaction.Filter{
+			Allowed: []redaction.Show{
+				redaction.Show{
+					KeyMatch: ".*",
+				},
+			},
+		},
+		RequestHeaders: redaction.Filter{
+			Allowed: []redaction.Show{
+				redaction.Show{
+					KeyMatch: ".*",
+				},
+			},
+		},
+		ResponseHeaders: redaction.Filter{
+			Allowed: []redaction.Show{
+				redaction.Show{
+					KeyMatch: ".*",
+				},
+			},
+		},
+		MaskingCharacters: ".*",
+		JMSProperties: redaction.Filter{
+			Allowed: []redaction.Show{
+				redaction.Show{
+					KeyMatch: ".*",
+				},
+			},
+		},
+	}
+	redaction.SetupGlobalRedaction(cfg)
+	setupConfig()
 }
 
 func TestEventMapper_processMapping(t *testing.T) {
-	err := setupForTest()
-	assert.Nil(t, err)
-
+	setupForTest()
 	client := &mockAnalyticsClient{
 		app: app,
 	}
-	mapper := &EventMapper{client: client}
+	mapper := NewEventMapper(client, agentConfig.CentralConfig)
 
 	item, err := mapper.ProcessMapping(event)
 	assert.Nil(t, err)
@@ -100,7 +163,7 @@ func TestEventMapper_processMapping(t *testing.T) {
 }
 
 func Test_getTransactionEventStatus(t *testing.T) {
-
+	setupForTest()
 	status := getTransactionEventStatus(100)
 	assert.Equal(t, transaction.TxEventStatusPass, status)
 
@@ -121,6 +184,7 @@ func Test_getTransactionEventStatus(t *testing.T) {
 }
 
 func Test_getTransactionSummaryStatus(t *testing.T) {
+	setupForTest()
 	status := getTransactionSummaryStatus(200)
 	assert.Equal(t, transaction.TxSummaryStatusSuccess, status)
 
@@ -141,6 +205,7 @@ func Test_getTransactionSummaryStatus(t *testing.T) {
 }
 
 func Test_buildHeaders(t *testing.T) {
+	setupForTest()
 	h := map[string]string{
 		"Authorization": "abc123",
 		"User-Agent":    "MulesoftTraceability",
@@ -150,6 +215,7 @@ func Test_buildHeaders(t *testing.T) {
 }
 
 func Test_APIServiceNameAndTransactionProxyNameAreEqual(t *testing.T) {
+	setupForTest()
 	redaction.SetupGlobalRedaction(redaction.DefaultConfig())
 
 	sd := &discovery.ServiceDetail{
