@@ -10,9 +10,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/Axway/agent-sdk/pkg/traceability/redaction"
-	"gopkg.in/yaml.v2"
-
 	"github.com/Axway/agent-sdk/pkg/transaction"
 	"github.com/elastic/beats/v7/libbeat/beat"
 	"github.com/elastic/beats/v7/libbeat/common"
@@ -29,10 +26,11 @@ const (
 )
 
 func TestEventProcessor_ProcessRaw(t *testing.T) {
+	setupForTest()
 	client := &mockAnalyticsClient{
 		app: app,
 	}
-	mapper := &EventMapper{client: client}
+	mapper := NewEventMapper(client, agentConfig.CentralConfig)
 	processor := NewEventProcessor(agentConfig, &eventGeneratorMock{}, mapper)
 
 	bts, err := json.Marshal(&event)
@@ -80,6 +78,7 @@ func TestEventProcessor_ProcessRaw(t *testing.T) {
 }
 
 func TestEventProcessor_ProcessRaw_Errors(t *testing.T) {
+	setupForTest()
 	// returns nil when the EventMapper throws an error
 	processor := NewEventProcessor(agentConfig, &eventGeneratorMock{}, &eventMapperErr{})
 	bts, err := json.Marshal(&event)
@@ -91,7 +90,7 @@ func TestEventProcessor_ProcessRaw_Errors(t *testing.T) {
 	client := &mockAnalyticsClient{
 		app: app,
 	}
-	mapper := &EventMapper{client: client}
+	mapper := NewEventMapper(client, agentConfig.CentralConfig)
 	processor = NewEventProcessor(agentConfig, &eventGenMockErr{}, mapper)
 	bts, err = json.Marshal(&event)
 	assert.Nil(t, err)
@@ -133,26 +132,6 @@ func assertLegTransactionEvent(t *testing.T, muleEvent anypoint.AnalyticsEvent, 
 	assert.Equal(t, 0, logEvent.TransactionEvent.Duration)
 	assert.Equal(t, direction, logEvent.TransactionEvent.Direction)
 	assert.Equal(t, "Pass", logEvent.TransactionEvent.Status)
-}
-
-func setupRedaction() {
-	redactionCfg := `
-path:
-  show:
-    - keyMatch: ".*"
-queryArgument:
-  show: 
-    - keyMatch: ".*"
-requestHeader:
-  show: 
-    - keyMatch: ".*"
-responseHeader:
-  show: 
-    - keyMatch: ".*"
-`
-	var allowAllRedaction redaction.Config
-	yaml.Unmarshal([]byte(redactionCfg), &allowAllRedaction)
-	redaction.SetupGlobalRedaction(allowAllRedaction)
 }
 
 // eventGeneratorMock - mock event generator

@@ -7,9 +7,10 @@ toolchain go1.21.3
 //replace github.com/Axway/agent-sdk => /home/ubuntu/go/src/github.com/Axway/agent-sdk
 
 require (
-	github.com/Axway/agent-sdk v1.1.80
+	github.com/Axway/agent-sdk v1.1.81
 	github.com/elastic/beats/v7 v7.17.17
 	github.com/getkin/kin-openapi v0.76.0
+	github.com/google/uuid v1.3.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.9.0
 	github.com/tidwall/gjson v1.14.0
@@ -69,7 +70,6 @@ require (
 	github.com/gomodule/redigo v1.8.3 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/gofuzz v1.1.0 // indirect
-	github.com/google/uuid v1.3.1 // indirect
 	github.com/googleapis/gnostic v0.5.5 // indirect
 	github.com/gorhill/cronexpr v0.0.0-20180427100037-88b0669f7d75 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0 // indirect
