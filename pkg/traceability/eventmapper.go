@@ -6,9 +6,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
+	"github.com/google/uuid"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/transaction"
@@ -35,7 +34,7 @@ func (em *EventMapper) ProcessMapping(event anypoint.AnalyticsEvent) ([]*transac
 	centralCfg := agent.GetCentralConfig()
 
 	eventTime := event.Timestamp.UnixNano() / 1000000
-	txID := FormatTxnID(event.APIVersionID, event.MessageID)
+	txID := uuid.New().String()
 	txEventID := event.MessageID
 	leg0ID := FormatLeg0(txEventID)
 	leg1ID := FormatLeg1(txEventID)
@@ -129,8 +128,6 @@ func (em *EventMapper) createSummaryEvent(
 	statusCode := event.StatusCode
 	uri := event.ResourcePath
 
-	// must be the same as the the 'externalAPIID' attribute set on the APIService.
-	// apiVersionID := event.APIVersionID
 	builder := transaction.NewTransactionSummaryBuilder().
 		SetDuration(event.ResponseTime).
 		SetEntryPoint("http", method, uri, host).
@@ -140,12 +137,8 @@ func (em *EventMapper) createSummaryEvent(
 		SetTransactionID(txID).
 		SetTimestamp(eventTime)
 
-	if event.Application != "" {
-		app, err := em.client.GetClientApplication(event.Application)
-		if err != nil {
-			logrus.Errorf("failed to get application with id '%s'", event.Application)
-		}
-		builder.SetApplication(transutil.FormatApplicationID(event.Application), app.Name)
+	if event.ApplicationName != "" {
+		builder.SetApplication(transutil.FormatApplicationID(event.Application), event.ApplicationName)
 	}
 
 	return builder.Build()
@@ -177,10 +170,6 @@ func getTransactionEventStatus(code int) transaction.TxEventStatus {
 		return transaction.TxEventStatusFail
 	}
 	return transaction.TxEventStatusPass
-}
-
-func FormatTxnID(apiVersionID, messageID string) string {
-	return fmt.Sprintf("%s-%s", apiVersionID, messageID)
 }
 
 func FormatLeg0(id string) string {

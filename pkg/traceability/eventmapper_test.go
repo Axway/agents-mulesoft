@@ -6,7 +6,9 @@ import (
 	"time"
 
 	"github.com/Axway/agents-mulesoft/pkg/discovery"
+	"github.com/google/uuid"
 
+	"github.com/Axway/agent-sdk/pkg/traceability/redaction"
 	"github.com/Axway/agent-sdk/pkg/transaction"
 
 	"github.com/stretchr/testify/assert"
@@ -148,6 +150,8 @@ func Test_buildHeaders(t *testing.T) {
 }
 
 func Test_APIServiceNameAndTransactionProxyNameAreEqual(t *testing.T) {
+	redaction.SetupGlobalRedaction(redaction.DefaultConfig())
+
 	sd := &discovery.ServiceDetail{
 		APIName:           "petstore-3",
 		APISpec:           []byte(`{"openapi":"3.0.1","servers":[{"url":"google.com"}],"paths":{},"info":{"title":"petstore3"}}`),
@@ -180,7 +184,8 @@ func Test_APIServiceNameAndTransactionProxyNameAreEqual(t *testing.T) {
 		err: nil,
 	}
 	em := &EventMapper{client: client}
-	le, err := em.createSummaryEvent(100, FormatTxnID(event.APIVersionID, event.MessageID), event, "123")
+
+	le, err := em.createSummaryEvent(100, uuid.New().String(), event, "123")
 	assert.Nil(t, err)
 	transactionProxyName := le.TransactionSummary.Proxy.Name
 	transactionProxyID := le.TransactionSummary.Proxy.ID

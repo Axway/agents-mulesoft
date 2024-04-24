@@ -113,7 +113,6 @@ func TestEventProcessor_ProcessRaw_Errors(t *testing.T) {
 
 func assertLegCommonFields(t *testing.T, muleEvent anypoint.AnalyticsEvent, logEvent *transaction.LogEvent, logType string) {
 	assert.Equal(t, "1.0", logEvent.Version)
-	assert.Equal(t, FormatTxnID(muleEvent.APIVersionID, muleEvent.MessageID), logEvent.TransactionID)
 	assert.Equal(t, "", logEvent.Environment)
 	assert.Equal(t, APICDeployment, logEvent.APICDeployment)
 	assert.Equal(t, EnvID, logEvent.EnvironmentID)
