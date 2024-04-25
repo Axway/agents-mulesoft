@@ -4,8 +4,6 @@ import (
 	"testing"
 	"time"
 
-	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
-
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
@@ -56,30 +54,6 @@ func TestAgent_Run(t *testing.T) {
 	done := <-processorChannel
 	assert.True(t, done)
 	traceAgent.Stop()
-}
-
-func Test_newAgentError(t *testing.T) {
-	// should return an error when the health check fails
-	processorChannel := make(chan bool)
-	eventChannel := make(chan string)
-
-	processor := &mockProcessor{
-		channel: processorChannel,
-	}
-
-	client := &mockAnalyticsClient{
-		events: []anypoint.AnalyticsEvent{event},
-		err:    nil,
-	}
-	emitter := NewMuleEventEmitter("/tmp", eventChannel, client)
-	hc.RegisterHealthcheck("fake", "fake", func(name string) *hc.Status {
-		return &hc.Status{
-			Result: hc.FAIL,
-		}
-	})
-	_, err := newAgent(processor, emitter, eventChannel)
-	assert.NotNil(t, err)
-
 }
 
 type mockAnalyticsClient struct {

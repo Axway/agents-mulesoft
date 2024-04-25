@@ -7,7 +7,6 @@ import (
 
 	coreagent "github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/transaction"
-	agenterrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 	"github.com/Axway/agents-mulesoft/pkg/config"
@@ -33,9 +32,7 @@ func NewBeater(_ *beat.Beat, _ *common.Config) (beat.Beater, error) {
 	var err error
 	generator := transaction.NewEventGenerator()
 	client := anypoint.NewClient(agentConfig.MulesoftConfig)
-	mapper := &EventMapper{
-		client: client,
-	}
+	mapper := NewEventMapper(client, agentConfig.CentralConfig)
 	processor := NewEventProcessor(agentConfig, generator, mapper)
 	emitter := NewMuleEventEmitter(agentConfig.MulesoftConfig.CachePath, eventChannel, client)
 
@@ -57,11 +54,6 @@ func newAgent(
 		eventChannel:   eventChannel,
 		eventProcessor: processor,
 		mule:           emitter,
-	}
-
-	// Validate that all necessary services are up and running. If not, return error
-	if hc.RunChecks() != hc.OK {
-		return nil, agenterrors.ErrInitServicesNotReady
 	}
 
 	return a, nil

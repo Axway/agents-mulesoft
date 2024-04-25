@@ -17,6 +17,7 @@ import (
 	agenterrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 
+	"github.com/Axway/agents-mulesoft/pkg/common"
 	"github.com/Axway/agents-mulesoft/pkg/config"
 )
 
@@ -30,30 +31,31 @@ type Page struct {
 
 // Client interface to gateway
 type Client interface {
-	CreateClientApplication(apiInstanceID string, app *AppRequestBody) (*Application, error)
-	CreateContract(int64, *Contract) (*Contract, error)
-	DeleteClientApplication(appID int64) error
+	CreateClientApplication(apiID string, app *AppRequestBody) (*Application, error)
+	CreateContract(appID string, contract *Contract) (*Contract, error)
+	DeleteClientApplication(appID string) error
 	GetAccessToken() (string, *User, time.Duration, error)
-	GetAPI(id string) (*API, error)
+	GetAPI(apiID string) (*API, error)
 	GetClientApplication(appID string) (*Application, error)
 	GetEnvironmentByName(name string) (*Environment, error)
 	GetExchangeAsset(groupID, assetID, assetVersion string) (*ExchangeAsset, error)
 	GetExchangeAssetIcon(icon string) (string, string, error)
 	GetExchangeFileContent(link, packaging, mainFile string, useOriginalRaml bool) ([]byte, bool, error)
-	GetPolicies(apiID int64) ([]Policy, error)
-	GetSLATiers(int642 int64) (*Tiers, error)
+	GetPolicies(apiID string) ([]Policy, error)
+	GetSLATiers(apiID string, tierName string) (*Tiers, error)
+	CreateSLATier(apiID string) (int, error)
 	ListAssets(page *Page) ([]Asset, error)
 	OnConfigChange(mulesoftConfig *config.MulesoftConfig)
-	DeleteContract(apiID string, contractID string) error
+	DeleteContract(apiID, contractID string) error
 	RevokeContract(apiID, contractID string) error
-	ResetAppSecret(appID int64) (*Application, error)
+	ResetAppSecret(appID string) (*Application, error)
 }
 
 type AnalyticsClient interface {
 	GetAnalyticsWindow(string, string) ([]AnalyticsEvent, error)
 	OnConfigChange(mulesoftConfig *config.MulesoftConfig)
-	GetClientApplication(appId string) (*Application, error)
-	GetAPI(id string) (*API, error)
+	GetClientApplication(appID string) (*Application, error)
+	GetAPI(apiID string) (*API, error)
 }
 
 type AuthClient interface {
@@ -67,8 +69,6 @@ type ListAssetClient interface {
 // AnypointClient is the client for interacting with Mulesoft Anypoint.
 type AnypointClient struct {
 	baseURL      string
-	username     string
-	password     string
 	clientID     string
 	clientSecret string
 	lifetime     time.Duration
@@ -102,8 +102,6 @@ func (c *AnypointClient) OnConfigChange(mulesoftConfig *config.MulesoftConfig) {
 	}
 
 	c.baseURL = mulesoftConfig.AnypointExchangeURL
-	c.username = mulesoftConfig.Username
-	c.password = mulesoftConfig.Password
 	c.clientID = mulesoftConfig.ClientID
 	c.clientSecret = mulesoftConfig.ClientSecret
 	c.orgName = mulesoftConfig.OrgName
@@ -148,19 +146,16 @@ func (c *AnypointClient) healthcheck(name string) (status *hc.Status) {
 
 // GetAccessToken retrieves a token
 func (c *AnypointClient) GetAccessToken() (string, *User, time.Duration, error) {
-	url := c.baseURL + "/accounts/login"
+	if c.clientID == "" || c.clientSecret == "" {
+		return "", nil, 0, fmt.Errorf("authentication only available through clientID and clientSecret")
+	}
+	url := c.baseURL + "/accounts/api/v2/oauth2/token"
 	body := map[string]string{
-		"username": c.username,
-		"password": c.password,
+		"grant_type":    "client_credentials",
+		"client_id":     c.clientID,
+		"client_secret": c.clientSecret,
 	}
-	if c.clientID != "" {
-		url = c.baseURL + "/accounts/api/v2/oauth2/token"
-		body = map[string]string{
-			"grant_type":    "client_credentials",
-			"client_id":     c.clientID,
-			"client_secret": c.clientSecret,
-		}
-	}
+
 	buffer, err := json.Marshal(body)
 	if err != nil {
 		return "", nil, 0, agenterrors.Wrap(ErrMarshallingBody, err.Error())
@@ -190,8 +185,16 @@ func (c *AnypointClient) GetAccessToken() (string, *User, time.Duration, error) 
 	if err != nil {
 		return "", nil, 0, agenterrors.Wrap(ErrAuthentication, err.Error())
 	}
-	token := respMap["access_token"].(string)
+	token, ok := respMap["access_token"].(string)
+	if !ok {
+		return "", nil, 0, ErrMarshallingBody
+	}
+	lifetime, ok := respMap["expires_in"].(float64)
+	if !ok {
+		return "", nil, 0, ErrMarshallingBody
+	}
 
+	c.lifetime = time.Second * time.Duration(lifetime)
 	user, err := c.getCurrentUser(token)
 	if err != nil {
 		return "", nil, 0, agenterrors.Wrap(ErrAuthentication, err.Error())
@@ -226,7 +229,7 @@ func (c *AnypointClient) getCurrentUser(token string) (*User, error) {
 
 	// this sets the User.Organization.ID as the Org ID of the Business Unit specified in Config
 	for _, value := range user.User.MemberOfOrganizations {
-		if value.Name == c.orgName {
+		if value.ID == c.orgName {
 			user.User.Organization.ID = value.ID
 			user.User.Organization.Name = value.Name
 		}
@@ -283,8 +286,8 @@ func (c *AnypointClient) ListAssets(page *Page) ([]Asset, error) {
 }
 
 // GetAPI gets a single api by id
-func (c *AnypointClient) GetAPI(id string) (*API, error) {
-	url := fmt.Sprintf("%s/apimanager/api/v1/organizations/%s/environments/%s/apis/%s", c.baseURL, c.auth.GetOrgID(), c.environment.ID, id)
+func (c *AnypointClient) GetAPI(apiID string) (*API, error) {
+	url := fmt.Sprintf("%s/apimanager/api/v1/organizations/%s/environments/%s/apis/%s", c.baseURL, c.auth.GetOrgID(), c.environment.ID, apiID)
 	res := &API{}
 	err := c.invokeJSONGet(url, nil, res, nil)
 
@@ -296,9 +299,9 @@ func (c *AnypointClient) GetAPI(id string) (*API, error) {
 }
 
 // GetPolicies lists the API policies.
-func (c *AnypointClient) GetPolicies(apiID int64) ([]Policy, error) {
+func (c *AnypointClient) GetPolicies(apiID string) ([]Policy, error) {
 	policies := Policies{}
-	url := fmt.Sprintf("%s/apimanager/api/v1/organizations/%s/environments/%s/apis/%d/policies", c.baseURL, c.auth.GetOrgID(), c.environment.ID, apiID)
+	url := fmt.Sprintf("%s/apimanager/api/v1/organizations/%s/environments/%s/apis/%s/policies", c.baseURL, c.auth.GetOrgID(), c.environment.ID, apiID)
 	err := c.invokeJSONGet(url, nil, &policies, nil)
 	// Older versions of mulesoft may return []Policy JSON format instead.
 	if err != nil && strings.HasPrefix(err.Error(), "json: cannot unmarshal") {
@@ -402,31 +405,63 @@ func (c *AnypointClient) GetAnalyticsWindow(startDate, endDate string) ([]Analyt
 	return events, err
 }
 
-func (c *AnypointClient) GetSLATiers(apiID int64) (*Tiers, error) {
+func (c *AnypointClient) GetSLATiers(apiID string, tierName string) (*Tiers, error) {
 	var slatiers Tiers
 	headers := map[string]string{
 		"Authorization": c.getAuthString(c.auth.GetToken()),
 	}
-	url := fmt.Sprintf("%s/apimanager/api/v1/organizations/%s/environments/%s/apis/%d/tiers",
+	url := fmt.Sprintf("%s/apimanager/api/v1/organizations/%s/environments/%s/apis/%s/tiers",
 		c.baseURL, c.auth.GetOrgID(), c.environment.ID, apiID)
 
 	request := coreapi.Request{
-		Method:      coreapi.GET,
-		URL:         url,
-		QueryParams: nil,
-		Headers:     headers,
+		Method: coreapi.GET,
+		URL:    url,
+		QueryParams: map[string]string{
+			"query": tierName,
+		},
+		Headers: headers,
 	}
 	err := c.invokeJSON(request, &slatiers)
 	return &slatiers, err
 }
 
-func (c *AnypointClient) CreateClientApplication(apiInstanceID string, app *AppRequestBody) (*Application, error) {
-	var application Application
-	query := map[string]string{
-		"apiInstanceId": apiInstanceID,
+func (c *AnypointClient) CreateSLATier(apiID string) (int, error) {
+	var resp SLATier
+	tier := SLATier{
+		Name:        common.AxwayAgentSLATierName,
+		AutoApprove: true,
+		Description: ToPointer[string](common.AxwayAgentSLATierDescription),
+		Limits: []Limits{
+			Limits{
+				MaximumRequests:          10,
+				TimePeriodInMilliseconds: 1000,
+				Visible:                  true,
+			},
+		},
+		Status: common.SLAActive,
+	}
+	url := fmt.Sprintf("%s/apimanager/api/v1/organizations/%s/environments/%s/apis/%s/tiers",
+		c.baseURL, c.auth.GetOrgID(), c.environment.ID, apiID)
+
+	body, err := json.Marshal(tier)
+	if err != nil {
+		return 0, agenterrors.Wrap(ErrMarshallingBody, err.Error())
+	}
+	err = c.invokeJSONPost(url, nil, body, &resp)
+	if err != nil {
+		return 0, err
 	}
 
-	url := fmt.Sprintf("%s/exchange/api/v1/organizations/%s/applications", c.baseURL, c.auth.GetOrgID())
+	return *resp.ID, nil
+}
+
+func (c *AnypointClient) CreateClientApplication(apiID string, app *AppRequestBody) (*Application, error) {
+	var application Application
+	query := map[string]string{
+		"apiInstanceId": apiID,
+	}
+
+	url := fmt.Sprintf("%s/exchange/api/v2/organizations/%s/applications", c.baseURL, c.auth.GetOrgID())
 
 	buffer, err := json.Marshal(app)
 	if err != nil {
@@ -440,15 +475,15 @@ func (c *AnypointClient) CreateClientApplication(apiInstanceID string, app *AppR
 	return &application, nil
 }
 
-func (c *AnypointClient) ResetAppSecret(appID int64) (*Application, error) {
-	url := fmt.Sprintf("%s/exchange/api/v2/organizations/%s/applications/%v/secret/reset", c.baseURL, c.auth.GetOrgID(), appID)
+func (c *AnypointClient) ResetAppSecret(appID string) (*Application, error) {
+	url := fmt.Sprintf("%s/exchange/api/v2/organizations/%s/applications/%s/secret/reset", c.baseURL, c.auth.GetOrgID(), appID)
 	application := &Application{}
 	err := c.invokeJSONPost(url, nil, []byte{}, application)
 	return application, err
 }
 
-func (c *AnypointClient) DeleteClientApplication(appID int64) error {
-	url := fmt.Sprintf("%s/exchange/api/v2/organizations/%s/applications/%v", c.baseURL, c.auth.GetOrgID(), appID)
+func (c *AnypointClient) DeleteClientApplication(appID string) error {
+	url := fmt.Sprintf("%s/exchange/api/v2/organizations/%s/applications/%s", c.baseURL, c.auth.GetOrgID(), appID)
 
 	headers := map[string]string{
 		"Authorization": c.getAuthString(c.auth.GetToken()),
@@ -483,7 +518,7 @@ func (c *AnypointClient) GetClientApplication(appID string) (*Application, error
 	return &application, err
 }
 
-func (c *AnypointClient) DeleteContract(apiID string, contractID string) error {
+func (c *AnypointClient) DeleteContract(apiID, contractID string) error {
 	url := fmt.Sprintf(
 		"%s/apimanager/api/v1/organizations/%s/environments/%s/apis/%s/contracts/%s",
 		c.baseURL, c.auth.GetOrgID(), c.environment.ID, apiID, contractID,
@@ -508,7 +543,7 @@ func (c *AnypointClient) RevokeContract(apiID, contractID string) error {
 	res := map[string]interface{}{}
 
 	url := fmt.Sprintf(
-		"%s/apimanager/api/v1/organizations/%s/environments/%s/apis/%s/contracts/%s/revoke",
+		"%s/apimanager/xapi/v1/organizations/%s/environments/%s/apis/%s/contracts/%s/revoke",
 		c.baseURL, c.auth.GetOrgID(), c.environment.ID, apiID, contractID,
 	)
 
@@ -520,7 +555,7 @@ func (c *AnypointClient) RevokeContract(apiID, contractID string) error {
 	return nil
 }
 
-func (c *AnypointClient) GetContract(apiID string, contractID string) (*Contract, error) {
+func (c *AnypointClient) GetContract(apiID, contractID string) (*Contract, error) {
 	var cnt Contract
 
 	url := fmt.Sprintf(
@@ -536,10 +571,9 @@ func (c *AnypointClient) GetContract(apiID string, contractID string) (*Contract
 	return &cnt, nil
 }
 
-func (c *AnypointClient) CreateContract(appID int64, contract *Contract) (*Contract, error) {
+func (c *AnypointClient) CreateContract(appID string, contract *Contract) (*Contract, error) {
 	var cnt Contract
-
-	url := fmt.Sprintf("%s/exchange/api/v1/organizations/%s/applications/%d/contracts", c.baseURL, c.auth.GetOrgID(), appID)
+	url := fmt.Sprintf("%s/exchange/api/v1/organizations/%s/applications/%s/contracts", c.baseURL, c.auth.GetOrgID(), appID)
 
 	buffer, err := json.Marshal(contract)
 	if err != nil {

@@ -47,7 +47,7 @@ func (m *MockAnypointClient) OnConfigChange(*config.MulesoftConfig) {
 	// intentionally left empty for this mock
 }
 
-func (m *MockAnypointClient) GetAPI(id string) (*API, error) {
+func (m *MockAnypointClient) GetAPI(apiID string) (*API, error) {
 	args := m.Called()
 	result := args.Get(0)
 	return result.(*API), args.Error(1)
@@ -73,7 +73,7 @@ func (m *MockAnypointClient) ListAssets(*Page) ([]Asset, error) {
 	return result.([]Asset), args.Error(1)
 }
 
-func (m *MockAnypointClient) GetPolicies(int64) ([]Policy, error) {
+func (m *MockAnypointClient) GetPolicies(string) ([]Policy, error) {
 	args := m.Called()
 	result := args.Get(0)
 	return result.([]Policy), args.Error(1)
@@ -104,32 +104,34 @@ func (m *MockAnypointClient) GetAnalyticsWindow() ([]AnalyticsEvent, error) {
 	return result.([]AnalyticsEvent), args.Error(1)
 }
 
-func (m *MockAnypointClient) CreateClientApplication(id string, body *AppRequestBody) (*Application, error) {
-	var args mock.Arguments
-	args = m.Called()
+func (m *MockAnypointClient) CreateClientApplication(apiID string, body *AppRequestBody) (*Application, error) {
+	args := m.Called()
 	result := args.Get(0)
 	return result.(*Application), args.Error(1)
 }
 
-func (m *MockAnypointClient) CreateContract(id int64, contract *Contract) (*Contract, error) {
-	var args mock.Arguments
-	args = m.Called()
+func (m *MockAnypointClient) CreateContract(appID string, contract *Contract) (*Contract, error) {
+	args := m.Called()
 	return contract, args.Error(1)
 }
 
-func (m *MockAnypointClient) GetSLATiers(int642 int64) (*Tiers, error) {
+func (m *MockAnypointClient) GetSLATiers(apiID, tierName string) (*Tiers, error) {
 	return &Tiers{
 		Total: 1,
 		Tiers: []SLATier{
 			{
-				ID:   654272,
-				Name: "Gold",
+				ID:   ToPointer[int](14214),
+				Name: tierName,
 			},
 		},
 	}, nil
 }
 
-func (m *MockAnypointClient) DeleteClientApplication(appID int64) error {
+func (m *MockAnypointClient) CreateSLATier(apiID string) (int, error) {
+	return 1, nil
+}
+
+func (m *MockAnypointClient) DeleteClientApplication(appID string) error {
 	args := m.Called()
 	return args.Error(0)
 }
@@ -138,7 +140,7 @@ func (m *MockAnypointClient) GetClientApplication(appID string) (*Application, e
 	return nil, nil
 }
 
-func (m *MockAnypointClient) DeleteContract(apiID string, contractID string) error {
+func (m *MockAnypointClient) DeleteContract(apiID, contractID string) error {
 	args := m.Called()
 	return args.Error(0)
 }
@@ -148,6 +150,6 @@ func (m *MockAnypointClient) RevokeContract(apiID, contractID string) error {
 	return args.Error(0)
 }
 
-func (m *MockAnypointClient) ResetAppSecret(appID int64) (*Application, error) {
+func (m *MockAnypointClient) ResetAppSecret(appID string) (*Application, error) {
 	return nil, nil
 }

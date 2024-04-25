@@ -4,9 +4,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Axway/agents-mulesoft/pkg/common"
-	subs "github.com/Axway/agents-mulesoft/pkg/subscription"
-
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
@@ -23,8 +20,7 @@ func TestCleanTags(t *testing.T) {
 func TestAgent(t *testing.T) {
 	cfg := newConfig()
 	mockClient := &anypoint.MockAnypointClient{}
-	mss := &mockSchemaHandler{}
-	a := NewAgent(cfg, mockClient, mss)
+	a := NewAgent(cfg, mockClient)
 	assert.NotNil(t, a)
 	assert.Equal(t, mockClient, a.client)
 	assert.NotNil(t, a.discovery)
@@ -77,12 +73,10 @@ func newConfig() *config.AgentConfig {
 			DiscoveryIgnoreTags: "",
 			DiscoveryTags:       "",
 			Environment:         "mule",
-			Password:            "123",
 			PollInterval:        1 * time.Second,
 			ProxyURL:            "",
 			SessionLifetime:     60 * time.Minute,
 			TLS:                 nil,
-			Username:            "abc",
 		},
 	}
 }
@@ -117,12 +111,4 @@ func (m mockPublisher) OnConfigChange(*config.MulesoftConfig) {
 
 func (m mockPublisher) Stop() {
 	m.stopCh <- true
-}
-
-type mockSchemaHandler struct{}
-
-func (m *mockSchemaHandler) GetSubscriptionSchemaName(_ common.PolicyDetail) string {
-	return ""
-}
-func (m *mockSchemaHandler) RegisterNewSchema(_ subs.SubSchema) {
 }

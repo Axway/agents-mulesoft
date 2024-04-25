@@ -34,7 +34,6 @@ type healthChecker func(name, endpoint string, check hc.CheckStatus) (string, er
 type MuleEventEmitter struct {
 	client       anypoint.AnalyticsClient
 	eventChannel chan string
-	jobID        string
 	cache        cache.Cache
 	cachePath    string
 }
@@ -61,15 +60,8 @@ func NewMuleEventEmitter(cachePath string, eventChannel chan string, client anyp
 
 // Start retrieves analytics data from anypoint and sends them on the event channel for processing.
 func (me *MuleEventEmitter) Start() error {
-	oldTime := time.Now()
 	strStartTime, strEndTime := me.getLastRun()
-
 	events, err := me.client.GetAnalyticsWindow(strStartTime, strEndTime)
-
-	currentTime := time.Now()
-	duration := currentTime.Sub(oldTime)
-	logrus.WithFields(logrus.Fields{
-		"duration": fmt.Sprintf("%d ms", duration.Milliseconds()), "count": len(events)}).Debug("retrieved events from anypoint")
 
 	if err != nil {
 		logrus.WithError(err).Error("failed to get analytics data")
@@ -82,10 +74,6 @@ func (me *MuleEventEmitter) Start() error {
 		logrus.WithFields(logrus.Fields{"strStartTime": strStartTime}).Warn("Unable to Parse Last Time")
 	}
 	for _, event := range events {
-		api, _ := me.client.GetAPI(event.APIVersionID)
-		if api != nil {
-			event.AssetVersion = api.AssetVersion
-		}
 		// Results are not sorted. We want the most recent time to bubble up
 		if event.Timestamp.After(lastTime) {
 			lastTime = event.Timestamp
@@ -99,8 +87,9 @@ func (me *MuleEventEmitter) Start() error {
 	// Add 1 second to the last time stamp if we found records from this pull.
 	// This will prevent duplicate records from being retrieved
 	if len(events) > 0 {
-		me.saveLastRun(lastTime.Add(time.Second * 1).Format(time.RFC3339))
+		lastTime = lastTime.Add(time.Second * 1)
 	}
+	me.saveLastRun(lastTime.Format(time.RFC3339))
 
 	return nil
 
@@ -108,7 +97,7 @@ func (me *MuleEventEmitter) Start() error {
 func (me *MuleEventEmitter) getLastRun() (string, string) {
 	tStamp, _ := me.cache.Get(CacheKeyTimeStamp)
 	now := time.Now()
-	tNow := now.Format(time.RFC3339)
+	tNow := now.Format(time.RFC3339Nano)
 	if tStamp == nil {
 		tStamp = tNow
 		me.saveLastRun(tNow)
@@ -187,10 +176,7 @@ func (m *MuleEventEmitterJob) Status() error {
 // Ready determines if the job is ready to run.
 func (m *MuleEventEmitterJob) Ready() bool {
 	status := m.getStatusLevel(healthCheckEndpoint)
-	if status == hc.OK {
-		return true
-	}
-	return false
+	return status == hc.OK
 }
 
 // Check the status of the connection to mulesoft

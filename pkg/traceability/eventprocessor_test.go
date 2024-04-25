@@ -3,7 +3,6 @@ package traceability
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"testing"
 	"time"
 
@@ -11,21 +10,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/Axway/agent-sdk/pkg/traceability/redaction"
-	"gopkg.in/yaml.v2"
-
-	"github.com/Axway/agent-sdk/pkg/agent"
-
 	"github.com/Axway/agent-sdk/pkg/transaction"
 	"github.com/elastic/beats/v7/libbeat/beat"
 	"github.com/elastic/beats/v7/libbeat/common"
 
-	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	transutil "github.com/Axway/agent-sdk/pkg/transaction/util"
-	"github.com/Axway/agents-mulesoft/pkg/config"
 )
-
-var agentConfig *config.AgentConfig
 
 const (
 	TenantID       = "332211"
@@ -36,10 +26,11 @@ const (
 )
 
 func TestEventProcessor_ProcessRaw(t *testing.T) {
+	setupForTest()
 	client := &mockAnalyticsClient{
 		app: app,
 	}
-	mapper := &EventMapper{client: client}
+	mapper := NewEventMapper(client, agentConfig.CentralConfig)
 	processor := NewEventProcessor(agentConfig, &eventGeneratorMock{}, mapper)
 
 	bts, err := json.Marshal(&event)
@@ -87,6 +78,7 @@ func TestEventProcessor_ProcessRaw(t *testing.T) {
 }
 
 func TestEventProcessor_ProcessRaw_Errors(t *testing.T) {
+	setupForTest()
 	// returns nil when the EventMapper throws an error
 	processor := NewEventProcessor(agentConfig, &eventGeneratorMock{}, &eventMapperErr{})
 	bts, err := json.Marshal(&event)
@@ -98,7 +90,7 @@ func TestEventProcessor_ProcessRaw_Errors(t *testing.T) {
 	client := &mockAnalyticsClient{
 		app: app,
 	}
-	mapper := &EventMapper{client: client}
+	mapper := NewEventMapper(client, agentConfig.CentralConfig)
 	processor = NewEventProcessor(agentConfig, &eventGenMockErr{}, mapper)
 	bts, err = json.Marshal(&event)
 	assert.Nil(t, err)
@@ -113,7 +105,6 @@ func TestEventProcessor_ProcessRaw_Errors(t *testing.T) {
 
 func assertLegCommonFields(t *testing.T, muleEvent anypoint.AnalyticsEvent, logEvent *transaction.LogEvent, logType string) {
 	assert.Equal(t, "1.0", logEvent.Version)
-	assert.Equal(t, FormatTxnID(muleEvent.APIVersionID, muleEvent.MessageID), logEvent.TransactionID)
 	assert.Equal(t, "", logEvent.Environment)
 	assert.Equal(t, APICDeployment, logEvent.APICDeployment)
 	assert.Equal(t, EnvID, logEvent.EnvironmentID)
@@ -141,26 +132,6 @@ func assertLegTransactionEvent(t *testing.T, muleEvent anypoint.AnalyticsEvent, 
 	assert.Equal(t, 0, logEvent.TransactionEvent.Duration)
 	assert.Equal(t, direction, logEvent.TransactionEvent.Direction)
 	assert.Equal(t, "Pass", logEvent.TransactionEvent.Status)
-}
-
-func setupRedaction() {
-	redactionCfg := `
-path:
-  show:
-    - keyMatch: ".*"
-queryArgument:
-  show: 
-    - keyMatch: ".*"
-requestHeader:
-  show: 
-    - keyMatch: ".*"
-responseHeader:
-  show: 
-    - keyMatch: ".*"
-`
-	var allowAllRedaction redaction.Config
-	yaml.Unmarshal([]byte(redactionCfg), &allowAllRedaction)
-	redaction.SetupGlobalRedaction(allowAllRedaction)
 }
 
 // eventGeneratorMock - mock event generator
@@ -194,27 +165,6 @@ func (c *eventGeneratorMock) CreateEvent(
 
 func (c *eventGeneratorMock) SetUseTrafficForAggregation(useTrafficForAggregation bool) {
 	c.shouldUseTrafficForAggregation = useTrafficForAggregation
-}
-
-func setupConfig() error {
-	os.Setenv("CENTRAL_AUTH_PRIVATEKEY_DATA", "12345")
-	os.Setenv("CENTRAL_AUTH_PUBLICKEY_DATA", "12345")
-	cfg := corecfg.NewTestCentralConfig(corecfg.TraceabilityAgent)
-	centralCfg := cfg.(*corecfg.CentralConfiguration)
-	centralCfg.APICDeployment = APICDeployment
-	centralCfg.TenantID = TenantID
-	centralCfg.Environment = Environment
-	centralCfg.EnvironmentID = EnvID
-	agentConfig = &config.AgentConfig{
-		CentralConfig: centralCfg,
-		MulesoftConfig: &config.MulesoftConfig{
-			PollInterval: 1 * time.Second,
-		},
-	}
-	agentConfig.CentralConfig.SetEnvironmentID(EnvID)
-	agentConfig.CentralConfig.SetTeamID(TeamID)
-	config.SetConfig(agentConfig)
-	return agent.Initialize(agentConfig.CentralConfig)
 }
 
 type eventGenMockErr struct {

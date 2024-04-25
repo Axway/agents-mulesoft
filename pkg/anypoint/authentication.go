@@ -69,17 +69,13 @@ func (a *auth) startRefreshToken(lifetime time.Duration) {
 				a.token = token
 				a.user = user
 
-				if lifetime <= 0 {
-					break
-				} else {
+				if lifetime > 0 {
 					interval = time.Duration(float64(lifetime.Nanoseconds()) * threshold)
 					timer = time.NewTimer(interval)
 				}
-
 			case <-a.stopChan:
 				log.Debug("stopping access token refresh")
 				timer.Stop()
-				break
 			}
 		}
 	}()

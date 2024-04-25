@@ -7,6 +7,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/agent"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
+	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agents-mulesoft/pkg/common"
@@ -42,27 +43,28 @@ func (p provisioner) AccessRequestDeprovision(req prov.AccessRequest) prov.Reque
 		return p.failed(rs, notFound(common.ContractID))
 	}
 
-	// skip error handling since access request may already be deleted if the managed app was deleted first.
-	p.client.DeleteContract(apiID, contractID)
+	logger := p.log.WithField("api", apiID).WithField("app", req.GetApplicationName()).WithField("contractID", contractID)
+	// logging only because contract may already be deleted if the managed app was deleted first.
+	if err := p.client.DeleteContract(apiID, contractID); err != nil {
+		logger.WithError(err).Error("failed to delete contract")
+	}
 
-	p.log.
-		WithField("api", apiID).
-		WithField("app", req.GetApplicationName()).
-		Info("removed access")
+	logger.Info("removed access")
 	return rs.Success()
 }
 
 // AccessRequestProvision adds an API to an app
 func (p provisioner) AccessRequestProvision(req prov.AccessRequest) (prov.RequestStatus, prov.AccessData) {
+	var err error
 	p.log.Info("provisioning access request")
 	rs := prov.NewRequestStatusBuilder()
 	instDetails := req.GetInstanceDetails()
+	reqData := req.GetAccessRequestData()
 
 	apiID := util.ToString(instDetails[common.AttrAPIID])
 	if apiID == "" {
 		return p.failed(rs, notFound(common.AttrAPIID)), nil
 	}
-
 	stage := util.ToString(instDetails[defs.AttrExternalAPIStage])
 	if stage == "" {
 		return p.failed(rs, notFound(defs.AttrExternalAPIStage)), nil
@@ -93,20 +95,21 @@ func (p provisioner) AccessRequestProvision(req prov.AccessRequest) (prov.Reques
 		}
 	}
 
-	appID64, err := strconv.ParseInt(appID, 10, 64)
-	if err != nil {
-		return p.failed(rs, fmt.Errorf("failed to convert appID to int64. %s", err)), nil
+	tierID := util.ToString(reqData[common.SlaTier])
+	if tierID == "" {
+		tierID, err = p.client.CreateIfNotExistingSLATier(apiID)
+		if err != nil {
+			return p.failed(rs, fmt.Errorf("failed to create SLA tier: %s", err)), nil
+		}
 	}
 
-	accessData := req.GetAccessRequestData()
-	tier := util.ToString(accessData[common.SlaTier])
-
-	contract, err := p.client.CreateContract(apiID, tier, appID64)
+	contract, err := p.client.CreateContract(apiID, tierID, appID)
 	if err != nil {
 		return p.failed(rs, fmt.Errorf("failed to create contract: %s", err)), nil
 	}
 
-	rs.AddProperty(common.ContractID, fmt.Sprintf("%d", contract.Id))
+	rs.AddProperty(common.ContractID, strconv.Itoa(contract.ID)).
+		AddProperty(common.SlaTier, tierID)
 
 	p.log.
 		WithField("api", apiID).
@@ -123,12 +126,7 @@ func (p provisioner) ApplicationRequestDeprovision(req prov.ApplicationRequest) 
 	appID := req.GetApplicationDetailsValue(common.AppID)
 	// Application not provisioned yet by the access request handler
 	if appID != "" {
-		appID64, err := strconv.ParseInt(appID, 10, 64)
-		if err != nil {
-			return p.failed(rs, fmt.Errorf("failed to convert appID to int64. %s", err))
-		}
-
-		err = p.client.DeleteApp(appID64)
+		err := p.client.DeleteApp(appID)
 		if err != nil {
 			return p.failed(rs, fmt.Errorf("failed to delete app: %s", err))
 		}
@@ -159,10 +157,10 @@ func (p provisioner) ApplicationRequestProvision(req prov.ApplicationRequest) pr
 
 // CredentialDeprovision returns success since credentials are removed with the app
 func (p provisioner) CredentialDeprovision(_ prov.CredentialRequest) prov.RequestStatus {
-	msg := "credentials will be removed when the subscription is deleted"
+	msg := "credentials will be removed when the application is deleted"
 	p.log.Info(msg)
 	return prov.NewRequestStatusBuilder().
-		SetMessage("credentials will be removed when the application is deleted").
+		SetMessage(msg).
 		Success()
 }
 
@@ -186,7 +184,16 @@ func (p provisioner) CredentialProvision(req prov.CredentialRequest) (prov.Reque
 		return p.failed(rs, fmt.Errorf("failed to retrieve app: %s", err)), nil
 	}
 
-	cr := prov.NewCredentialBuilder().SetOAuthIDAndSecret(app.ClientID, app.ClientSecret)
+	var cr prov.Credential
+	credType := req.GetCredentialType()
+	switch credType {
+	case provisioning.BasicAuthCRD:
+		cr = prov.NewCredentialBuilder().SetHTTPBasic(app.ClientID, app.ClientSecret)
+	case provisioning.OAuthSecretCRD:
+		cr = prov.NewCredentialBuilder().SetOAuthIDAndSecret(app.ClientID, app.ClientSecret)
+	default:
+		return p.failed(rs, fmt.Errorf("invalid credential type provided: %s", credType)), nil
+	}
 
 	p.log.Info("created credentials")
 
@@ -196,12 +203,7 @@ func (p provisioner) CredentialProvision(req prov.CredentialRequest) (prov.Reque
 func (p provisioner) CredentialUpdate(req prov.CredentialRequest) (prov.RequestStatus, prov.Credential) {
 	p.log.Info("updating credential for app %s", req.GetApplicationName())
 	rs := prov.NewRequestStatusBuilder()
-
 	appID := req.GetApplicationDetailsValue(common.AppID)
-	appID64, err := strconv.ParseInt(appID, 10, 64)
-	if err != nil {
-		return p.failed(rs, fmt.Errorf("failed to convert appID to int64. %s", err)), nil
-	}
 
 	// return right away if the action is rotate
 	if req.GetCredentialAction() != prov.Rotate {
@@ -213,7 +215,7 @@ func (p provisioner) CredentialUpdate(req prov.CredentialRequest) (prov.RequestS
 		return p.failed(rs, fmt.Errorf("failed to rotate application secret: %s", err)), nil
 	}
 
-	secret, err := p.client.ResetAppSecret(appID64)
+	secret, err := p.client.ResetAppSecret(appID)
 	if err != nil {
 		return p.failed(rs, fmt.Errorf("failed to rotate application secret: %s", err)), nil
 	}

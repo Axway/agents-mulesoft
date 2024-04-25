@@ -17,23 +17,10 @@ func TestKongGatewayCfg(t *testing.T) {
 
 	cfg.AnypointExchangeURL = "test.com"
 	err = cfg.ValidateCfg()
-	assert.Equal(t, usernameOrClientIDErr, err.Error())
+	assert.Equal(t, clientCredentialsErr, err.Error())
 
-	cfg.Username = "Tom"
-	cfg.ClientID = "Jerry"
-	err = cfg.ValidateCfg()
-	assert.Equal(t, usernameAndClientIDErr, err.Error())
-
-	cfg.ClientID = ""
-	err = cfg.ValidateCfg()
-	assert.Equal(t, passwordErr, err.Error())
-
-	cfg.ClientID = "Jerry"
-	cfg.Username = ""
-	err = cfg.ValidateCfg()
-	assert.Equal(t, clientSecretErr, err.Error())
-
-	cfg.ClientSecret = "Spike"
+	cfg.ClientID = "Tom"
+	cfg.ClientSecret = "Jerry"
 	err = cfg.ValidateCfg()
 	assert.Equal(t, envErr, err.Error())
 
@@ -119,8 +106,6 @@ func TestKongProperties(t *testing.T) {
 	assert.Contains(t, newProps.props, pathOrgName)
 	assert.Contains(t, newProps.props, pathDiscoveryTags)
 	assert.Contains(t, newProps.props, pathDiscoveryIgnoreTags)
-	assert.Contains(t, newProps.props, pathAuthUsername)
-	assert.Contains(t, newProps.props, pathAuthPassword)
 	assert.Contains(t, newProps.props, pathAuthClientID)
 	assert.Contains(t, newProps.props, pathAuthClientSecret)
 	assert.Contains(t, newProps.props, pathAuthLifetime)
@@ -141,8 +126,6 @@ func TestKongProperties(t *testing.T) {
 	assert.Equal(t, "", cfg.OrgName)
 	assert.Equal(t, "", cfg.DiscoveryTags)
 	assert.Equal(t, "", cfg.DiscoveryIgnoreTags)
-	assert.Equal(t, "", cfg.Username)
-	assert.Equal(t, "", cfg.Password)
 	assert.Equal(t, "", cfg.ClientID)
 	assert.Equal(t, "", cfg.ClientSecret)
 	assert.Equal(t, 60*time.Minute, cfg.SessionLifetime)
@@ -162,8 +145,6 @@ func TestKongProperties(t *testing.T) {
 	newProps.props[pathOrgName] = propData{"string", "", "orgName"}
 	newProps.props[pathDiscoveryTags] = propData{"string", "", "tag1"}
 	newProps.props[pathDiscoveryIgnoreTags] = propData{"string", "", "tag-ignore"}
-	newProps.props[pathAuthUsername] = propData{"string", "", "username"}
-	newProps.props[pathAuthPassword] = propData{"string", "", "password"}
 	newProps.props[pathAuthClientID] = propData{"string", "", "clientID"}
 	newProps.props[pathAuthClientSecret] = propData{"string", "", "clientSecret"}
 	newProps.props[pathAuthLifetime] = propData{"duration", "", time.Minute * 20}
@@ -183,8 +164,6 @@ func TestKongProperties(t *testing.T) {
 	assert.Equal(t, "orgName", cfg.OrgName)
 	assert.Equal(t, "tag1", cfg.DiscoveryTags)
 	assert.Equal(t, "tag-ignore", cfg.DiscoveryIgnoreTags)
-	assert.Equal(t, "username", cfg.Username)
-	assert.Equal(t, "password", cfg.Password)
 	assert.Equal(t, "clientID", cfg.ClientID)
 	assert.Equal(t, "clientSecret", cfg.ClientSecret)
 	assert.Equal(t, time.Minute*20, cfg.SessionLifetime)

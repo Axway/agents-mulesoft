@@ -1,25 +1,18 @@
 package discovery
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
 
 	"github.com/Axway/agents-mulesoft/pkg/common"
+	"gopkg.in/yaml.v2"
 
 	"github.com/Axway/agent-sdk/pkg/cache"
 
-	corecfg "github.com/Axway/agent-sdk/pkg/config"
-
-	"github.com/Axway/agent-sdk/pkg/agent"
-
 	"github.com/getkin/kin-openapi/openapi2"
 	"github.com/getkin/kin-openapi/openapi3"
-
-	"github.com/Axway/agents-mulesoft/pkg/discovery/mocks"
-
-	"github.com/Axway/agents-mulesoft/pkg/subscription"
-	"github.com/sirupsen/logrus"
 
 	"github.com/Axway/agent-sdk/pkg/apic"
 
@@ -60,16 +53,15 @@ func TestServiceHandler(t *testing.T) {
 		content              string
 		policies             []anypoint.Policy
 		exchangeAsset        *anypoint.ExchangeAsset
-		exchangeAssetIcon    string
 		expectedResourceType string
-		expectedTitle        string
-		expectedVersion      string
 	}
 	cases := []testCase{
 		{
 			content: "#%RAML 1.0\ntitle: API with Examples\ndescription: Grand Theft Auto:Vice City\nversion: v3\nprotocols: [HTTP,HTTPS]\nbaseUri: https://na1.salesforce.com:4000/services/data/{version}/chatter",
 			policies: []anypoint.Policy{
-				{PolicyTemplateID: common.ClientIDEnforcement},
+				{
+					PolicyTemplateID: common.ClientIDEnforcement,
+				},
 			},
 			exchangeAsset:        &exchangeAsset,
 			expectedResourceType: apic.Raml,
@@ -77,7 +69,9 @@ func TestServiceHandler(t *testing.T) {
 		{
 			content: `{"openapi":"3.0.1","servers":[{"url":"https://abc.com"}], "paths":{}, "info":{"title":"petstore3"}}`,
 			policies: []anypoint.Policy{
-				{PolicyTemplateID: common.ClientIDEnforcement},
+				{
+					PolicyTemplateID: common.ClientIDEnforcement,
+				},
 			},
 			exchangeAsset:        &exchangeAsset,
 			expectedResourceType: apic.Oas3,
@@ -90,13 +84,11 @@ func TestServiceHandler(t *testing.T) {
 		mc.On("GetExchangeFileContent").Return([]byte(c.content), true, nil)
 		mc.On("GetExchangeAssetIcon").Return("", "", nil)
 
-		msh := &mockSchemaHandler{}
 		sh := &serviceHandler{
 			muleEnv:             "Sandbox",
 			discoveryTags:       []string{"tag1"},
 			discoveryIgnoreTags: []string{"nah"},
 			client:              mc,
-			schemas:             msh,
 			cache:               cache.New(),
 		}
 		list := sh.ToServiceDetails(&asset)
@@ -105,7 +97,7 @@ func TestServiceHandler(t *testing.T) {
 		item := list[0]
 
 		assert.Equal(t, asset.APIs[0].AssetID, item.APIName)
-		assert.Equal(t, apic.Apikey, item.AuthPolicy)
+		assert.Equal(t, "", item.AuthPolicy)
 		assert.Equal(t, fmt.Sprint(asset.ID), item.ID)
 		assert.Equal(t, c.expectedResourceType, item.ResourceType)
 		assert.Equal(t, api.AssetVersion, item.Stage)
@@ -134,40 +126,6 @@ func TestServiceHandler(t *testing.T) {
 	}
 }
 
-func TestServiceHandlerSLAPolicy(t *testing.T) {
-	cc := &mocks.MockCentralClient{}
-	cc.On("RegisterSubscriptionSchema").Return(nil)
-	agent.Initialize(&corecfg.CentralConfiguration{})
-	agent.InitializeForTest(cc)
-	content := `{"openapi":"3.0.1","servers":[{"url":"https://abc.com"}], "paths":{}, "info":{"title":"petstore3"}}`
-	policies := []anypoint.Policy{
-		{
-			PolicyTemplateID: common.SLABased,
-		},
-	}
-	mc := &anypoint.MockAnypointClient{}
-	mc.On("GetPolicies").Return(policies, nil)
-	mc.On("GetExchangeAsset").Return(&exchangeAsset, nil)
-	mc.On("GetExchangeFileContent").Return([]byte(content), true, nil)
-	mc.On("GetExchangeAssetIcon").Return("", "", nil)
-
-	msh := &mockSchemaHandler{}
-	sh := &serviceHandler{
-		muleEnv:             "Sandbox",
-		discoveryTags:       []string{"tag1"},
-		discoveryIgnoreTags: []string{"nah"},
-		client:              mc,
-		schemas:             msh,
-		cache:               cache.New(),
-	}
-
-	details := sh.ToServiceDetails(&asset)
-
-	assert.Equal(t, 1, len(details))
-	assert.Equal(t, fmt.Sprint(apiID), details[0].SubscriptionName)
-
-}
-
 func TestServiceHandlerDidNotDiscoverAPI(t *testing.T) {
 	policies := []anypoint.Policy{
 		{
@@ -182,31 +140,10 @@ func TestServiceHandlerDidNotDiscoverAPI(t *testing.T) {
 		discoveryIgnoreTags: []string{"nah"},
 		client:              mc,
 		cache:               cache.New(),
-		schemas:             &mockSchemaHandler{},
 	}
 	details := sh.ToServiceDetails(&asset)
 	assert.Equal(t, 0, len(details))
 	assert.Equal(t, 0, len(mc.Calls))
-}
-
-func TestServiceHandlerGetPolicyError(t *testing.T) {
-	stage := "Sandbox"
-	policies := []anypoint.Policy{}
-	mc := &anypoint.MockAnypointClient{}
-	expectedErr := fmt.Errorf("failed to get policies")
-	mc.On("GetPolicies").Return(policies, expectedErr)
-	sh := &serviceHandler{
-		muleEnv:             stage,
-		discoveryTags:       []string{},
-		discoveryIgnoreTags: []string{},
-		client:              mc,
-		cache:               cache.New(),
-		schemas:             &mockSchemaHandler{},
-	}
-	sd, err := sh.getServiceDetail(&asset, &asset.APIs[0])
-
-	assert.Nil(t, sd)
-	assert.Equal(t, expectedErr, err)
 }
 
 func TestServiceHandlerGetExchangeAssetError(t *testing.T) {
@@ -221,7 +158,6 @@ func TestServiceHandlerGetExchangeAssetError(t *testing.T) {
 		discoveryTags:       []string{},
 		discoveryIgnoreTags: []string{},
 		client:              mc,
-		schemas:             &mockSchemaHandler{},
 		cache:               cache.New(),
 	}
 	sd, err := sh.getServiceDetail(&asset, &asset.APIs[0])
@@ -398,363 +334,493 @@ func Test_checksum(t *testing.T) {
 	assert.NotEqual(t, s1, s2)
 }
 
-func Test_getAuthPolicy(t *testing.T) {
+func Test_getAuthConfig(t *testing.T) {
 	tests := []struct {
 		name     string
-		expected string
+		expected []string
 		policies []anypoint.Policy
+		err      error
 	}{
 		{
-			name:     "should return the policy as APIKey when the mulesoft policy is client-id-enforcement",
-			expected: apic.Apikey,
+			name:     "OAuth2Policy",
+			expected: []string{apic.Oauth},
 			policies: []anypoint.Policy{
 				{
-					Configuration:    map[string]interface{}{},
-					PolicyTemplateID: common.ClientIDEnforcement,
+					PolicyTemplateID: common.OAuth2MuleOauthProviderPolicy,
 				},
 			},
 		},
 		{
-			name:     "should return the policy as OAuth when the mulesoft policy is oauth",
-			expected: apic.Oauth,
+			name:     "BasicAuthSimplePolicy",
+			expected: []string{apic.Basic},
 			policies: []anypoint.Policy{
 				{
-					Configuration:    map[string]interface{}{},
-					PolicyTemplateID: common.ExternalOauth,
+					PolicyTemplateID: common.BasicAuthSimplePolicy,
 				},
 			},
 		},
 		{
-			name:     "should return the first policy that matches 'client-id-enforcement'",
-			expected: apic.Apikey,
+			name:     "ClientIDEnforcement",
+			expected: []string{apic.Basic},
 			policies: []anypoint.Policy{
 				{
-					Configuration:    map[string]interface{}{},
-					PolicyTemplateID: "fake",
-				},
-				{
-					Configuration:    map[string]interface{}{},
-					PolicyTemplateID: common.ClientIDEnforcement,
+					Configuration: map[string]interface{}{
+						common.CredOrigin: "sth",
+					},
+					PolicyTemplateID: common.ClientIDEnforcementPolicy,
 				},
 			},
 		},
 		{
-			name:     "should return a map for the configuration when it is not set.'",
-			expected: apic.Apikey,
+			name:     "ClientIDEnforcementCustomExpression",
+			expected: []string{},
 			policies: []anypoint.Policy{
 				{
-					PolicyTemplateID: common.ClientIDEnforcement,
+					Configuration: map[string]interface{}{
+						common.CredOrigin: "customExpression",
+					},
+					PolicyTemplateID: common.ClientIDEnforcementPolicy,
+				},
+			},
+			err: fmt.Errorf("incompatible Mulesoft Policies provided"),
+		},
+		{
+			name:     "BasicAuth_ClientIDEnforcement",
+			expected: []string{apic.Oauth, apic.Basic},
+			policies: []anypoint.Policy{
+				{
+					PolicyTemplateID: common.OAuth2MuleOauthProviderPolicy,
+				},
+				{
+					PolicyTemplateID: common.BasicAuthSimplePolicy,
 				},
 			},
 		},
 		{
-			name:     "should return the policy as pass-through when there are no policies in the array",
-			expected: apic.Passthrough,
+			name:     "Passthrough",
+			expected: []string{},
 			policies: []anypoint.Policy{},
 		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			policy, conf, _ := getAuthPolicy(tc.policies, catalog)
-			assert.Equal(t, policy, tc.expected)
+			apicAuths, conf, err := getApicAuthsAndConfig(tc.policies)
+			if tc.err != nil {
+				assert.Equal(t, err, tc.err)
+				return
+			}
+			assert.Equal(t, err, nil)
+			assert.Equal(t, tc.expected, apicAuths)
 			assert.NotNil(t, conf)
 		})
 	}
 }
 
-func Test_updateSpec(t *testing.T) {
+func TestSetPolicies(t *testing.T) {
+	urlExample := "https://www.test.com"
 	tests := []struct {
 		name            string
-		specType        string
-		endpoint        string
-		content         []byte
-		expectedContent []byte
-		authPolicy      string
+		configuration   map[string]interface{}
+		content         interface{}
+		expectedContent map[string]interface{}
 	}{
 		{
-			name:            "should update an OAS 2 spec with APIKey security",
-			specType:        apic.Oas2,
-			endpoint:        "https://newhost.com/v1",
-			content:         []byte(`{"basePath": "/v2","host": "oldhost.com","schemes": ["http"],"swagger": "2.0","info": {"title": "petstore2"},"paths": {}}`),
-			expectedContent: []byte(`{"basePath":"/v1","host":"newhost.com","info":{"title":"petstore2","version":""},"schemes":["https"],"securityDefinitions":{"client-id-enforcement":{"description":"Provided as: client_id:\u003cINSERT_VALID_CLIENTID_HERE\u003e \n\n client_secret:\u003cINSERT_VALID_SECRET_HERE\u003e\n\n","in":"header","name":"authorization","type":"apiKey"}},"swagger":"2.0"}`),
-			authPolicy:      apic.Apikey,
+			name: "OAS3_HttpBasic",
+			configuration: map[string]interface{}{
+				apic.Basic: "",
+			},
+			content: &openapi3.T{
+				OpenAPI: "3.0.1",
+				Info: &openapi3.Info{
+					Title: "petstore3",
+				},
+				Paths:   openapi3.Paths{},
+				Servers: openapi3.Servers{{URL: "http://google.com"}},
+			},
+			expectedContent: map[string]interface{}{
+				"components": map[string]interface{}{
+					"securitySchemes": map[string]interface{}{
+						common.BasicAuthName: map[string]interface{}{
+							"description": common.BasicAuthDesc,
+							"scheme":      common.BasicAuthScheme,
+							"type":        common.BasicAuthOASType,
+						},
+					},
+				},
+				"info": map[string]interface{}{
+					"title":   "petstore3",
+					"version": "",
+				},
+				"openapi": "3.0.1",
+				"paths":   map[string]interface{}{},
+				"servers": []interface{}{
+					map[string]interface{}{
+						"url": "http://google.com",
+					},
+				},
+				"security": []map[string]interface{}{
+					map[string]interface{}{
+						common.BasicAuthName: []interface{}{""},
+					},
+				},
+			},
 		},
+
 		{
-			name:            "should update an OAS 2 spec with OAuth security",
-			specType:        apic.Oas2,
-			endpoint:        "https://newhost.com/v1",
-			content:         []byte(`{"basePath":"/v2","host":"oldhost.com","schemes":["http"],"swagger":"2.0","info":{"title":"petstore2"},"paths":{}}`),
-			expectedContent: []byte(`{"basePath":"/v1","host":"newhost.com","info":{"title":"petstore2","version":""},"schemes":["https"],"securityDefinitions":{"oauth2":{"description":"This API supports OAuth 2.0 for authenticating all API requests","flow":"accessCode","type":"oauth2"}},"swagger":"2.0"}`),
-			authPolicy:      apic.Oauth,
+			name: "OAS3_Oauth2",
+			configuration: map[string]interface{}{
+				apic.Oauth: map[string]interface{}{
+					common.TokenURL: "www.test.com",
+				},
+			},
+			content: &openapi3.T{
+				OpenAPI: "3.0.1",
+				Info: &openapi3.Info{
+					Title: "petstore3",
+				},
+				Paths:   openapi3.Paths{},
+				Servers: openapi3.Servers{{URL: "http://google.com"}},
+			},
+			expectedContent: map[string]interface{}{
+				"components": map[string]interface{}{
+					"securitySchemes": map[string]interface{}{
+						common.Oauth2Name: map[string]interface{}{
+							"description": common.Oauth2Desc,
+							"type":        common.Oauth2OASType,
+							"flows": map[string]interface{}{
+								"authorizationCode": map[string]interface{}{
+									"authorizationUrl": "www.test.com",
+									"scopes":           map[string]interface{}{},
+									"tokenUrl":         "www.test.com",
+								},
+							},
+						},
+					},
+				},
+				"info": map[string]interface{}{
+					"title":   "petstore3",
+					"version": "",
+				},
+				"openapi": "3.0.1",
+				"paths":   map[string]interface{}{},
+				"security": []interface{}{
+					map[string]interface{}{
+						common.Oauth2Name: []interface{}{},
+					},
+				},
+				"servers": []interface{}{
+					map[string]interface{}{
+						"url": "http://google.com",
+					},
+				},
+			},
 		},
+
 		{
-			name:            "should update an OAS 3 spec with OAuth security",
-			specType:        apic.Oas3,
-			endpoint:        "https://abc.com",
-			content:         []byte(`{"openapi":"3.0.1","servers":[{"url":"google.com"}],"paths":{},"info":{"title":"petstore3"}}`),
-			expectedContent: []byte(`{"components":{"securitySchemes":{"oauth2":{"description":"This API supports OAuth 2.0 for authenticating all API requests","flows":{"authorizationCode":{"scopes":{}}},"type":"oauth2"}}},"info":{"title":"petstore3","version":""},"openapi":"3.0.1","paths":{},"servers":[{"url":"https://abc.com"}]}`),
-			authPolicy:      apic.Oauth,
+			name: "OAS3_Oauth2_Scopes",
+			configuration: map[string]interface{}{
+				apic.Oauth: map[string]interface{}{
+					common.TokenURL: "www.test.com", common.Scopes: "read write",
+				},
+			},
+			content: &openapi3.T{
+				OpenAPI: "3.0.1",
+				Info: &openapi3.Info{
+					Title: "petstore3",
+				},
+				Paths:   openapi3.Paths{},
+				Servers: openapi3.Servers{{URL: "http://google.com"}},
+			},
+			expectedContent: map[string]interface{}{
+				"components": map[string]interface{}{
+					"securitySchemes": map[string]interface{}{
+						common.Oauth2Name: map[string]interface{}{
+							"description": common.Oauth2Desc,
+							"type":        common.Oauth2OASType,
+							"flows": map[string]interface{}{
+								"authorizationCode": map[string]interface{}{
+									"authorizationUrl": "www.test.com",
+									"scopes": map[string]interface{}{
+										"read":  "",
+										"write": "",
+									},
+									"tokenUrl": "www.test.com",
+								},
+							},
+						},
+					},
+				},
+				"info": map[string]interface{}{
+					"title":   "petstore3",
+					"version": "",
+				},
+				"openapi": "3.0.1",
+				"paths":   map[string]interface{}{},
+				"security": []interface{}{
+					map[string]interface{}{
+						common.Oauth2Name: []interface{}{
+							"read",
+							"write",
+						},
+					},
+				},
+				"servers": []interface{}{
+					map[string]interface{}{
+						"url": "http://google.com",
+					},
+				},
+			},
 		},
+
 		{
-			name:            "should update an OAS 3 spec with APIKey security",
-			specType:        apic.Oas3,
-			endpoint:        "https://abc.com",
-			content:         []byte(`{"openapi":"3.0.1","servers":[{"url":"google.com"}],"paths":{},"info":{"title":"petstore3"}}`),
-			expectedContent: []byte(`{"components":{"securitySchemes":{"client-id-enforcement":{"description":"Provided as: client_id:\u003cINSERT_VALID_CLIENTID_HERE\u003e \n\n client_secret:\u003cINSERT_VALID_SECRET_HERE\u003e\n\n","in":"header","name":"authorization","type":"apiKey"}}},"info":{"title":"petstore3","version":""},"openapi":"3.0.1","paths":{},"servers":[{"url":"https://abc.com"}]}`),
-			authPolicy:      apic.Apikey,
+			name: "OAS2_HttpBasic",
+			configuration: map[string]interface{}{
+				apic.Basic: "",
+			},
+			content: &openapi2.T{
+				Swagger: "2.0",
+				Info: openapi3.Info{
+					Title: "petstore2",
+				},
+				Schemes:  []string{"http"},
+				Host:     "www.test.com",
+				BasePath: "/v2",
+			},
+			expectedContent: map[string]interface{}{
+				"basePath": "/v2",
+				"host":     "www.test.com",
+				"info": map[string]interface{}{
+					"title":   "petstore2",
+					"version": "",
+				},
+				"schemes": []interface{}{
+					"http",
+				},
+				"security": []map[string]interface{}{
+					map[string]interface{}{
+						common.BasicAuthName: []interface{}{},
+					},
+				},
+				"securityDefinitions": map[string]interface{}{
+					common.BasicAuthName: map[string]interface{}{
+						"description": common.BasicAuthDesc,
+						"type":        common.BasicAuthScheme,
+					},
+				},
+				"swagger": "2.0",
+			},
 		},
+
 		{
-			name:            "should update a Raml spec",
-			specType:        apic.Raml,
-			endpoint:        "https://abc.com",
-			content:         []byte("#%RAML 1.0\nbaseUri: https://na1.salesforce.com:4000/services/data/{version}/chatter"),
-			expectedContent: []byte("#%RAML 1.0\nbaseUri: https://abc.com\n"),
+			name: "OAS2_Oauth2",
+			configuration: map[string]interface{}{
+				apic.Oauth: map[string]interface{}{
+					common.TokenURL: "www.test.com",
+				},
+			},
+			content: &openapi2.T{
+				Swagger: "2.0",
+				Info: openapi3.Info{
+					Title: "petstore2",
+				},
+				Schemes:  []string{"http"},
+				Host:     "www.test.com",
+				BasePath: "/v2",
+			},
+			expectedContent: map[string]interface{}{
+				"basePath": "/v2",
+				"host":     "www.test.com",
+				"info": map[string]interface{}{
+					"title":   "petstore2",
+					"version": "",
+				},
+				"schemes": []interface{}{
+					"http",
+				},
+				"security": []interface{}{
+					map[string]interface{}{
+						common.Oauth2Name: []interface{}{},
+					},
+				},
+				"securityDefinitions": map[string]interface{}{
+					common.Oauth2Name: map[string]interface{}{
+						"authorizationUrl": "www.test.com",
+						"description":      common.Oauth2Desc,
+						"flow":             common.AccessCode,
+						"tokenUrl":         "www.test.com",
+						"type":             common.Oauth2OASType,
+					},
+				},
+				"swagger": "2.0",
+			},
+		},
+
+		{
+			name: "OAS2_Oauth2_Scopes",
+			configuration: map[string]interface{}{
+				apic.Oauth: map[string]interface{}{
+					common.TokenURL: "www.test.com", common.Scopes: "read write",
+				},
+			},
+			content: &openapi2.T{
+				Swagger: "2.0",
+				Info: openapi3.Info{
+					Title: "petstore2",
+				},
+				Schemes:  []string{"http"},
+				Host:     "www.test.com",
+				BasePath: "/v2",
+			},
+			expectedContent: map[string]interface{}{
+				"basePath": "/v2",
+				"host":     "www.test.com",
+				"info": map[string]interface{}{
+					"title":   "petstore2",
+					"version": "",
+				},
+				"schemes": []interface{}{
+					"http",
+				},
+				"security": []interface{}{
+					map[string]interface{}{
+						common.Oauth2Name: []interface{}{
+							"read",
+							"write",
+						},
+					},
+				},
+				"securityDefinitions": map[string]interface{}{
+					common.Oauth2Name: map[string]interface{}{
+						"authorizationUrl": "www.test.com",
+						"description":      common.Oauth2Desc,
+						"flow":             common.AccessCode,
+						"scopes": map[string]interface{}{
+							"read":  "",
+							"write": "",
+						},
+						"tokenUrl": "www.test.com",
+						"type":     common.Oauth2OASType,
+					},
+				},
+				"swagger": "2.0",
+			},
+		},
+
+		{
+			name: "RAML_Basic",
+			configuration: map[string]interface{}{
+				apic.Basic: "",
+			},
+			content: []byte("#%RAML 1.0\ntitle: ok"),
+			expectedContent: map[string]interface{}{
+				"baseUri":   urlExample,
+				"securedBy": []interface{}{common.BasicAuthName},
+				"securitySchemes": map[string]interface{}{
+					common.BasicAuthName: map[string]interface{}{
+						"description": common.BasicAuthDesc,
+						"type":        common.BasicAuthRAMLType,
+					},
+				},
+				"title": "ok",
+			},
+		},
+
+		{
+			name: "RAML_OAuth2",
+			configuration: map[string]interface{}{
+				apic.Oauth: map[string]interface{}{
+					common.TokenURL: urlExample,
+				},
+			},
+			content: []byte("#%RAML 1.0\ntitle: ok"),
+			expectedContent: map[string]interface{}{
+				"baseUri": urlExample,
+				"securedBy": []interface{}{
+					common.Oauth2Name,
+				},
+				"securitySchemes": map[string]interface{}{
+					common.Oauth2Name: map[string]interface{}{
+						"description": common.Oauth2Desc,
+						"type":        common.Oauth2RAMLType,
+						"settings": map[string]interface{}{
+							"accessTokenUri":   urlExample,
+							"authorizationUri": urlExample,
+						},
+						"describedBy": map[string]interface{}{
+							"headers": map[string]interface{}{
+								"Authorization": map[string]interface{}{
+									"description": common.Oauth2Desc,
+									"type":        "string",
+								},
+							},
+						},
+					},
+				},
+				"title": "ok",
+			},
+		},
+
+		{
+			name: "RAML_OAuth2_Scopes",
+			configuration: map[string]interface{}{
+				apic.Oauth: map[string]interface{}{
+					common.TokenURL: urlExample, common.Scopes: "read write",
+				},
+			},
+			content: []byte("#%RAML 1.0\ntitle: ok"),
+			expectedContent: map[string]interface{}{
+				"baseUri": urlExample,
+				"securedBy": []interface{}{
+					map[string]interface{}{
+						common.Oauth2Name: map[string]interface{}{
+							"scopes": []interface{}{
+								"read",
+								"write",
+							},
+						},
+					},
+				},
+				"securitySchemes": map[string]interface{}{
+					common.Oauth2Name: map[string]interface{}{
+						"description": common.Oauth2Desc,
+						"type":        common.Oauth2RAMLType,
+						"settings": map[string]interface{}{
+							"accessTokenUri":   urlExample,
+							"authorizationUri": urlExample,
+						},
+						"describedBy": map[string]interface{}{
+							"headers": map[string]interface{}{
+								"Authorization": map[string]interface{}{
+									"description": common.Oauth2Desc,
+									"type":        "string",
+								},
+							},
+						},
+					},
+				},
+				"title": "ok",
+			},
 		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			content, err := updateSpec(tc.specType, tc.endpoint, tc.authPolicy, nil, tc.content)
+			actual := []byte{}
+			var err error
+			expected := []byte{}
+			switch content := tc.content.(type) {
+			case *openapi3.T:
+				actual, err = setOAS3policies(content, tc.configuration)
+				expected, _ = json.Marshal(tc.expectedContent)
+			case *openapi2.T:
+				actual, err = setOAS2policies(content, tc.configuration)
+				expected, _ = json.Marshal(tc.expectedContent)
+			case []byte:
+				actual, err = setRamlHostAndAuth(content, urlExample, tc.configuration)
+				expected, _ = yaml.Marshal(tc.expectedContent)
+				expected = append([]byte("#%RAML 1.0\n"), expected...)
+			}
 			assert.Nil(t, err)
-			assert.Equal(t, tc.expectedContent, content)
+			assert.Equal(t, expected, actual)
 		})
 	}
-}
-
-func Test_setOAS2policies(t *testing.T) {
-	tests := []struct {
-		name            string
-		configuration   map[string]interface{}
-		content         *openapi2.T
-		expectedContent []byte
-		authPolicy      string
-	}{
-		{
-			name:          "should apply APIKey security policy with no configuration",
-			configuration: nil,
-			content: &openapi2.T{
-				Swagger: "2.0",
-				Info: openapi3.Info{
-					Title: "petstore2",
-				},
-				Schemes:  []string{"http"},
-				Host:     "oldhost.com",
-				BasePath: "/v2",
-				Paths:    nil,
-			},
-			expectedContent: []byte(`{"basePath":"/v2","host":"oldhost.com","info":{"title":"petstore2","version":""},"schemes":["http"],"securityDefinitions":{"client-id-enforcement":{"description":"Provided as: client_id:\u003cINSERT_VALID_CLIENTID_HERE\u003e \n\n client_secret:\u003cINSERT_VALID_SECRET_HERE\u003e\n\n","in":"header","name":"authorization","type":"apiKey"}},"swagger":"2.0"}`),
-			authPolicy:      apic.Apikey,
-		},
-		{
-			name:          "should apply APIKey security policy with Custom configuration set as Basic Auth",
-			configuration: map[string]interface{}{common.CredOrigin: "httpBasicAuthenticationHeader"},
-			content: &openapi2.T{
-				Swagger: "2.0",
-				Info: openapi3.Info{
-					Title: "petstore2",
-				},
-				Schemes:  []string{"http"},
-				Host:     "oldhost.com",
-				BasePath: "/v2",
-				Paths:    nil,
-			},
-			expectedContent: []byte(`{"basePath":"/v2","host":"oldhost.com","info":{"title":"petstore2","version":""},"schemes":["http"],"securityDefinitions":{"client-id-enforcement":{"description":"Provided as: client_id:\u003cINSERT_VALID_CLIENTID_HERE\u003e \n\n client_secret:\u003cINSERT_VALID_SECRET_HERE\u003e\n\nhttpBasicAuthenticationHeader","in":"header","name":"authorization","type":"apiKey"}},"swagger":"2.0"}`),
-			authPolicy:      apic.Apikey,
-		},
-		{
-			name:          "should apply OAuth security policy with no scope",
-			configuration: map[string]interface{}{common.TokenURL: "www.test.com"},
-			content: &openapi2.T{
-				Swagger: "2.0",
-				Info: openapi3.Info{
-					Title: "petstore2",
-				},
-				Schemes:  []string{"http"},
-				Host:     "oldhost.com",
-				BasePath: "/v2",
-				Paths:    nil,
-			},
-			expectedContent: []byte(`{"basePath":"/v2","host":"oldhost.com","info":{"title":"petstore2","version":""},"schemes":["http"],"securityDefinitions":{"oauth2":{"authorizationUrl":"www.test.com","description":"This API supports OAuth 2.0 for authenticating all API requests","flow":"accessCode","tokenUrl":"www.test.com","type":"oauth2"}},"swagger":"2.0"}`),
-			authPolicy:      apic.Oauth,
-		},
-		{
-			name:          "should apply OAuth security policy with scopes",
-			configuration: map[string]interface{}{common.TokenURL: "www.test.com", common.Scopes: "read,write"},
-			content: &openapi2.T{
-				Swagger: "2.0",
-				Info: openapi3.Info{
-					Title: "petstore2",
-				},
-				Schemes:  []string{"http"},
-				Host:     "oldhost.com",
-				BasePath: "/v2",
-				Paths:    nil,
-			},
-			expectedContent: []byte(`{"basePath":"/v2","host":"oldhost.com","info":{"title":"petstore2","version":""},"schemes":["http"],"securityDefinitions":{"oauth2":{"authorizationUrl":"www.test.com","description":"This API supports OAuth 2.0 for authenticating all API requests","flow":"accessCode","scopes":{"scopes":"read,write"},"tokenUrl":"www.test.com","type":"oauth2"}},"swagger":"2.0"}`),
-			authPolicy:      apic.Oauth,
-		},
-		// {
-		// 	name:          "should return error when authPolicy type is not supported ",
-		// 	configuration: nil,
-		// 	content: &openapi2.T{
-		// 		Swagger: "2.0",
-		// 		Info: openapi3.Info{
-		// 			Title: "petstore2",
-		// 		},
-		// 		Schemes:  []string{"http"},
-		// 		Host:     "oldhost.com",
-		// 		BasePath: "/v2",
-		// 		Paths:    nil,
-		// 	},
-		// 	expectedContent: []byte(`{"basePath":"/v2","host":"oldhost.com","schemes":["http"],"swagger":"2.0"}`),
-		// 	authPolicy:      "JWTToken",
-		// },
-	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			content, err := setOAS2policies(tc.content, tc.authPolicy, tc.configuration)
-			if tc.authPolicy != apic.Oauth && tc.authPolicy != apic.Apikey {
-				assert.NotNil(t, err)
-			} else {
-				assert.Nil(t, err)
-				assert.Equal(t, tc.expectedContent, content)
-
-			}
-		})
-	}
-}
-
-func Test_setOAS3policies(t *testing.T) {
-	tests := []struct {
-		name            string
-		configuration   map[string]interface{}
-		content         *openapi3.T
-		expectedContent []byte
-		authPolicy      string
-	}{
-		{
-			name:          "should apply APIKey security policy with no configuration",
-			configuration: nil,
-			content: &openapi3.T{
-				OpenAPI: "3.0.1",
-				Info: &openapi3.Info{
-					Title: "petstore3",
-				},
-				Servers: openapi3.Servers{{URL: "http://google.com"}},
-			},
-			expectedContent: []byte(`{"components":{"securitySchemes":{"client-id-enforcement":{"description":"Provided as: client_id:\u003cINSERT_VALID_CLIENTID_HERE\u003e \n\n client_secret:\u003cINSERT_VALID_SECRET_HERE\u003e\n\n","in":"header","name":"authorization","type":"apiKey"}}},"info":{"title":"petstore3","version":""},"openapi":"3.0.1","paths":null,"servers":[{"url":"http://google.com"}]}`),
-			authPolicy:      apic.Apikey,
-		},
-		{
-			name:          "should apply APIKey security policy with Custom configuration set as Basic Auth",
-			configuration: map[string]interface{}{common.CredOrigin: "httpBasicAuthenticationHeader"},
-			content: &openapi3.T{
-				OpenAPI: "3.0.1",
-				Info: &openapi3.Info{
-					Title: "petstore3",
-				},
-				Servers: openapi3.Servers{{URL: "http://google.com"}},
-			},
-			expectedContent: []byte(`{"components":{"securitySchemes":{"client-id-enforcement":{"description":"Provided as: client_id:\u003cINSERT_VALID_CLIENTID_HERE\u003e \n\n client_secret:\u003cINSERT_VALID_SECRET_HERE\u003e\n\nhttpBasicAuthenticationHeader","in":"header","name":"authorization","type":"apiKey"}}},"info":{"title":"petstore3","version":""},"openapi":"3.0.1","paths":null,"servers":[{"url":"http://google.com"}]}`),
-			authPolicy:      apic.Apikey,
-		},
-		{
-			name:          "should apply OAuth security policy with no scope",
-			configuration: map[string]interface{}{common.TokenURL: "www.test.com"},
-			content: &openapi3.T{
-				OpenAPI: "3.0.1",
-				Info: &openapi3.Info{
-					Title: "petstore3",
-				},
-				Servers: openapi3.Servers{{URL: "http://google.com"}},
-			},
-			expectedContent: []byte(`{"components":{"securitySchemes":{"oauth2":{"description":"This API supports OAuth 2.0 for authenticating all API requests","flows":{"authorizationCode":{"authorizationUrl":"www.test.com","scopes":{},"tokenUrl":"www.test.com"}},"type":"oauth2"}}},"info":{"title":"petstore3","version":""},"openapi":"3.0.1","paths":null,"servers":[{"url":"http://google.com"}]}`),
-			authPolicy:      apic.Oauth,
-		},
-		{
-			name:          "should apply OAuth security policy with scopes",
-			configuration: map[string]interface{}{common.TokenURL: "www.test.com", common.Scopes: "read,write"},
-			content: &openapi3.T{
-				OpenAPI: "3.0.1",
-				Info: &openapi3.Info{
-					Title: "petstore3",
-				},
-				Servers: openapi3.Servers{{URL: "http://google.com"}},
-			},
-			expectedContent: []byte(`{"components":{"securitySchemes":{"oauth2":{"description":"This API supports OAuth 2.0 for authenticating all API requests","flows":{"authorizationCode":{"authorizationUrl":"www.test.com","scopes":{"scopes":"read,write"},"tokenUrl":"www.test.com"}},"type":"oauth2"}}},"info":{"title":"petstore3","version":""},"openapi":"3.0.1","paths":null,"servers":[{"url":"http://google.com"}]}`),
-			authPolicy:      apic.Oauth,
-		},
-		// {
-		// 	name:            "should return error when authPolicy type is not supported",
-		// 	configuration:   nil,
-		// 	content:         []byte(`{"openapi":"3.0.1","servers":[{"url":"google.com"}]}`),
-		// 	expectedContent: []byte(`{"openapi":"3.0.1","servers":[{"url":"google.com"}]}`),
-		// 	authPolicy:      "JWTToken",
-		// },
-	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			content, err := setOAS3policies(tc.content, tc.authPolicy, tc.configuration)
-			if tc.authPolicy != apic.Oauth && tc.authPolicy != apic.Apikey {
-				assert.NotNil(t, err)
-			} else {
-				assert.Nil(t, err)
-				assert.Equal(t, tc.expectedContent, content)
-			}
-		})
-	}
-}
-
-func getSLATierInfo() (*anypoint.Tiers, *serviceHandler, *mocks.MockCentralClient) {
-	stage := "Sandbox"
-	mc := &anypoint.MockAnypointClient{}
-	tiers := anypoint.Tiers{
-		Total: 2,
-		Tiers: []anypoint.SLATier{{
-			ID:   123,
-			Name: "Gold",
-			Limits: []anypoint.Limits{{
-				TimePeriodInMilliseconds: 1000,
-				MaximumRequests:          10,
-			}},
-		}, {
-			ID:   456,
-			Name: "Silver",
-			Limits: []anypoint.Limits{{
-				TimePeriodInMilliseconds: 1000,
-				MaximumRequests:          1,
-			}},
-		}},
-	}
-
-	msc := &subscription.MockMuleSubscriptionClient{}
-	sm := subscription.NewManager(logrus.StandardLogger(), msc)
-
-	sh := &serviceHandler{
-		muleEnv:             stage,
-		discoveryTags:       []string{},
-		discoveryIgnoreTags: []string{},
-		client:              mc,
-		schemas:             sm,
-		cache:               cache.New(),
-	}
-
-	return &tiers, sh, &mocks.MockCentralClient{}
-}
-
-func TestCreateSubscriptionSchemaForSLATier(t *testing.T) {
-	tiers, sh, mcc := getSLATierInfo()
-
-	_, err := sh.createSLATierSchema("1", tiers, mcc)
-	assert.Nil(t, err)
-}
-
-func TestSLATierSchemaSubscriptionCreateFailure(t *testing.T) {
-	tiers, sh, mcc := getSLATierInfo()
-
-	mcc.RegisterSubscriptionSchemaMock = func(_ apic.SubscriptionSchema, _ bool) error {
-		return fmt.Errorf("cannot register subscription schema")
-	}
-	_, err := sh.createSLATierSchema("1", tiers, mcc)
-
-	assert.Error(t, err)
 }

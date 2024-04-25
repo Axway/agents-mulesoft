@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
+	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning/mock"
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
@@ -121,7 +122,7 @@ func TestAccessRequestProvision(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			contract := &anypoint.Contract{
-				Id: 98765,
+				ID: 98765,
 			}
 
 			client := &MockMuleSubscriptionClient{
@@ -268,7 +269,7 @@ func TestCredentialProvision(t *testing.T) {
 		status  prov.Status
 	}{
 		{
-			name:    "should provision credentials",
+			name:    "should provision basic auth credentials",
 			appName: "app1",
 			appID:   "65432",
 			status:  prov.Success,
@@ -309,13 +310,14 @@ func TestCredentialProvision(t *testing.T) {
 				AppDetails: map[string]string{
 					common.AppID: tc.appID,
 				},
+				CredDefName: provisioning.BasicAuthCRD,
 			}
 			status, cr := prv.CredentialProvision(req)
 			assert.Equal(t, tc.status.String(), status.GetStatus().String())
 			if tc.status.String() == prov.Success.String() {
 				assert.NotNil(t, cr)
-				assert.Contains(t, cr.GetData(), prov.OauthClientSecret)
-				assert.Contains(t, cr.GetData(), prov.OauthClientID)
+				assert.Contains(t, cr.GetData(), prov.BasicAuthUsername)
+				assert.Contains(t, cr.GetData(), prov.BasicAuthPassword)
 			} else {
 				assert.Nil(t, cr)
 			}
