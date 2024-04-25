@@ -83,7 +83,7 @@ type API struct {
 	EndpointURI               string   `json:"endpointUri"`
 	EnvironmentID             string   `json:"environmentId"`
 	GroupID                   string   `json:"groupId"`
-	ID                        int64    `json:"id"`
+	ID                        int      `json:"id"`
 	InstanceLabel             string   `json:"instanceLabel"`
 	IsPublic                  bool     `json:"isPublic"`
 	MasterOrganizationID      string   `json:"masterOrganizationId"`
@@ -96,23 +96,9 @@ type API struct {
 
 // Policy -
 type Policy struct {
-	// APIID                int64       `json:"apiId,omitempty"`
-	// Audit                Audit       `json:"audit,omitempty"`
 	Configuration     interface{} `json:"configuration,omitempty"`
 	ConfigurationData interface{} `json:"configurationData,omitempty"`
-	// ID                   int64       `json:"id,omitempty"`
-	// MasterOrganizationID string      `json:"masterOrganizationId,omitempty"`
-	// Order                int         `json:"order,omitempty"`
-	// OrganizationID       string      `json:"organizationId,omitempty"`
-	// PointCutData         interface{} `json:"pointCutData,omitempty"`
-	// PolicyID             int         `json:"policyId,omitempty"`
-	PolicyTemplateID string `json:"policyTemplateId,omitempty"`
-	// Template             string      `json:"template,omitempty"`
-	// Type                 string      `json:"type,omitempty"`
-	// Version              int64       `json:"version,omitempty"`
-	// AssetID              string      `json:"assetId,omitempty"`
-	// AssetVersion         string      `json:"assetVersion,omitempty"`
-	// GroupID              string      `json:"groupId,omitempty"`
+	PolicyTemplateID  string      `json:"policyTemplateId,omitempty"`
 }
 
 type Policies struct {
@@ -233,7 +219,7 @@ type Application struct {
 	ClientID     string `json:"clientId"`
 	ClientSecret string `json:"clientSecret"`
 	Description  string `json:"description"`
-	ID           int64  `json:"id"`
+	ID           int    `json:"id"`
 	Name         string `json:"name"`
 }
 
@@ -244,13 +230,13 @@ type AppRequestBody struct {
 
 type Contract struct {
 	AcceptedTerms   bool   `json:"acceptedTerms"`
-	APIID           string `json:"apiId"`
+	ApiID           string `json:"apiId"`
 	AssetID         string `json:"assetId"`
 	EnvironmentID   string `json:"environmentId"`
 	GroupID         string `json:"groupId"`
-	Id              int64  `json:"id"`
+	ID              int    `json:"id"`
 	OrganizationID  string `json:"organizationId"`
-	RequestedTierID int64  `json:"requestedTierId,omitempty"`
+	RequestedTierID int    `json:"requestedTierId,omitempty"`
 	Status          string `json:"status"`
 	Version         string `json:"version"`
 	VersionGroup    string `json:"versionGroup"`
@@ -262,15 +248,20 @@ type Tiers struct {
 }
 
 type SLATier struct {
-	Description interface{} `json:"description"`
-	ID          int         `json:"id"`
-	Limits      []Limits    `json:"limits"`
-	Name        string      `json:"name"`
-	Status      string      `json:"status"`
+	Audit                *Audit   `json:"audit,omitempty"`
+	MasterOrganizationID *string  `json:"masterOrganizationId,omitempty"`
+	OrganizationID       *string  `json:"organizationId,omitempty"`
+	Description          *string  `json:"description,omitempty"`
+	ID                   *int     `json:"id,omitempty"`
+	Limits               []Limits `json:"limits"`
+	Name                 string   `json:"name"`
+	Status               string   `json:"status"`
+	AutoApprove          bool     `json:"autoApprove"`
+	ApplicationCount     *int     `json:"applicationCount,omitempty"`
 }
 
 type Limits struct {
-	MaximumRequests          interface{} `json:"maximumRequests,omitempty"`
-	TimePeriodInMilliseconds int         `json:"timePeriodInMilliseconds,omitempty"`
-	Visible                  bool        `json:"visible,omitempty"`
+	MaximumRequests          interface{} `json:"maximumRequests"`
+	TimePeriodInMilliseconds int         `json:"timePeriodInMilliseconds"`
+	Visible                  bool        `json:"visible"`
 }

@@ -2,6 +2,7 @@ package subscription
 
 import (
 	"fmt"
+	"strconv"
 	"testing"
 
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
@@ -36,7 +37,7 @@ func TestCreateApp(t *testing.T) {
 			client.On("CreateClientApplication").Return(app1, tc.err)
 			subClient := NewMuleSubscriptionClient(client)
 
-			_, err := subClient.CreateApp(app1.Name, "apiID-123", app1.Description)
+			_, err := subClient.CreateApp(app1.Name, strconv.Itoa(1234), app1.Description)
 			if tc.hasErr {
 				assert.Error(t, err)
 			} else {
@@ -98,20 +99,19 @@ func TestCreateContract(t *testing.T) {
 			subClient := NewMuleSubscriptionClient(client)
 
 			apiIDStr := fmt.Sprintf("%d", api.ID)
-			var tID int64 = 7654
-			tIDStr := fmt.Sprintf("%d", tID)
+			tierID := 7654
 
-			contract, err := subClient.CreateContract(apiIDStr, tIDStr, 123)
+			contract, err := subClient.CreateContract(apiIDStr, strconv.Itoa(tierID), strconv.Itoa(123))
 			if tc.hasErr {
 				assert.Error(t, err)
 			} else {
 				assert.True(t, contract.AcceptedTerms)
-				assert.Equal(t, apiIDStr, contract.APIID)
+				assert.Equal(t, apiIDStr, contract.ApiID)
 				assert.Equal(t, api.AssetID, contract.AssetID)
 				assert.Equal(t, api.EnvironmentID, contract.EnvironmentID)
 				assert.Equal(t, api.GroupID, contract.GroupID)
 				assert.Equal(t, api.OrganizationID, contract.OrganizationID)
-				assert.Equal(t, tID, contract.RequestedTierID)
+				assert.Equal(t, tierID, contract.RequestedTierID)
 				assert.Equal(t, api.AssetVersion, contract.Version)
 				assert.Equal(t, asset.VersionGroup, contract.VersionGroup)
 				assert.Nil(t, err)
@@ -139,7 +139,7 @@ func TestDeleteApp(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			var appID int64 = 123
+			var appID int = 123
 			app1 := &anypoint.Application{
 				Name:        "app one",
 				ID:          appID,
@@ -149,7 +149,7 @@ func TestDeleteApp(t *testing.T) {
 			client.On("DeleteClientApplication").Return(tc.deleteAppErr)
 			subClient := NewMuleSubscriptionClient(client)
 
-			err := subClient.DeleteApp(app1.ID)
+			err := subClient.DeleteApp(strconv.Itoa(app1.ID))
 			if tc.hasErr {
 				assert.Error(t, err)
 			} else {

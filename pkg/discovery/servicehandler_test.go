@@ -84,13 +84,11 @@ func TestServiceHandler(t *testing.T) {
 		mc.On("GetExchangeFileContent").Return([]byte(c.content), true, nil)
 		mc.On("GetExchangeAssetIcon").Return("", "", nil)
 
-		msh := &mockSchemaHandler{}
 		sh := &serviceHandler{
 			muleEnv:             "Sandbox",
 			discoveryTags:       []string{"tag1"},
 			discoveryIgnoreTags: []string{"nah"},
 			client:              mc,
-			schemas:             msh,
 			cache:               cache.New(),
 		}
 		list := sh.ToServiceDetails(&asset)
@@ -142,7 +140,6 @@ func TestServiceHandlerDidNotDiscoverAPI(t *testing.T) {
 		discoveryIgnoreTags: []string{"nah"},
 		client:              mc,
 		cache:               cache.New(),
-		schemas:             &mockSchemaHandler{},
 	}
 	details := sh.ToServiceDetails(&asset)
 	assert.Equal(t, 0, len(details))
@@ -161,7 +158,6 @@ func TestServiceHandlerGetExchangeAssetError(t *testing.T) {
 		discoveryTags:       []string{},
 		discoveryIgnoreTags: []string{},
 		client:              mc,
-		schemas:             &mockSchemaHandler{},
 		cache:               cache.New(),
 	}
 	sd, err := sh.getServiceDetail(&asset, &asset.APIs[0])
@@ -507,6 +503,11 @@ func TestSetPolicies(t *testing.T) {
 				},
 				"openapi": "3.0.1",
 				"paths":   map[string]interface{}{},
+				"security": []interface{}{
+					map[string]interface{}{
+						common.Oauth2Name: []interface{}{},
+					},
+				},
 				"servers": []interface{}{
 					map[string]interface{}{
 						"url": "http://google.com",
@@ -823,162 +824,3 @@ func TestSetPolicies(t *testing.T) {
 		})
 	}
 }
-
-// func Test_setOAS3policies(t *testing.T) {
-// 	tests := []struct {
-// 		name            string
-// 		configuration   map[string]interface{}
-// 		content         *openapi3.T
-// 		expectedContent map[string]interface{}
-// 		authPolicy      string
-// 	}{
-// 		{
-// 			name: "should apply HTTP Basic security policy",
-// 			configuration: map[string]interface{}{
-// 				apic.Basic: "",
-// 			},
-// 			content: &openapi3.T{
-// 				OpenAPI: "3.0.1",
-// 				Info: &openapi3.Info{
-// 					Title: "petstore3",
-// 				},
-// 				Servers: openapi3.Servers{{URL: "http://google.com"}},
-// 			},
-// 			expectedContent: map[string]interface{}{
-// 				"components": map[string]interface{}{
-// 					"securitySchemes": map[string]interface{}{
-// 						common.BasicAuthName: map[string]interface{}{
-// 							"description": common.BasicAuthDesc,
-// 							"scheme":      common.BasicAuthScheme,
-// 							"type":        common.BasicAuthOASType,
-// 						},
-// 					},
-// 				},
-// 				"info": map[string]interface{}{
-// 					"title":   "petstore3",
-// 					"version": "",
-// 				},
-// 				"openapi": "3.0.1",
-// 				"servers": []interface{}{
-// 					map[string]interface{}{
-// 						"url": "http://google.com",
-// 					},
-// 				},
-// 				"security": []map[string]interface{}{
-// 					map[string]interface{}{
-// 						common.BasicAuthName: []interface{}{""},
-// 					},
-// 				},
-// 				"paths": map[string]interface{}{},
-// 			},
-// 			authPolicy: apic.Basic,
-// 		},
-// 		{
-// 			name: "should apply OAuth security policy with no scope",
-// 			configuration: map[string]interface{}{
-// 				apic.Oauth: map[string]interface{}{
-// 					common.TokenURL: "www.test.com",
-// 				},
-// 			},
-// 			content: &openapi3.T{
-// 				OpenAPI: "3.0.1",
-// 				Info: &openapi3.Info{
-// 					Title: "petstore3",
-// 				},
-// 				Servers: openapi3.Servers{{URL: "http://google.com"}},
-// 			},
-// 			expectedContent: map[string]interface{}{
-// 				"components": map[string]interface{}{
-// 					"securitySchemes": map[string]interface{}{
-// 						common.Oauth2Name: map[string]interface{}{
-// 							"description": common.Oauth2Desc,
-// 							"type":        common.Oauth2OASType,
-// 							"flows": map[string]interface{}{
-// 								"authorizationCode": map[string]interface{}{
-// 									"authorizationUrl": "www.test.com",
-// 									"scopes":           map[string]interface{}{},
-// 									"tokenUrl":         "www.test.com",
-// 								},
-// 							},
-// 						},
-// 					},
-// 				},
-// 				"info": map[string]interface{}{
-// 					"title":   "petstore3",
-// 					"version": "",
-// 				},
-// 				"openapi": "3.0.1",
-// 				"paths":   map[string]interface{}{},
-// 				"servers": []interface{}{
-// 					map[string]interface{}{
-// 						"url": "http://google.com",
-// 					},
-// 				},
-// 			},
-// 			authPolicy: apic.Oauth,
-// 		},
-// 		{
-// 			name: "should apply OAuth security policy with scopes",
-// 			configuration: map[string]interface{}{
-// 				apic.Oauth: map[string]interface{}{
-// 					common.TokenURL: "www.test.com", common.Scopes: "read write",
-// 				},
-// 			},
-// 			content: &openapi3.T{
-// 				OpenAPI: "3.0.1",
-// 				Info: &openapi3.Info{
-// 					Title: "petstore3",
-// 				},
-// 				Servers: openapi3.Servers{{URL: "http://google.com"}},
-// 			},
-// 			expectedContent: map[string]interface{}{
-// 				"components": map[string]interface{}{
-// 					"securitySchemes": map[string]interface{}{
-// 						common.Oauth2Name: map[string]interface{}{
-// 							"description": common.Oauth2Desc,
-// 							"type":        common.Oauth2OASType,
-// 							"flows": map[string]interface{}{
-// 								"authorizationCode": map[string]interface{}{
-// 									"authorizationUrl": "www.test.com",
-// 									"scopes": map[string]interface{}{
-// 										"read":  "",
-// 										"write": "",
-// 									},
-// 									"tokenUrl": "www.test.com",
-// 								},
-// 							},
-// 						},
-// 					},
-// 				},
-// 				"info": map[string]interface{}{
-// 					"title":   "petstore3",
-// 					"version": "",
-// 				},
-// 				"openapi": "3.0.1",
-// 				"paths":   map[string]interface{}{},
-// 				"security": []interface{}{
-// 					map[string]interface{}{
-// 						common.Oauth2Name: []interface{}{
-// 							"read",
-// 							"write",
-// 						},
-// 					},
-// 				},
-// 				"servers": []interface{}{
-// 					map[string]interface{}{
-// 						"url": "http://google.com",
-// 					},
-// 				},
-// 			},
-// 			authPolicy: apic.Oauth,
-// 		},
-// 	}
-// 	for _, tc := range tests {
-// 		t.Run(tc.name, func(t *testing.T) {
-// 			actual, err := setOAS3policies(tc.content, tc.configuration)
-// 			assert.Nil(t, err)
-// 			expected, _ := json.Marshal(tc.expectedContent)
-// 			assert.True(t, bytes.Equal(expected, actual))
-// 		})
-// 	}
-// }

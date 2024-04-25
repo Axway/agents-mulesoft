@@ -42,8 +42,13 @@ const (
 	Scopes    = "scopes"
 	SLABased  = "sla-based"
 	SlaTier   = "sla-tier"
+	SLAActive = "ACTIVE"
+
 	TierLabel = "SLA Tier"
 	TokenURL  = "tokenUrl"
+
+	AxwayAgentSLATierName        = "Axway Agent Tier"
+	AxwayAgentSLATierDescription = "SLA Tier created for Axway Agent Provisioning purposes"
 )
 
 const (

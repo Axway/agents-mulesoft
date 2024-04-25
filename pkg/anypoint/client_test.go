@@ -172,7 +172,7 @@ func TestClient(t *testing.T) {
 	})
 	assert.Equal(t, 1, len(assets))
 	assert.Nil(t, err)
-	py, err := client.GetPolicies(10)
+	py, err := client.GetPolicies("10")
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(py))
 	a, err := client.GetExchangeAsset("1", "2", "3")

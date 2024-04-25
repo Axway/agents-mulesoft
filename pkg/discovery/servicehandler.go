@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
@@ -15,7 +16,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	subs "github.com/Axway/agents-mulesoft/pkg/subscription"
 	"github.com/getkin/kin-openapi/openapi2"
 
 	"github.com/getkin/kin-openapi/openapi3"
@@ -24,11 +24,6 @@ import (
 	sdkUtil "github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 	"github.com/Axway/agents-mulesoft/pkg/config"
-)
-
-const (
-	marketplace = "marketplace"
-	catalog     = "unified-catalog"
 )
 
 // ServiceHandler converts a mulesoft asset to an array of ServiceDetails
@@ -42,7 +37,6 @@ type serviceHandler struct {
 	discoveryTags        []string
 	discoveryIgnoreTags  []string
 	client               anypoint.Client
-	schemas              subs.SchemaStore
 	cache                cache.Cache
 	discoverOriginalRaml bool
 }
@@ -95,7 +89,7 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 	})
 
 	// Get the policies associated with the API
-	policies, err := s.client.GetPolicies(api.ID)
+	policies, err := s.client.GetPolicies(strconv.Itoa(api.ID))
 	if err != nil {
 		return nil, err
 	}
@@ -404,21 +398,22 @@ func setOAS3policies(spec *openapi3.T, configuration map[string]interface{}) ([]
 		case apic.Oauth:
 			tokenURL := ""
 			scopes := make(map[string]string)
+			scopesSlice := []string{}
 
 			if cfg := config.(map[string]interface{})[common.TokenURL]; cfg != nil {
 				tokenURL = cfg.(string)
 			}
 			if cfg := config.(map[string]interface{})[common.Scopes]; cfg != nil {
 				// Mulesoft scopes should come separated by space (it's defined when you add scopes in the UI)
-				scopesSlice := strings.Split(cfg.(string), " ")
+				scopesSlice = strings.Split(cfg.(string), " ")
 				for _, scope := range scopesSlice {
 					scopes[scope] = ""
 				}
-				spec.Security = *spec.Security.With(
-					openapi3.NewSecurityRequirement().Authenticate(
-						common.Oauth2Name, scopesSlice...),
-				)
 			}
+			spec.Security = *spec.Security.With(
+				openapi3.NewSecurityRequirement().Authenticate(
+					common.Oauth2Name, scopesSlice...),
+			)
 
 			ssr := openapi3.SecuritySchemeRef{
 				Value: &openapi3.SecurityScheme{
