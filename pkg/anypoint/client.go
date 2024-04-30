@@ -289,7 +289,10 @@ func (c *AnypointClient) ListAssets(page *Page) ([]Asset, error) {
 func (c *AnypointClient) GetAPI(apiID string) (*API, error) {
 	url := fmt.Sprintf("%s/apimanager/api/v1/organizations/%s/environments/%s/apis/%s", c.baseURL, c.auth.GetOrgID(), c.environment.ID, apiID)
 	res := &API{}
-	err := c.invokeJSONGet(url, nil, res, nil)
+	query := map[string]string{
+		"includeProxyConfiguration": "true",
+	}
+	err := c.invokeJSONGet(url, nil, res, query)
 
 	if err != nil {
 		return nil, err

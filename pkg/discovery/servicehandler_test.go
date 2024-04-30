@@ -83,6 +83,7 @@ func TestServiceHandler(t *testing.T) {
 		mc.On("GetExchangeAsset").Return(c.exchangeAsset, nil)
 		mc.On("GetExchangeFileContent").Return([]byte(c.content), true, nil)
 		mc.On("GetExchangeAssetIcon").Return("", "", nil)
+		mc.On("GetAPI").Return(&asset.APIs[0], nil)
 
 		sh := &serviceHandler{
 			muleEnv:             "Sandbox",
@@ -488,10 +489,9 @@ func TestSetPolicies(t *testing.T) {
 							"description": common.Oauth2Desc,
 							"type":        common.Oauth2OASType,
 							"flows": map[string]interface{}{
-								"authorizationCode": map[string]interface{}{
-									"authorizationUrl": "www.test.com",
-									"scopes":           map[string]interface{}{},
-									"tokenUrl":         "www.test.com",
+								"clientCredentials": map[string]interface{}{
+									"scopes":   map[string]interface{}{},
+									"tokenUrl": "www.test.com",
 								},
 							},
 						},
@@ -538,8 +538,7 @@ func TestSetPolicies(t *testing.T) {
 							"description": common.Oauth2Desc,
 							"type":        common.Oauth2OASType,
 							"flows": map[string]interface{}{
-								"authorizationCode": map[string]interface{}{
-									"authorizationUrl": "www.test.com",
+								"clientCredentials": map[string]interface{}{
 									"scopes": map[string]interface{}{
 										"read":  "",
 										"write": "",
@@ -644,11 +643,10 @@ func TestSetPolicies(t *testing.T) {
 				},
 				"securityDefinitions": map[string]interface{}{
 					common.Oauth2Name: map[string]interface{}{
-						"authorizationUrl": "www.test.com",
-						"description":      common.Oauth2Desc,
-						"flow":             common.AccessCode,
-						"tokenUrl":         "www.test.com",
-						"type":             common.Oauth2OASType,
+						"description": common.Oauth2Desc,
+						"flow":        common.ClientCredentials,
+						"tokenUrl":    "www.test.com",
+						"type":        common.Oauth2OASType,
 					},
 				},
 				"swagger": "2.0",
@@ -691,9 +689,8 @@ func TestSetPolicies(t *testing.T) {
 				},
 				"securityDefinitions": map[string]interface{}{
 					common.Oauth2Name: map[string]interface{}{
-						"authorizationUrl": "www.test.com",
-						"description":      common.Oauth2Desc,
-						"flow":             common.AccessCode,
+						"description": common.Oauth2Desc,
+						"flow":        common.ClientCredentials,
 						"scopes": map[string]interface{}{
 							"read":  "",
 							"write": "",
@@ -743,8 +740,7 @@ func TestSetPolicies(t *testing.T) {
 						"description": common.Oauth2Desc,
 						"type":        common.Oauth2RAMLType,
 						"settings": map[string]interface{}{
-							"accessTokenUri":   urlExample,
-							"authorizationUri": urlExample,
+							"accessTokenUri": urlExample,
 						},
 						"describedBy": map[string]interface{}{
 							"headers": map[string]interface{}{
@@ -785,8 +781,7 @@ func TestSetPolicies(t *testing.T) {
 						"description": common.Oauth2Desc,
 						"type":        common.Oauth2RAMLType,
 						"settings": map[string]interface{}{
-							"accessTokenUri":   urlExample,
-							"authorizationUri": urlExample,
+							"accessTokenUri": urlExample,
 						},
 						"describedBy": map[string]interface{}{
 							"headers": map[string]interface{}{

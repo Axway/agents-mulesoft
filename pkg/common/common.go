@@ -3,11 +3,12 @@ package common
 import "fmt"
 
 const (
-	AccessCode    = "accessCode"
-	APIKey        = "apiKey"
-	AppID         = "appID"
-	AppName       = "appName"
-	Authorization = "authorization"
+	AccessCode        = "accessCode"
+	ClientCredentials = "clientCredentials"
+	APIKey            = "apiKey"
+	AppID             = "appID"
+	AppName           = "appName"
+	Authorization     = "authorization"
 
 	AttrAPIID          = "API ID"
 	AttrAssetID        = "Asset ID"
