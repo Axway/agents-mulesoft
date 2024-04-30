@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -65,7 +66,18 @@ func (s *serviceHandler) ToServiceDetails(asset *anypoint.Asset) []*ServiceDetai
 			logger.WithField("endpoint", api.EndpointURI).Debugf("skipping discovery. %s", msg)
 			continue
 		}
+		// ListAssets doesn't have the option to get the proxy endpoint, only GetAPI
+		apiDetailed, err := s.client.GetAPI(fmt.Sprint(api.ID))
+		if err != nil {
+			logger.WithError(err).Error("error getting api details")
+		}
+		if apiDetailed.Endpoint != nil {
+			parsedUri, err := url.ParseRequestURI(apiDetailed.Endpoint.ProxyURI)
+			if err == nil {
+				api.EndpointURI = api.EndpointURI + parsedUri.Path
+			}
 
+		}
 		serviceDetail, err := s.getServiceDetail(asset, &api)
 		if err != nil {
 			logger.Errorf("error getting the service details: %s", err.Error())
@@ -364,12 +376,11 @@ func setOAS2policies(swagger *openapi2.T, configuration map[string]interface{}) 
 			}
 
 			ss := openapi2.SecurityScheme{
-				Description:      common.Oauth2Desc,
-				Type:             common.Oauth2OASType,
-				Flow:             common.AccessCode,
-				AuthorizationURL: tokenURL,
-				TokenURL:         tokenURL,
-				Scopes:           scopes,
+				Description: common.Oauth2Desc,
+				Type:        common.Oauth2OASType,
+				Flow:        common.ClientCredentials,
+				TokenURL:    tokenURL,
+				Scopes:      scopes,
 			}
 			swagger.SecurityDefinitions[common.Oauth2Name] = &ss
 		}
@@ -420,10 +431,9 @@ func setOAS3policies(spec *openapi3.T, configuration map[string]interface{}) ([]
 					Type:        common.Oauth2OASType,
 					Description: common.Oauth2Desc,
 					Flows: &openapi3.OAuthFlows{
-						AuthorizationCode: &openapi3.OAuthFlow{
-							TokenURL:         tokenURL,
-							AuthorizationURL: tokenURL,
-							Scopes:           scopes,
+						ClientCredentials: &openapi3.OAuthFlow{
+							TokenURL: tokenURL,
+							Scopes:   scopes,
 						},
 					},
 				},
@@ -458,8 +468,7 @@ func setRamlHostAndAuth(spec []byte, endpoint string, configuration map[string]i
 			}
 
 			oAuthSettings := map[string]interface{}{
-				"accessTokenUri":   tokenURL,
-				"authorizationUri": tokenURL,
+				"accessTokenUri": tokenURL,
 			}
 			if s := config.(map[string]interface{})[common.Scopes]; s != nil {
 				// formats correctly for raml securedBy format

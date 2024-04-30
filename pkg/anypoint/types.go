@@ -73,25 +73,30 @@ type Asset struct {
 
 // API -
 type API struct {
-	ActiveContractsCount      int      `json:"activeContractsCount"`
-	AssetID                   string   `json:"assetId"`
-	AssetVersion              string   `json:"assetVersion"`
-	Audit                     Audit    `json:"audit"`
-	AutodiscoveryInstanceName string   `json:"autodiscoveryInstanceName"`
-	Deprecated                bool     `json:"deprecated"`
-	Description               string   `json:"description"`
-	EndpointURI               string   `json:"endpointUri"`
-	EnvironmentID             string   `json:"environmentId"`
-	GroupID                   string   `json:"groupId"`
-	ID                        int      `json:"id"`
-	InstanceLabel             string   `json:"instanceLabel"`
-	IsPublic                  bool     `json:"isPublic"`
-	MasterOrganizationID      string   `json:"masterOrganizationId"`
-	Order                     int      `json:"order"`
-	OrganizationID            string   `json:"organizationId"`
-	Pinned                    bool     `json:"pinned"`
-	ProductVersion            string   `json:"productVersion"`
-	Tags                      []string `json:"tags"`
+	ActiveContractsCount      int       `json:"activeContractsCount"`
+	AssetID                   string    `json:"assetId"`
+	AssetVersion              string    `json:"assetVersion"`
+	Audit                     Audit     `json:"audit"`
+	AutodiscoveryInstanceName string    `json:"autodiscoveryInstanceName"`
+	Deprecated                bool      `json:"deprecated"`
+	Description               string    `json:"description"`
+	EndpointURI               string    `json:"endpointUri"`
+	Endpoint                  *Endpoint `json:"endpoint,omitempty"`
+	EnvironmentID             string    `json:"environmentId"`
+	GroupID                   string    `json:"groupId"`
+	ID                        int       `json:"id"`
+	InstanceLabel             string    `json:"instanceLabel"`
+	IsPublic                  bool      `json:"isPublic"`
+	MasterOrganizationID      string    `json:"masterOrganizationId"`
+	Order                     int       `json:"order"`
+	OrganizationID            string    `json:"organizationId"`
+	Pinned                    bool      `json:"pinned"`
+	ProductVersion            string    `json:"productVersion"`
+	Tags                      []string  `json:"tags"`
+}
+
+type Endpoint struct {
+	ProxyURI string `json:"proxyUri"`
 }
 
 // Policy -
