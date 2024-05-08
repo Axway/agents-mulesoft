@@ -72,7 +72,7 @@ twistlock-discovery:on-schedule:
     # need to override this variable for github agents because the tag will need the 'v' if it exists
     NO_V_RELEASE_TAG_REGEX: "^v?[0-9]{1,}\\.[0-9]{1,}\\.[0-9]{1,}$"
   before_script:
-    - !reference [.get-last-tag, script]
+    - !reference [.get-agent-last-tag, script]
     - echo "Using the last tagged version ${LAST_TAG_VERSION}"
     - export IMAGE_NAME=ghcr.io/axway/mulesoft_discovery_agent:${LAST_TAG_VERSION}
     - docker pull ${IMAGE_NAME}
@@ -86,7 +86,7 @@ twistlock-traceability:on-schedule:
     # need to override this variable for github agents because the tag will need the 'v' if it exists
     NO_V_RELEASE_TAG_REGEX: "^v?[0-9]{1,}\\.[0-9]{1,}\\.[0-9]{1,}$"
   before_script:
-    - !reference [.get-last-tag, script]
+    - !reference [.get-agent-last-tag, script]
     - echo "Using the last tagged version ${LAST_TAG_VERSION}"
     - export IMAGE_NAME=ghcr.io/axway/mulesoft_traceability_agent:${LAST_TAG_VERSION}
     - docker pull ${IMAGE_NAME}
@@ -95,7 +95,7 @@ blackduck:on-schedule:
   rules:
     - !reference [.mirror-schedule-csr-rules, rules]
   before_script:
-    - !reference [.get-last-tag, script]
+    - !reference [.get-agent-last-tag, script]
 
 # overridden from csrjobs.yml because mirror repos like this one don't get merge events 
 fortify:
