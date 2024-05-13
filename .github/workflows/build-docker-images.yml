@@ -50,12 +50,12 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-        build-args: |
-          time=${{ steps.vars.outputs.date }}
-          CGO_ENABLED=0
-          version=${{ steps.vars.outputs.tag }}
-          sdk_version=${{ steps.vars.outputs.sdkversion }}
-          commit_id=${{ steps.vars.outputs.commit }}
+          build-args: |
+            time=${{ steps.vars.outputs.date }}
+            CGO_ENABLED=0
+            version=${{ steps.vars.outputs.tag }}
+            sdk_version=${{ steps.vars.outputs.sdkversion }}
+            commit_id=${{ steps.vars.outputs.commit }}
 
   buildTraceabilityAgent:
     env:
@@ -98,12 +98,12 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-        build-args: |
-          time=${{ steps.vars.outputs.date }}
-          CGO_ENABLED=0
-          version=${{ steps.vars.outputs.tag }}
-          sdk_version=${{ steps.vars.outputs.sdkversion }}
-          commit_id=${{ steps.vars.outputs.commit }}
+          build-args: |
+            time=${{ steps.vars.outputs.date }}
+            CGO_ENABLED=0
+            version=${{ steps.vars.outputs.tag }}
+            sdk_version=${{ steps.vars.outputs.sdkversion }}
+            commit_id=${{ steps.vars.outputs.commit }}
 
   notifyTeamsChannel:
     runs-on: ubuntu-latest
