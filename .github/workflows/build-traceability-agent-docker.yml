@@ -2,7 +2,7 @@ name: Mulesoft Traceability Agent Docker
 on:
   push:
     tags:
-      - v*.*.*xxx
+      - xxx
 
 jobs:
   build:

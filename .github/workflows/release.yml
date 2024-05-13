@@ -2,7 +2,7 @@ name: Release agents with goreleaser
 on:
   push:
     tags:
-      - v*.*.*xxx
+      - xxx
 
 jobs:
   discovery:
