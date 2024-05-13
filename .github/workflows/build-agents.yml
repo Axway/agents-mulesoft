@@ -1,8 +1,7 @@
 name: Build agents
 on:
   push:
-    # branches: [main, "*"]
-    branches: "foobar"
+    branches: [main, "*"]
 
 jobs:
   testAgents:
