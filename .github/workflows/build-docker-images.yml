@@ -8,7 +8,7 @@ jobs:
   testAgents:
     uses: ./.github/workflows/run-tests.yml
 
-  buildDiscoveryAgent:
+  buildDiscoveryAgentDocker:
     needs: testAgents
     env:
       GOFLAGS: "-mod=mod"
@@ -57,7 +57,7 @@ jobs:
             sdk_version=${{ steps.vars.outputs.sdkversion }}
             commit_id=${{ steps.vars.outputs.commit }}
 
-  buildTraceabilityAgent:
+  buildTraceabilityAgentDocker:
     env:
       GOFLAGS: "-mod=mod"
       IMAGE_NAME: mulesoft_traceability_agent
@@ -107,7 +107,7 @@ jobs:
 
   notifyTeamsChannel:
     runs-on: ubuntu-latest
-    needs: [buildDiscoveryAgentDocker, buildTraceabilityAgentDocker, archiveHelm]
+    needs: [buildDiscoveryAgentDocker, buildTraceabilityAgentDocker]
     steps:
       - uses: actions/checkout@v4
       - name: Notify Teams channel
