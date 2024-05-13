@@ -27,6 +27,7 @@ jobs:
           echo "tag=${{github.ref_name }}" >> $GITHUB_OUTPUT
           # echo "sdkversion=$(grep github.com/Axway/agent-sdk go.mod |  awk '{print $2}')" >> $GITHUB_OUTPUT
           # sdkversion=grep github.com/Axway/agent-sdk go.mod | awk '{print $2}'
+          grep github.com/Axway/agent-sdk go.mod | awk '{print $2}'
           sdkversion=$(grep github.com/Axway/agent-sdk go.mod | awk '{print $2}')
           echo "sdkversion: $sdkversion"
           echo "sdkversion=$sdkversion" >> $GITHUB_OUTPUT
