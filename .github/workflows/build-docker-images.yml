@@ -5,8 +5,8 @@ on:
       - "*"
 
 jobs:
-    testAgents:
-        uses: ./.github/workflows/run-da-tests.yml
+  testAgents:
+    uses: ./.github/workflows/run-tests.yml
 
   buildDiscoveryAgent:
     needs: testAgents
