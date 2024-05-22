@@ -1,40 +1,33 @@
-name: Build MuleSoft Agents
+name: Build agents
 on:
   push:
-    branches: [main, "APIGOV-*"]
+    branches: [main, "*"]
 
 jobs:
-  test:
-    env:
-      GOFLAGS: "-mod=mod"
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: 1.21
-      - name: Test
-        working-directory: .
-        run: |
-          make test
+  testAgents:
+    uses: ./.github/workflows/run-tests.yml
 
-  build:
+  buildAgents:
+    needs: testAgents
     env:
       GOFLAGS: "-mod=mod"
+      GOWORK: "off"
       VERSION: ${{ github.ref_name }}
       COMMIT_ID: ${{ github.sha }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: 1.21
+
       - name: Build discovery agent
         working-directory: .
         run: |
           make build-discovery
+
       - name: Build traceability agent
         working-directory: .
         run: |

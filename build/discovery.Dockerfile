@@ -1,5 +1,12 @@
 # Build image
 FROM golang:1.21.5-bullseye AS builder
+
+ARG commit_id
+ARG version
+ARG sdk_version
+ARG time
+ARG CGO_ENABLED
+
 ENV APP_HOME /build
 ENV APP_USER axway
 

@@ -4,10 +4,8 @@ go 1.21
 
 toolchain go1.21.3
 
-//replace github.com/Axway/agent-sdk => /home/ubuntu/go/src/github.com/Axway/agent-sdk
-
 require (
-	github.com/Axway/agent-sdk v1.1.83-0.20240509100514-5fb711f2d203
+	github.com/Axway/agent-sdk v1.1.83
 	github.com/elastic/beats/v7 v7.17.20
 	github.com/getkin/kin-openapi v0.76.0
 	github.com/google/uuid v1.6.0
