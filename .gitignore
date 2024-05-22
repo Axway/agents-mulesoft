@@ -17,6 +17,9 @@ bin/
 .idea/
 **.tgz
 .log
+*.lock
+cmd/traceability/data
+cmd/traceability/logs
 *.env
 *.env*
 *.pem
