@@ -1,5 +1,5 @@
 # Build image
-FROM golang:1.22.3-bullseye AS builder
+FROM golang:1.22.4-bullseye AS builder
 
 ARG commit_id
 ARG version
