@@ -435,7 +435,7 @@ func TestSetPolicies(t *testing.T) {
 				Info: &openapi3.Info{
 					Title: "petstore3",
 				},
-				Paths:   openapi3.Paths{},
+				Paths:   &openapi3.Paths{},
 				Servers: openapi3.Servers{{URL: "http://google.com"}},
 			},
 			expectedContent: map[string]interface{}{
@@ -479,7 +479,7 @@ func TestSetPolicies(t *testing.T) {
 				Info: &openapi3.Info{
 					Title: "petstore3",
 				},
-				Paths:   openapi3.Paths{},
+				Paths:   &openapi3.Paths{},
 				Servers: openapi3.Servers{{URL: "http://google.com"}},
 			},
 			expectedContent: map[string]interface{}{
@@ -528,7 +528,7 @@ func TestSetPolicies(t *testing.T) {
 				Info: &openapi3.Info{
 					Title: "petstore3",
 				},
-				Paths:   openapi3.Paths{},
+				Paths:   &openapi3.Paths{},
 				Servers: openapi3.Servers{{URL: "http://google.com"}},
 			},
 			expectedContent: map[string]interface{}{
