@@ -351,7 +351,7 @@ func setOAS2policies(swagger *openapi2.T, configuration map[string]interface{}) 
 			}
 			swagger.SecurityDefinitions[common.BasicAuthName] = &ss
 			swagger.Security = append(swagger.Security, map[string][]string{
-				common.BasicAuthName: []string{},
+				common.BasicAuthName: {},
 			})
 
 		case apic.Oauth:
@@ -371,7 +371,7 @@ func setOAS2policies(swagger *openapi2.T, configuration map[string]interface{}) 
 				})
 			} else {
 				swagger.Security = append(swagger.Security, map[string][]string{
-					common.Oauth2Name: []string{},
+					common.Oauth2Name: {},
 				})
 			}
 
@@ -390,6 +390,9 @@ func setOAS2policies(swagger *openapi2.T, configuration map[string]interface{}) 
 }
 
 func setOAS3policies(spec *openapi3.T, configuration map[string]interface{}) ([]byte, error) {
+	if spec.Components == nil {
+		spec.Components = &openapi3.Components{}
+	}
 	// remove existing security
 	spec.Components.SecuritySchemes = make(openapi3.SecuritySchemes)
 	spec.Security = *openapi3.NewSecurityRequirements()
