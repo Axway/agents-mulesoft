@@ -5,7 +5,7 @@ go 1.21
 toolchain go1.21.3
 
 require (
-	github.com/Axway/agent-sdk v1.1.90
+	github.com/Axway/agent-sdk v1.1.92
 	github.com/elastic/beats/v7 v7.17.20
 	github.com/getkin/kin-openapi v0.125.0
 	github.com/google/uuid v1.6.0
@@ -130,6 +130,7 @@ require (
 	github.com/spf13/viper v1.12.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/subosito/gotenv v1.4.0 // indirect
+	github.com/swaggest/go-asyncapi v0.8.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/urso/diag v0.0.0-20200210123136-21b3cc8eb797 // indirect
