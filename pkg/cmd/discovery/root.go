@@ -70,12 +70,10 @@ func initConfig(centralConfig corecfg.CentralConfig) (interface{}, error) {
 		muleSubClient := subs.NewMuleSubscriptionClient(client)
 		entry := logrus.NewEntry(log.Get())
 
-		if centralConfig.IsMarketplaceSubsEnabled() {
-			agent.RegisterProvisioner(subs.NewProvisioner(muleSubClient, entry))
-			agent.NewAPIKeyAccessRequestBuilder().Register()
-			agent.NewOAuthCredentialRequestBuilder(agent.WithCRDOAuthSecret(), agent.WithCRDIsSuspendable()).Register()
-			agent.NewBasicAuthCredentialRequestBuilder(agent.WithCRDIsSuspendable()).Register()
-		}
+		agent.RegisterProvisioner(subs.NewProvisioner(muleSubClient, entry))
+		agent.NewAPIKeyAccessRequestBuilder().Register()
+		agent.NewOAuthCredentialRequestBuilder(agent.WithCRDOAuthSecret(), agent.WithCRDIsSuspendable()).Register()
+		agent.NewBasicAuthCredentialRequestBuilder(agent.WithCRDIsSuspendable()).Register()
 
 		discoveryAgent = discovery.NewAgent(conf, client)
 	}
