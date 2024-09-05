@@ -87,4 +87,4 @@ twistlock-discovery:on-schedule:
 
 twistlock-traceability:on-schedule:
   variables:
-    AGENT_NAME: "apigee_traceability_agent"
+    AGENT_NAME: "mulesoft_traceability_agent"
