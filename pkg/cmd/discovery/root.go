@@ -1,6 +1,7 @@
 package discovery
 
 import (
+	"github.com/Axway/agent-sdk/pkg/apic"
 	"github.com/Axway/agent-sdk/pkg/migrate"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
@@ -36,6 +37,10 @@ func init() {
 		run,                        // Callback for executing the agent
 		corecfg.DiscoveryAgent,     // Agent Type (Discovery or Traceability)
 	)
+
+	// set the dataplane type that will be added to the agent spec
+	corecfg.AgentDataPlaneType = apic.Mulesoft.String()
+
 	config.AddConfigProperties(RootCmd.GetProperties())
 
 	migrate.MatchAttr(

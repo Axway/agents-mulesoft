@@ -1,6 +1,7 @@
 package traceability
 
 import (
+	"github.com/Axway/agent-sdk/pkg/apic"
 	corecmd "github.com/Axway/agent-sdk/pkg/cmd"
 	"github.com/Axway/agent-sdk/pkg/cmd/service"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
@@ -37,6 +38,10 @@ func init() {
 		run,
 		corecfg.TraceabilityAgent,
 	)
+
+	// set the dataplane type that will be added to the agent spec
+	corecfg.AgentDataPlaneType = apic.Mulesoft.String()
+
 	config.AddConfigProperties(RootCmd.GetProperties())
 	RootCmd.AddCommand(service.GenServiceCmd("pathConfig"))
 }
