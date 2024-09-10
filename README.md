@@ -1,4 +1,4 @@
-# Amplify MuleSoft AnyPoint Agent
+# Amplify MuleSoft AnyPoint Agents
 
 ## Overview
 
