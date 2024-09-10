@@ -1,183 +1,115 @@
-# Amplify MuleSoft Anypoint Agent
+# Amplify MuleSoft AnyPoint Agent
 
 ## Overview
 
-This repository contains the Axway Amplify dataplane agents for the MuleSoft Anypoint platform. These agents connect your MuleSoft Anypoint dataplane to the Amplify Central management plane.
+This repository contains the Axway Amplify dataplane agents for the MuleSoft AnyPoint platform. These agents connect your MuleSoft Anypoint dataplane to the Amplify Central management plane.
 
-### Discovery
+## Prerequisites
 
-The Discovery agent is used to discover APIs in the MuleSoft API Manager and publish them to the Amplify Central.
+* You need an Axway Platform user account that is assigned the AMPLIFY Central admin role
+* Your MuleSoft AnyPoint deployment should be up and running and have APIs to be discovered and exposed in AMPLIFY Central
 
-### Traceability
+Let’s get started!
 
-The traceability agent retrieves traffic and usage data from the MuleSoft API Manager analytics service and publishes it to the Amplify Central.
+## Prepare AMPLIFY Central Environments
 
-## Getting Started
+In this section we'll:
 
-The setup process is:
+* [Create an environment in Central](#create-an-environment-in-central)
+* [Create a service account](#create-a-service-account)
 
-- Download and install the agents.
-- Create a Service Account in Amplify Central for the agents to use.
-- Create an Environment in Amplify Central for the agents to publish too.
-- Configure and run the agents.
+### Create an environment in Central
 
-### Downloading the Agents
+* Log into [Amplify Central](https://apicentral.axway.com)
+* Navigate to "Topology" then "Environments"
+* Click "+ Environment"
+  * Select a name
+  * Click "Save"
+* To enable the viewing of the agent status in Amplify see [Visualize the agent status](https://docs.axway.com/bundle/amplify-central/page/docs/connect_manage_environ/environment_agent_resources/index.html#add-your-agent-resources-to-the-environment)
 
-Download and unzip the [latest release](https://github.com/Axway/agents-mulesoft/releases/latest) of the *discovery agent* and the *traceability agent*.
+### Create a service account
 
-```shell
-curl  -L https://github.com/Axway/agents-mulesoft/releases/download/v1.0.0/mulesoft_discovery_agent_1.0.0_Linux_x86_64.tar.gz --output - | tar xz
-curl  -L https://github.com/Axway/agents-mulesoft/releases/download/v1.0.0/mulesoft_traceability_agent_1.0.0_Linux_x86_64.tar.gz --output - | tar xz
+* Create a public and private key pair locally using the openssl command
+
+```sh
+openssl genpkey -algorithm RSA -out private_key.pem -pkeyopt rsa_keygen_bits: 2048
+openssl rsa -in private_key.pem -pubout -out public_key.pem
 ```
 
-### Configure Axway Amplify Central
+* Log into the [Amplify Platform](https://platform.axway.com)
+* Navigate to "Organization" then "Service Accounts"
+* Click "+ Service Account"
+  * Select a name
+  * Optionally add a description
+  * Select "Client Certificate"
+  * Select "Provide public key"
+  * Select or paste the contents of the public_key.pem file
+  * Select "Central admin"
+  * Click "Save"
+* Note the Client ID value, this and the key files will be needed for the agents
 
-Navigate to [https://platform.axway.com](https://platform.axway.com) and authenticate or sign up for a trial account.
+## Prepare MuleSoft
 
-#### Locate Amplify Organization ID
+* Gather the following information
+  * MuleSoft AnyPoint Exchange URL
+  * MuleSoft Environment name to discover and track transactions from (e.g. Sandbox)
+  * MuleSoft AnyPoint Business Unit the agent connects to
+  * MuleSoft Username and Password or Client ID and Secret.
+    * If using a Client ID and Secret then a MuleSoft App Integration will need to be created
 
-<img src="./img/WelcomeToAmplify.png" width="600">
+## Setup agent Environment Variables
 
-Click on your profile in the top-right corner of the Welcome screen and select *Organization*.
+The following environment variables file should be created for executing both of the agents
 
-<img src="./img/OrganizationID.png" width="600">
+```ini
+CENTRAL_ORGANIZATIONID=<Amplify Central Organization ID>
+CENTRAL_TEAM=<Amplify Central Team Name>
+CENTRAL_ENVIRONMENT=<Amplify Central Environment Name>   # created in Prepare AMPLIFY Central Environments step
 
-Note the value of the Organization ID.
+CENTRAL_AUTH_CLIENTID=<Amplify Central Service Account>  # created in Prepare AMPLIFY Central Environments step
+CENTRAL_AUTH_PRIVATEKEY=/keys/private_key.pem            # path to the key file created with openssl
+CENTRAL_AUTH_PUBLICKEY=/keys/public_key.pem              # path to the key file created with openssl
 
-#### Create a Service Account
+MULESOFT_ANYPOINTEXCHANGEURL=https://mulesoftexhange.com # gathered in Prepare MuleSoft step
+MULESOFT_AUTH_USERNAME=username                          # gathered in Prepare MuleSoft step
+MULESOFT_AUTH_PASSWORD=password                          # gathered in Prepare MuleSoft step
+MULESOFT_ENVIRONMENT=Sandbox                             # gathered in Prepare MuleSoft step
+MULESOFT_ORGNAME=Unit                                    # gathered in Prepare MuleSoft step
 
-Service Account are used by Amplify so that the Agents can connect securely to Amplify Central using private key credentials known only to the owner of the dataplane.
-
-##### Using the Axway CLI
-
-The creation of the service account requires a public/private key pair. The Axway CLI can automatically generate these and create the service account.
-
-```shell
-$ amplify central create service-account
-WARNING: Creating a new DOSA account will overwrite any existing "private_key.pem" and "public_key.pem" files in this directory
-? Enter a new service account name:  ExampleSA
-Creating a new service account.
-New service account "ExampleSA" with clientId "DOSA_edf194aa2430422bace013ce46a31d4a" has been successfully created.
-The private key has been placed at /home/user/example/private_key.pem
-The public key has been placed at /home/user/example/public_key.pem
+LOG_LEVEL=info
+LOG_OUTPUT=stdout
 ```
 
-For more information on configuring the Axway CLI see [Getting started with Amplify Central CLI](https://docs.axway.com/bundle/axway-open-docs/page/docs/central/cli_central/index.html).
+## Discovery Agent
 
-##### Using the Amplify Central UI
+Reference: [Discovery Agent](/README_discovery.md)
 
-Click the grid icon at the top-left of the UI and select *Central*.
+## Traceability Agent
 
-Navigate to *Access -> Service Accounts*.
+Reference: [Traceability Agent](/README_traceability.md)
 
-Click the `+Service Account` Button.
+## Development and Compiling
 
-Add a name and a public key.
+The MuleSoft AnyPoint agent repository delivers only Docker containers, if it is desired to run an agent outside of a Docker container the agents may be compiled for a specific OS (`GOOS`) and architecture (`GOARCH`).
 
-To generate a public key, you can install OpenSSL and run the commands:
+Agents running outside of the delivered docker containers are considered to be in a development state and do not receive the same level of support as the delivered Docker containers.
 
-```shell
-openssl genpkey -algorithm RSA -out private_key.pem -pkeyopt rsa_keygen_bits:2048
-openssl rsa -pubout -in private_key.pem -out public_key.pem
+### Building
+
+1. Install golang, a version the same or newer of that defined in the `go.mod` file
+2. Fork/Clone this git repository locally `git clone git@github.com:Axway/agents-mulesoft.git`
+3. Run the following commands changing the OS and Architecture as necessary
+
+Discovery
+
+```bash
+CGO_ENABLED=0  GOOS=linux GOARCH=amd64  make build-discovery
 ```
 
-<img src="./img/ServiceAccount.png" width="600">
+Traceability
 
-Note the Client ID value.
-
-### Create Environment
-
-The environment in Amplify Central is where the agent will publish the resources it discovers from Mulesoft Anypoint API Manager.
-
-Navigate to the Toplogy tab and click the `+Environment` Button
-
-Complete the configuration form, noting the value entered in the `Name` field. It must be all lowercase with no spaces as it will be used as an identifier to the agent configuration later.
-
-<img src="./img/Environments.png" width="600">
-
-### Agent Configuration
-
-To configure the agents see:
-
-- [Mulesoft Discovery Agent Configuration](./README_discovery.md)
-- [Mulesoft Traceability Agent Configuration](./README_traceability.md)
-
-### Agent Status Reporting
-
-In order for the  environment status in Amplify Central / Topology to display the connected agent status, we have to create the necessary resources for the Agents.
-Please note that you would need the Axway CLI to create these resources.
-Given below are the sample configuration for the agents:
-
-Discovery Agent:
-
-```yaml
-group: management
-apiVersion: v1alpha1
-kind: DiscoveryAgent
-name: my-agent-name
-title: My DiscoveryAgent title
-metadata:
-  scope:
-    kind: Environment
-    name: my-amplify-central-environment
-attributes: {}
-finalizers: []
-tags:
-  - sample
-spec:
-  config:
-    additionalTags:
-      - DiscoveredByMulesoftAgent
-  logging:
-    level: debug
-  dataplaneType: my-dataplane-name
+```bash
+CGO_ENABLED=0  GOOS=linux GOARCH=amd64  make build-traceability
 ```
 
-Traceability Agent:
-
-```yaml
-group: management
-apiVersion: v1alpha1
-kind: TraceabilityAgent
-name: my-agent-name
-title: My beautiful TraceabilityAgent title
-metadata:
-  scope:
-    kind: Environment
-    name: my-amplify-central-environment
-attributes: {}
-finalizers: []
-tags:
-  - sample
-spec:
-  config:
-    excludeHeaders:
-      - Authorization
-    processHeaders: true
-  dataplaneType: my-dataplane-name
-```
-
-Once configured, save those files and please create those resources:
-
-```shell
-axway central apply -f disovery-agent-res.yaml
----
-axway central apply -f traceability-agent-res.yaml
-```
-
-In order to link agent deployment with the appropriate agent resource,
-you have to update the agent configuration file (env_vars). Use the `CENTRAL_AGENTNAME` variable and link the value to the resource name defined previously.
-
-Once the Agents successfully starts, the agent status (AMPLIFY Central / Topology) will change to `Running`. If there are no other agents linked to that environment, then the environment status will change from `Manual Sync` to `Connected`.
-So in the traceability-deployment.yaml and discovery-deployment.yaml, set the Env Variable:
-
-```shell
-- name: CENTRAL_AGENTNAME
-  value: my-agent-name
-```
-
-For more information on setting up the resources for Visualizing Agent Status reporting, please refer to:  [Visualizing Agent Resources](https://docs.axway.com/bundle/axway-open-docs/page/docs/central/env_gw_mgmt/environment_agent_resources/index.html)
-
-## See Also
-
-Reference: [SDK Documentation - Building Discovery Agent](https://github.com/Axway/agent-sdk/blob/main/docs/discovery/index.md), [Mulesoft API Manager API](https://anypoint.mulesoft.com/exchange/portals/anypoint-platform/f1e97bc6-315a-4490-82a7-23abe036327a.anypoint-platform/api-manager-api/minor/1.0/console/method/%231156/)
+The golang website may be referenced for supported values in those variables [Go Docs](https://pkg.go.dev/internal/platform).
