@@ -1,20 +1,21 @@
 package traceability
 
 import (
-	"encoding/json"
 	"fmt"
 	"time"
 
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/cache"
+	"github.com/Axway/agent-sdk/pkg/util"
 
 	"github.com/Axway/agent-sdk/pkg/jobs"
 
-	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/sirupsen/logrus"
 
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
+	"github.com/Axway/agents-mulesoft/pkg/common"
 	"github.com/Axway/agents-mulesoft/pkg/config"
 )
 
@@ -22,6 +23,11 @@ const (
 	healthCheckEndpoint = "ingestion"
 	CacheKeyTimeStamp   = "LAST_RUN"
 )
+
+type instanceCache interface {
+	GetAPIServiceInstanceKeys() []string
+	GetAPIServiceInstanceByID(id string) (*v1.ResourceInstance, error)
+}
 
 type Emitter interface {
 	Start() error
@@ -32,10 +38,11 @@ type healthChecker func(name, endpoint string, check hc.CheckStatus) (string, er
 
 // MuleEventEmitter - Gathers analytics data for publishing to Central.
 type MuleEventEmitter struct {
-	client       anypoint.AnalyticsClient
-	eventChannel chan string
-	cache        cache.Cache
-	cachePath    string
+	client        anypoint.AnalyticsClient
+	eventChannel  chan common.MetricEvent
+	cache         cache.Cache
+	cachePath     string
+	instanceCache instanceCache
 }
 
 // MuleEventEmitterJob wraps an Emitter and implements the Job interface so that it can be executed by the sdk.
@@ -48,10 +55,11 @@ type MuleEventEmitterJob struct {
 }
 
 // NewMuleEventEmitter - Creates a client to poll for events.
-func NewMuleEventEmitter(cachePath string, eventChannel chan string, client anypoint.AnalyticsClient) *MuleEventEmitter {
+func NewMuleEventEmitter(cachePath string, eventChannel chan common.MetricEvent, client anypoint.AnalyticsClient, instanceCache instanceCache) *MuleEventEmitter {
 	me := &MuleEventEmitter{
-		eventChannel: eventChannel,
-		client:       client,
+		eventChannel:  eventChannel,
+		client:        client,
+		instanceCache: instanceCache,
 	}
 	me.cachePath = formatCachePath(cachePath)
 	me.cache = cache.Load(me.cachePath)
@@ -60,53 +68,62 @@ func NewMuleEventEmitter(cachePath string, eventChannel chan string, client anyp
 
 // Start retrieves analytics data from anypoint and sends them on the event channel for processing.
 func (me *MuleEventEmitter) Start() error {
-	strStartTime, strEndTime := me.getLastRun()
-	events, err := me.client.GetAnalyticsWindow(strStartTime, strEndTime)
-
-	if err != nil {
-		logrus.WithError(err).Error("failed to get analytics data")
-		return err
-	}
-
-	var lastTime time.Time
-	lastTime, err = time.Parse(time.RFC3339, strStartTime)
-	if err != nil {
-		logrus.WithFields(logrus.Fields{"strStartTime": strStartTime}).Warn("Unable to Parse Last Time")
-	}
-	for _, event := range events {
-		// Results are not sorted. We want the most recent time to bubble up
-		if event.Timestamp.After(lastTime) {
-			lastTime = event.Timestamp
+	// change the cache to store startTime per API
+	instanceKeys := me.instanceCache.GetAPIServiceInstanceKeys()
+	for _, instanceID := range instanceKeys {
+		instance, _ := me.instanceCache.GetAPIServiceInstanceByID(instanceID)
+		apiID, _ := util.GetAgentDetailsValue(instance, common.AttrAPIID)
+		if apiID == "" {
+			continue
 		}
-		j, err := json.Marshal(event)
+
+		lastAPIReportTime := me.getLastRun(apiID)
+		metrics, err := me.client.GetMonitoringArchive(apiID, lastAPIReportTime)
+
 		if err != nil {
-			log.Warnf("failed to marshal event: %s", err.Error())
+			logrus.WithError(err).Error("failed to get analytics data")
+			return err
 		}
-		me.eventChannel <- string(j)
+
+		endTime := lastAPIReportTime
+		for _, metric := range metrics {
+			// Results are not sorted. We want the most recent time to bubble up
+			if metric.Time.After(lastAPIReportTime) {
+				endTime = metric.Time
+				for _, event := range metric.Events {
+					m := common.MetricEvent{
+						APIID:      apiID,
+						Instance:   instance,
+						StatusCode: event.StatusCode,
+						Count:      int64(event.RequestSizeCount),
+						Max:        int64(event.ResponseTimeMax),
+						Min:        int64(event.ResponseTimeMin),
+					}
+					me.eventChannel <- m
+				}
+			}
+		}
+		me.saveLastRun(apiID, endTime)
 	}
-	// Add 1 second to the last time stamp if we found records from this pull.
-	// This will prevent duplicate records from being retrieved
-	if len(events) > 0 {
-		lastTime = lastTime.Add(time.Second * 1)
-	}
-	me.saveLastRun(lastTime.Format(time.RFC3339))
 
 	return nil
 
 }
-func (me *MuleEventEmitter) getLastRun() (string, string) {
-	tStamp, _ := me.cache.Get(CacheKeyTimeStamp)
-	now := time.Now()
-	tNow := now.Format(time.RFC3339Nano)
-	if tStamp == nil {
-		tStamp = tNow
-		me.saveLastRun(tNow)
+func (me *MuleEventEmitter) getLastRun(apiID string) time.Time {
+	tStamp, _ := me.cache.Get(CacheKeyTimeStamp + "-" + apiID)
+	// use instance.Metadata.Audit.CreateTimestamp instead of Now()
+	tStart := time.Now()
+	if tStamp != nil {
+		tStart, _ = time.Parse(time.RFC3339Nano, tStamp.(string))
+	} else {
+		me.saveLastRun(apiID, tStart)
 	}
-	return tStamp.(string), tNow
+	return tStart
 }
 
-func (me *MuleEventEmitter) saveLastRun(lastTime string) {
-	me.cache.Set(CacheKeyTimeStamp, lastTime)
+func (me *MuleEventEmitter) saveLastRun(apiID string, lastTime time.Time) {
+	tm := lastTime.Format(time.RFC3339Nano)
+	me.cache.Set(CacheKeyTimeStamp+"-"+apiID, tm)
 	me.cache.Save(me.cachePath)
 }
 

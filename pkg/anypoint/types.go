@@ -184,39 +184,54 @@ type ExchangeFile struct {
 	SHA1         string    `json:"sha1"`
 }
 
-// AnalyticsEvent -
-type AnalyticsEvent struct {
-	APIID              string    `json:"API ID"`
-	APIName            string    `json:"API Name"`
-	APIVersionID       string    `json:"API Version ID"`
-	APIVersionName     string    `json:"API Version Name"`
-	ApplicationName    string    `json:"Application Name"`
-	Application        string    `json:"Application"`
-	Browser            string    `json:"Browser"`
-	City               string    `json:"City"`
-	ClientIP           string    `json:"Client IP"`
-	Continent          string    `json:"Continent"`
-	Country            string    `json:"Country"`
-	HardwarePlatform   string    `json:"Hardware Platform"`
-	MessageID          string    `json:"Message ID"`
-	OSFamily           string    `json:"OS Family"`
-	OSMajorVersion     string    `json:"OS Major Version"`
-	OSMinorVersion     string    `json:"OS Minor Version"`
-	OSVersion          string    `json:"OS Version"`
-	PostalCode         string    `json:"Postal Code"`
-	RequestOutcome     string    `json:"Request Outcome"`
-	RequestSize        int       `json:"Request Size"`
-	ResourcePath       string    `json:"Resource Path"`
-	ResponseSize       int       `json:"Response Size"`
-	ResponseTime       int       `json:"Response Time"`
-	StatusCode         int       `json:"Status Code"`
-	Timestamp          time.Time `json:"Timestamp"`
-	Timezone           string    `json:"Timezone"`
-	UserAgentName      string    `json:"User Agent Name"`
-	UserAgentVersion   string    `json:"User Agent Version"`
-	Verb               string    `json:"Verb"`
-	ViolatedPolicyName string    `json:"Violated Policy Name"`
-	AssetVersion       string    `json:"AssetVersion"`
+// APIMonitoringMetric -
+type APIMonitoringMetric struct {
+	Time   time.Time
+	Events []APISummaryMetricEvent
+}
+
+type DataFile struct {
+	ID   string    `json:"id"`
+	Time time.Time `json:"time"`
+	Size int       `json:"size"`
+}
+
+type DataFileResources struct {
+	Resources []DataFile `json:"resources"`
+}
+
+type APISummaryMetricEvent struct {
+	APIName            string `json:"api_name"`
+	APIVersion         string `json:"api_version"`
+	APIVersionID       string `json:"api_version_id"`
+	ClientID           string `json:"client_id"`
+	Method             string `json:"method"`
+	StatusCode         string `json:"status_code"`
+	ResponseSizeCount  int    `json:"response_size.count"`
+	ResponseSizeMax    int    `json:"response_size.max"`
+	ResponseSizeMin    int    `json:"response_size.min"`
+	ResponseSizeSos    int    `json:"response_size.sos"`
+	ResponseSizeSum    int    `json:"response_size.sum"`
+	ResponseTimeCount  int    `json:"response_time.count"`
+	ResponseTimeMax    int    `json:"response_time.max"`
+	ResponseTimeMin    int    `json:"response_time.min"`
+	ResponseTimeSos    int    `json:"response_time.sos"`
+	ResponseTimeSum    int    `json:"response_time.sum"`
+	RequestSizeCount   int    `json:"request_size.count"`
+	RequestSizeMax     int    `json:"request_size.max"`
+	RequestSizeMin     int    `json:"request_size.min"`
+	RequestSizeSos     int    `json:"request_size.sos"`
+	RequestSizeSum     int    `json:"request_size.sum"`
+	RequestDisposition string `json:"request_disposition"`
+}
+
+type MetricData struct {
+	Format   string                 `json:"format"`
+	Time     int64                  `json:"time"`
+	Type     string                 `json:"type"`
+	Metadata map[string]interface{} `json:"metadata"`
+	Commons  map[string]interface{} `json:"commons"`
+	Events   []APISummaryMetricEvent
 }
 
 type Application struct {
