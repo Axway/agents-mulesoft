@@ -56,10 +56,11 @@ func TestAgent_Run(t *testing.T) {
 	instanceCache := &mockInstaceCache{}
 	svcInst := management.NewAPIServiceInstance("api", "env")
 	util.SetAgentDetailsKey(svcInst, common.AttrAPIID, "1234")
+	util.SetAgentDetailsKey(svcInst, common.AttrAssetID, "1234")
 	svcInst.Metadata.ID = "1234"
 	ri, _ := svcInst.AsInstance()
 	instanceCache.AddAPIServiceInstance(ri)
-	emitter := NewMuleEventEmitter("/tmp", eventChannel, client, instanceCache)
+	emitter := NewMuleEventEmitter(&config.MulesoftConfig{CachePath: "/tmp", UseMonitoringAPI: true}, eventChannel, client, instanceCache)
 	collector := &mockMetricCollector{
 		channel: processorChannel,
 	}
@@ -97,6 +98,14 @@ type mockAnalyticsClient struct {
 	events []anypoint.APIMonitoringMetric
 	app    *anypoint.Application
 	err    error
+}
+
+func (m mockAnalyticsClient) GetMonitoringBootstrap() (*anypoint.MonitoringBootInfo, error) {
+	return nil, m.err
+}
+
+func (m mockAnalyticsClient) GetMonitoringMetrics(dataSourceName string, dataSourceID int, apiID, apiVersionID string, startDate, endTime time.Time) ([]anypoint.APIMonitoringMetric, error) {
+	return m.events, m.err
 }
 
 func (m mockAnalyticsClient) GetMonitoringArchive(apiID string, startDate time.Time) ([]anypoint.APIMonitoringMetric, error) {

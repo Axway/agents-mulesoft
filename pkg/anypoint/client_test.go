@@ -1,6 +1,8 @@
 package anypoint
 
 import (
+	"io"
+	"os"
 	"testing"
 	"time"
 
@@ -13,9 +15,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var metricData = `
-{"format":"v2","time":1585082947062,"type":"api_summary_metric","commons":{"deployment_type":"RTF","api_id":"204393","cluster_id":"rtf","env_id":"env","public_ip":"127.0.0.1","org_id":"org","worker_id":"worker-1"},"events":[{"response_size.max":2,"request_size.min":6,"status_code":"200","method":"POST","response_time.max":4,"api_version_id":"223337","response_size.count":1,"response_size.sum":2,"response_time.min":4,"request_size.count":1,"api_version":"v1:223337","request_size.sos":36,"client_id":"eb30101d7394407ea86f0643e1c63331","response_time.count":1,"response_time.sum":4,"request_size.max":6,"request_disposition":"processed","response_time.sos":16,"api_name":"groupId:6046b96d-c9aa-4cb2-9b30-90a54fc01a7b:assetId:policy_sla_rate_limit","response_size.min":2,"request_size.sum":6,"response_size.sos":4}],"metadata":{"batch_id":0,"aggregated":true,"limited":false,"producer_name":"analytics-metrics-collector-mule3","producer_version":"2.2.2-SNAPSHOT"}}
-`
+func readTestDataFile(t *testing.T, fileName string) []byte {
+	file, _ := os.Open(fileName)
+	inputData, err := io.ReadAll(file)
+	assert.Nil(t, err)
+
+	return inputData
+}
 
 func TestClient(t *testing.T) {
 	cfg := &config.MulesoftConfig{
@@ -39,82 +45,27 @@ func TestClient(t *testing.T) {
 		},
 		"/accounts/api/me": {
 			Code: 200,
-			Body: []byte(`{
-							"user": {
-								"identityType": "idtype",
-								"id": "123",
-								"username": "name",
-								"firstName": "first",
-								"lastName": "last",
-								"email": "email",
-								"organization": {
-									"id": "333",
-									"name": "org1",
-									"domain": "abc.com"
-								},
-								"memberOfOrganizations": [{
-										"id": "333",
-										"name": "org1"
-									},
-									{
-										"id": "444",
-										"name": "BusinessOrg1"
-									}
-								]
-						
-							}
-				}`),
+			Body: readTestDataFile(t, "./testdata/user.json"),
 		},
 		"/accounts/api/organizations/444/environments": {
 			Code: 200,
-			Body: []byte(`{
-					"data": [{
-						"id": "111",
-						"name": "Sandbox",
-						"organizationId": "444",
-						"type": "fake",
-						"clientId": "abc123"
-					}],
-					"total": 1
-				}`),
+			Body: readTestDataFile(t, "./testdata/org-444-envs.json"),
 		},
 		"/accounts/api/organizations/333/environments": {
 			Code: 200,
-			Body: []byte(`{
-					"data": [{
-						"id": "111",
-						"name": "name",
-						"organizationId": "333",
-						"type": "fake",
-						"clientId": "abc123"
-					}],
-					"total": 1
-				}`),
+			Body: readTestDataFile(t, "./testdata/org-333-envs.json"),
 		},
 		"/apimanager/api/v1/organizations/444/environments/111/apis": {
 			Code: 200,
-			Body: []byte(`{
-				"assets": [
-					{
-						"apis": []
-					}
-				],
-				"total": 1
-			}`),
+			Body: readTestDataFile(t, "./testdata/apis.json"),
 		},
 		"/apimanager/api/v1/organizations/444/environments/111/apis/10/policies": {
 			Code: 200,
-			Body: []byte(`[
-				{
-					"id": 0
-				}
-			]`),
+			Body: readTestDataFile(t, "./testdata/policies.json"),
 		},
 		"/exchange/api/v2/assets/1/2/3": {
 			Code: 200,
-			Body: []byte(`{
-				"assetId": "petstore"
-			}`),
+			Body: readTestDataFile(t, "./testdata/assets.json"),
 		},
 		"/icon": {
 			Code: 200,
@@ -130,17 +81,19 @@ func TestClient(t *testing.T) {
 		},
 		"/monitoring/archive/api/v1/organizations/444/environments/111/apis/222/summary/2024/01/01": {
 			Code: 200,
-			Body: []byte(`{
-			"resources": [
-				{
-					"id": "444-111-222.log"
-				}
-			]
-			}`),
+			Body: readTestDataFile(t, "./testdata/summary-datafiles.json"),
 		},
 		"/monitoring/archive/api/v1/organizations/444/environments/111/apis/222/summary/2024/01/01/444-111-222.log": {
 			Code: 200,
-			Body: []byte(metricData),
+			Body: readTestDataFile(t, "./testdata/monitoring-archive.txt"),
+		},
+		"/monitoring/api/visualizer/api/bootdata": {
+			Code: 200,
+			Body: readTestDataFile(t, "./testdata/boot-data.json"),
+		},
+		"/monitoring/api/visualizer/api/datasources/proxy/1234/query": {
+			Code: 200,
+			Body: readTestDataFile(t, "./testdata/query-response.json"),
 		},
 	}
 
@@ -202,6 +155,14 @@ func TestClient(t *testing.T) {
 	startTime, _ := time.Parse(time.RFC3339, "2024-01-01T14:30:20-07:00")
 
 	events, err := client.GetMonitoringArchive("222", startTime)
+	assert.Nil(t, err)
+	assert.Equal(t, 1, len(events))
+
+	bootInfo, err := client.GetMonitoringBootstrap()
+	assert.Nil(t, err)
+	assert.NotNil(t, bootInfo)
+
+	events, err = client.GetMonitoringMetrics(bootInfo.Settings.DataSource.InfluxDB.Database, bootInfo.Settings.DataSource.InfluxDB.ID, "222", "222", startTime, startTime)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(events))
 

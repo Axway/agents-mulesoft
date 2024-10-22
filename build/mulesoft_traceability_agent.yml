@@ -46,6 +46,7 @@ mulesoft_traceability_agent:
     orgName: "${MULESOFT_ORGNAME}"
     cachePath: "${MULESOFT_CACHEPATH:/tmp}"
     pollInterval: ${MULESOFT_POLLINTERVAL:20s}
+    useMonitoringAPI: "${MULESOFT_USEMONITORINGAPI}"
     auth:
       username: "${MULESOFT_AUTH_USERNAME}"
       password: "${MULESOFT_AUTH_PASSWORD}"

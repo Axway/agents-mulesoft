@@ -38,11 +38,12 @@ type healthChecker func(name, endpoint string, check hc.CheckStatus) (string, er
 
 // MuleEventEmitter - Gathers analytics data for publishing to Central.
 type MuleEventEmitter struct {
-	client        anypoint.AnalyticsClient
-	eventChannel  chan common.MetricEvent
-	cache         cache.Cache
-	cachePath     string
-	instanceCache instanceCache
+	client           anypoint.AnalyticsClient
+	eventChannel     chan common.MetricEvent
+	cache            cache.Cache
+	cachePath        string
+	instanceCache    instanceCache
+	useMonitoringAPI bool
 }
 
 // MuleEventEmitterJob wraps an Emitter and implements the Job interface so that it can be executed by the sdk.
@@ -55,36 +56,41 @@ type MuleEventEmitterJob struct {
 }
 
 // NewMuleEventEmitter - Creates a client to poll for events.
-func NewMuleEventEmitter(cachePath string, eventChannel chan common.MetricEvent, client anypoint.AnalyticsClient, instanceCache instanceCache) *MuleEventEmitter {
+func NewMuleEventEmitter(config *config.MulesoftConfig, eventChannel chan common.MetricEvent, client anypoint.AnalyticsClient, instanceCache instanceCache) *MuleEventEmitter {
 	me := &MuleEventEmitter{
-		eventChannel:  eventChannel,
-		client:        client,
-		instanceCache: instanceCache,
+		eventChannel:     eventChannel,
+		client:           client,
+		instanceCache:    instanceCache,
+		useMonitoringAPI: config.UseMonitoringAPI,
 	}
-	me.cachePath = formatCachePath(cachePath)
+	me.cachePath = formatCachePath(config.CachePath)
 	me.cache = cache.Load(me.cachePath)
 	return me
 }
 
 // Start retrieves analytics data from anypoint and sends them on the event channel for processing.
 func (me *MuleEventEmitter) Start() error {
+	var bootInfo *anypoint.MonitoringBootInfo
+	if me.useMonitoringAPI {
+		bi, err := me.client.GetMonitoringBootstrap()
+		if err != nil {
+			return err
+		}
+		bootInfo = bi
+	}
+
 	// change the cache to store startTime per API
 	instanceKeys := me.instanceCache.GetAPIServiceInstanceKeys()
+	reportEndTime := time.Now()
 	for _, instanceID := range instanceKeys {
 		instance, _ := me.instanceCache.GetAPIServiceInstanceByID(instanceID)
-		apiID, _ := util.GetAgentDetailsValue(instance, common.AttrAPIID)
+		apiID, _ := util.GetAgentDetailsValue(instance, common.AttrAssetID)
+		apiVersionID, _ := util.GetAgentDetailsValue(instance, common.AttrAPIID)
 		if apiID == "" {
 			continue
 		}
-
 		lastAPIReportTime := me.getLastRun(apiID)
-		metrics, err := me.client.GetMonitoringArchive(apiID, lastAPIReportTime)
-
-		if err != nil {
-			logrus.WithError(err).Error("failed to get analytics data")
-			return err
-		}
-
+		metrics, err := me.getMetrics(bootInfo, apiID, apiVersionID, lastAPIReportTime, reportEndTime)
 		endTime := lastAPIReportTime
 		for _, metric := range metrics {
 			// Report only latest entries, ignore old entries
@@ -109,11 +115,24 @@ func (me *MuleEventEmitter) Start() error {
 			}
 		}
 		me.saveLastRun(apiID, endTime)
+		if err != nil {
+			logrus.WithError(err).Error("failed to get analytics data")
+			return err
+		}
 	}
 
 	return nil
 
 }
+
+func (me *MuleEventEmitter) getMetrics(bootInfo *anypoint.MonitoringBootInfo, apiID, apiVersionID string, startTime, endTime time.Time) ([]anypoint.APIMonitoringMetric, error) {
+	if me.useMonitoringAPI {
+		return me.client.GetMonitoringArchive(apiID, startTime)
+	}
+
+	return me.client.GetMonitoringMetrics(bootInfo.Settings.DataSource.InfluxDB.Database, bootInfo.Settings.DataSource.InfluxDB.ID, apiID, apiVersionID, startTime, endTime)
+}
+
 func (me *MuleEventEmitter) getLastRun(apiID string) time.Time {
 	tStamp, _ := me.cache.Get(CacheKeyTimeStamp + "-" + apiID)
 	// use instance.Metadata.Audit.CreateTimestamp instead of Now()

@@ -71,11 +71,12 @@ func Test_MuleEventEmitter(t *testing.T) {
 	instanceCache := &mockInstaceCache{}
 	svcInst := management.NewAPIServiceInstance("api", "env")
 	util.SetAgentDetailsKey(svcInst, common.AttrAPIID, "1234")
+	util.SetAgentDetailsKey(svcInst, common.AttrAssetID, "1234")
 	svcInst.Metadata.ID = "1234"
 	ri, _ := svcInst.AsInstance()
 	instanceCache.AddAPIServiceInstance(ri)
 
-	emitter := NewMuleEventEmitter("/tmp", eventCh, client, instanceCache)
+	emitter := NewMuleEventEmitter(&config.MulesoftConfig{CachePath: "/tmp", UseMonitoringAPI: true}, eventCh, client, instanceCache)
 
 	assert.NotNil(t, emitter)
 
@@ -89,7 +90,7 @@ func Test_MuleEventEmitter(t *testing.T) {
 		events: []anypoint.APIMonitoringMetric{},
 		err:    fmt.Errorf("failed"),
 	}
-	emitter = NewMuleEventEmitter("/tmp", eventCh, client, instanceCache)
+	emitter = NewMuleEventEmitter(&config.MulesoftConfig{CachePath: "/tmp", UseMonitoringAPI: true}, eventCh, client, instanceCache)
 	err := emitter.Start()
 	assert.Equal(t, client.err, err)
 }
@@ -108,7 +109,7 @@ func TestMuleEventEmitterJob(t *testing.T) {
 		events: []anypoint.APIMonitoringMetric{},
 		err:    nil,
 	}
-	emitter := NewMuleEventEmitter("/tmp", eventCh, client, &mockInstaceCache{})
+	emitter := NewMuleEventEmitter(&config.MulesoftConfig{CachePath: "/tmp", UseMonitoringAPI: true}, eventCh, client, &mockInstaceCache{})
 
 	job, err := NewMuleEventEmitterJob(emitter, pollInterval, mockHealthCheck, getStatusSuccess, mockRegisterHC)
 	assert.Nil(t, err)

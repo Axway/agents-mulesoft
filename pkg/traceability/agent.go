@@ -48,7 +48,7 @@ func NewBeater(_ *beat.Beat, _ *common.Config) (beat.Beater, error) {
 
 	var err error
 	client := anypoint.NewClient(agentConfig.MulesoftConfig)
-	emitter := NewMuleEventEmitter(agentConfig.MulesoftConfig.CachePath, eventChannel, client, agent.GetCacheManager())
+	emitter := NewMuleEventEmitter(agentConfig.MulesoftConfig, eventChannel, client, agent.GetCacheManager())
 
 	emitterJob, err := NewMuleEventEmitterJob(emitter, pollInterval, traceabilityHealthCheck, hc.GetStatus, hc.RegisterHealthcheck)
 	if err != nil {

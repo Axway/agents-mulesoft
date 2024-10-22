@@ -43,6 +43,7 @@ const (
 	pathProxyURL              = "mulesoft.proxyUrl"
 	pathCachePath             = "mulesoft.cachePath"
 	pathDiscoverOriginalRaml  = "mulesoft.discoverOriginalRaml"
+	pathUseMonitoringAPI      = "mulesoft.useMonitoringAPI"
 )
 
 const (
@@ -87,6 +88,7 @@ type MulesoftConfig struct {
 	ClientID              string            `config:"auth.clientID"`
 	ClientSecret          string            `config:"auth.clientSecret"`
 	DiscoverOriginalRaml  bool              `config:"discoverOriginalRaml"`
+	UseMonitoringAPI      bool              `config:"useMonitoringAPI"`
 }
 
 // ValidateCfg - Validates the gateway config
@@ -140,6 +142,7 @@ func AddConfigProperties(rootProps props) {
 	rootProps.AddStringProperty(pathSSLMinVersion, corecfg.TLSDefaultMinVersionString(), "Minimum acceptable SSL/TLS protocol version.")
 	rootProps.AddStringProperty(pathSSLMaxVersion, "0", "Maximum acceptable SSL/TLS protocol version.")
 	rootProps.AddBoolProperty(pathDiscoverOriginalRaml, false, "If RAML API specs are discovered as RAML and not converted to OAS")
+	rootProps.AddBoolProperty(pathUseMonitoringAPI, true, "Flag to setup traceability agent to use Anypoint Monitoring Archive API")
 }
 
 // NewMulesoftConfig - parse the props and create an Mulesoft Configuration structure
@@ -165,5 +168,6 @@ func NewMulesoftConfig(rootProps props) *MulesoftConfig {
 			MaxVersion:         corecfg.TLSVersionAsValue(rootProps.StringPropertyValue(pathSSLMaxVersion)),
 		},
 		DiscoverOriginalRaml: rootProps.BoolPropertyValue(pathDiscoverOriginalRaml),
+		UseMonitoringAPI:     rootProps.BoolPropertyValue(pathUseMonitoringAPI),
 	}
 }

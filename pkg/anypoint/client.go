@@ -25,6 +25,11 @@ const (
 	HealthCheckEndpoint      = "mulesoft"
 	monitoringURITemplate    = "%s/monitoring/archive/api/v1/organizations/%s/environments/%s/apis/%s/summary/%d/%02d/%02d"
 	metricSummaryURITemplate = "%s/monitoring/archive/api/v1/organizations/%s/environments/%s/apis/%s/summary/%d/%02d/%02d/%s"
+	queryTemplate            = `SELECT sum("request_size.count") as request_count, max("response_time.max") as response_max, min("response_time.min") as response_min
+FROM "rp_general"."api_summary_metric" 
+WHERE ("api_id" = '%s' AND "api_version_id" = '%s') AND 
+time >= %dms and time <= %dms - 30m 
+GROUP BY "client_id", "status_code"`
 )
 
 // Page describes the page query parameter
@@ -56,6 +61,8 @@ type Client interface {
 }
 
 type AnalyticsClient interface {
+	GetMonitoringBootstrap() (*MonitoringBootInfo, error)
+	GetMonitoringMetrics(dataSourceName string, dataSourceID int, apiID, apiVersionID string, startDate, endTime time.Time) ([]APIMonitoringMetric, error)
 	GetMonitoringArchive(apiID string, startDate time.Time) ([]APIMonitoringMetric, error)
 	OnConfigChange(mulesoftConfig *config.MulesoftConfig)
 	GetClientApplication(appID string) (*Application, error)
@@ -390,6 +397,72 @@ func (c *AnypointClient) GetExchangeFileContent(link, packaging, mainFile string
 	return fileContent, wasConverted, err
 }
 
+func (c *AnypointClient) GetMonitoringBootstrap() (*MonitoringBootInfo, error) {
+	headers := map[string]string{
+		"Authorization": c.getAuthString(c.auth.GetToken()),
+	}
+
+	url := fmt.Sprintf("%s/monitoring/api/visualizer/api/bootdata", c.baseURL)
+	bootInfo := &MonitoringBootInfo{}
+	request := coreapi.Request{
+		Method:  coreapi.GET,
+		URL:     url,
+		Headers: headers,
+	}
+
+	err := c.invokeJSON(request, &bootInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	return bootInfo, err
+}
+
+// GetMonitoringMetrics returns monitoring data from InfluxDb
+func (c *AnypointClient) GetMonitoringMetrics(dataSourceName string, dataSourceID int, apiID, apiVersionID string, startDate, endTime time.Time) ([]APIMonitoringMetric, error) {
+	headers := map[string]string{
+		"Authorization": c.getAuthString(c.auth.GetToken()),
+	}
+
+	query := fmt.Sprintf(queryTemplate, apiID, apiVersionID, 1729589392, endTime.UnixMilli())
+	url := fmt.Sprintf("%s/monitoring/api/visualizer/api/datasources/proxy/%d/query", c.baseURL, dataSourceID)
+	request := coreapi.Request{
+		Method:  coreapi.GET,
+		URL:     url,
+		Headers: headers,
+		QueryParams: map[string]string{
+			"db":    dataSourceName,
+			"q":     query,
+			"epoch": "ms",
+		},
+	}
+	metricResponse := &MetricResponse{}
+	err := c.invokeJSON(request, metricResponse)
+	if err != nil {
+		return nil, err
+	}
+	// convert metricResponse
+	metrics := make([]APIMonitoringMetric, 0)
+	for _, mr := range metricResponse.Results {
+		for _, ms := range mr.Series {
+			m := APIMonitoringMetric{
+				Time: ms.Time,
+				Events: []APISummaryMetricEvent{
+					{
+						ClientID:         ms.Tags.ClientID,
+						StatusCode:       ms.Tags.StatusCode,
+						RequestSizeCount: int(ms.Count),
+						ResponseSizeMax:  int(ms.ResponseMax),
+						ResponseSizeMin:  int(ms.ResponseMin),
+					},
+				},
+			}
+			metrics = append(metrics, m)
+		}
+	}
+	return metrics, err
+}
+
 // GetMonitoringArchive returns archived monitoring data Mulesoft:
 // https://anypoint.mulesoft.com/exchange/portals/anypoint-platform/f1e97bc6-315a-4490-82a7-23abe036327a.anypoint-platform/anypoint-monitoring-archive-api/minor/1.0/pages/home/
 func (c *AnypointClient) GetMonitoringArchive(apiID string, startDate time.Time) ([]APIMonitoringMetric, error) {
@@ -464,7 +537,7 @@ func (c *AnypointClient) parseMetricSummaries(metricDataStream []byte) ([]APIMon
 			}
 			break
 		}
-		metricTime := time.Unix(0, metricData.Time)
+		metricTime := time.Unix(metricData.Time, 0)
 		metric := APIMonitoringMetric{
 			Time:   metricTime,
 			Events: metricData.Events,
