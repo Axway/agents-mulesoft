@@ -22,8 +22,9 @@ import (
 )
 
 const (
-	HealthCheckEndpoint   = "mulesoft"
-	monitoringURITemplate = "%s/monitoring/archive/api/v1/organizations/%s/environments/%s/apis/%s/summary/%d/%02d/%02d"
+	HealthCheckEndpoint      = "mulesoft"
+	monitoringURITemplate    = "%s/monitoring/archive/api/v1/organizations/%s/environments/%s/apis/%s/summary/%d/%02d/%02d"
+	metricSummaryURITemplate = "%s/monitoring/archive/api/v1/organizations/%s/environments/%s/apis/%s/summary/%d/%02d/%02d/%s"
 )
 
 // Page describes the page query parameter
@@ -416,7 +417,10 @@ func (c *AnypointClient) GetMonitoringArchive(apiID string, startDate time.Time)
 	for _, dataFile := range dataFiles.Resources {
 		apiMetric, err := c.getMonitoringArchiveFile(apiID, year, month, day, dataFile.ID)
 		if err != nil {
-			logrus.Warnf("failed to read monitoring archive for api:%s, filename: %s, error: %s", apiID, dataFile.ID, err)
+			logrus.WithField("apiID", apiID).
+				WithField("fileName", dataFile.ID).
+				WithError(err).
+				Warn("failed to read monitoring archive")
 		}
 		if len(apiMetric) > 0 {
 			metrics = append(metrics, apiMetric...)
@@ -431,7 +435,7 @@ func (c *AnypointClient) getMonitoringArchiveFile(apiID string, year, month, day
 		"Authorization": c.getAuthString(c.auth.GetToken()),
 	}
 
-	url := fmt.Sprintf("%s/monitoring/archive/api/v1/organizations/%s/environments/%s/apis/%s/summary/%d/%02d/%02d/%s", c.monitoringBaseURL, c.auth.GetOrgID(), c.environment.ID, apiID, year, month, day, fileName)
+	url := fmt.Sprintf(metricSummaryURITemplate, c.monitoringBaseURL, c.auth.GetOrgID(), c.environment.ID, apiID, year, month, day, fileName)
 	request := coreapi.Request{
 		Method:  coreapi.GET,
 		URL:     url,
