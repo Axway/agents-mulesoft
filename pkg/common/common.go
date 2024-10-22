@@ -2,6 +2,7 @@ package common
 
 import (
 	"fmt"
+	"time"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
@@ -81,6 +82,8 @@ type PolicyDetail struct {
 }
 
 type MetricEvent struct {
+	StartTime  time.Time
+	EndTime    time.Time
 	APIID      string
 	Instance   *v1.ResourceInstance
 	ClientID   string

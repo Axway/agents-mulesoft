@@ -4,10 +4,10 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	coreagent "github.com/Axway/agent-sdk/pkg/agent"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	cache "github.com/Axway/agent-sdk/pkg/cache"
@@ -112,21 +112,41 @@ func (a *Agent) processEvent(me cmn.MetricEvent) {
 		return
 	}
 
+	a.collector.AddAPIMetricDetail(metric.MetricDetail{
+		APIDetails: a.getAPIDetails(me),
+		AppDetails: a.getAppDetails(me),
+		StatusCode: me.StatusCode,
+		Count:      me.Count,
+		Response: metric.ResponseMetrics{
+			Max: me.Max,
+			Min: me.Min,
+		},
+		Observation: metric.ObservationDetails{
+			Start: me.StartTime.UnixMilli(),
+			End:   me.EndTime.UnixMilli(),
+		},
+	})
+}
+
+func (a *Agent) getAPIDetails(me cmn.MetricEvent) models.APIDetails {
 	apisRef := me.Instance.GetReferenceByGVK(management.APIServiceGVK())
 	externalAPIID, _ := coreutil.GetAgentDetailsValue(me.Instance, definitions.AttrExternalAPIID)
 	stage, _ := coreutil.GetAgentDetailsValue(me.Instance, definitions.AttrExternalAPIStage)
-	apiDetails := models.APIDetails{
+	return models.APIDetails{
 		ID:                 externalAPIID,
 		Name:               apisRef.Name,
 		Revision:           1,
 		APIServiceInstance: me.Instance.Name,
 		Stage:              stage,
 	}
+}
 
+func (a *Agent) getAppDetails(me cmn.MetricEvent) models.AppDetails {
 	appDetails := models.AppDetails{}
-	if me.ClientID != "" {
-		if ri, err := a.credentialCache.Get(me.ClientID); err == nil && ri != nil {
-			appRef := me.Instance.GetReferenceByGVK(management.ManagedApplicationGVK())
+	if item, err := a.credentialCache.Get(me.ClientID); err == nil && item != nil {
+		ri, ok := item.(*v1.ResourceInstance)
+		if ok && ri != nil {
+			appRef := ri.GetReferenceByGVK(management.ManagedApplicationGVK())
 			app := agent.GetCacheManager().GetManagedApplicationByName(appRef.Name)
 			if app != nil {
 				managedApp := &management.ManagedApplication{}
@@ -139,23 +159,7 @@ func (a *Agent) processEvent(me cmn.MetricEvent) {
 			}
 		}
 	}
-
-	response := metric.ResponseMetrics{
-		Max: me.Max,
-		Min: me.Min,
-	}
-
-	a.collector.AddAPIMetricDetail(metric.MetricDetail{
-		APIDetails: apiDetails,
-		AppDetails: appDetails,
-		StatusCode: me.StatusCode,
-		Count:      me.Count,
-		Response:   response,
-		Observation: metric.ObservationDetails{
-			Start: time.Now().UnixMilli(),
-			End:   time.Now().UnixMilli(),
-		},
-	})
+	return appDetails
 }
 
 // onConfigChange apply configuration changes

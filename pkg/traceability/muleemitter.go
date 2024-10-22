@@ -87,11 +87,12 @@ func (me *MuleEventEmitter) Start() error {
 
 		endTime := lastAPIReportTime
 		for _, metric := range metrics {
-			// Results are not sorted. We want the most recent time to bubble up
+			// Report only latest entries, ignore old entries
 			if metric.Time.After(lastAPIReportTime) {
-				endTime = metric.Time
 				for _, event := range metric.Events {
 					m := common.MetricEvent{
+						StartTime:  lastAPIReportTime,
+						EndTime:    metric.Time,
 						APIID:      apiID,
 						Instance:   instance,
 						StatusCode: event.StatusCode,
@@ -101,6 +102,10 @@ func (me *MuleEventEmitter) Start() error {
 					}
 					me.eventChannel <- m
 				}
+			}
+			// Results are not sorted. We want the most recent time to bubble up for next run cycle
+			if metric.Time.After(endTime) {
+				endTime = metric.Time
 			}
 		}
 		me.saveLastRun(apiID, endTime)
