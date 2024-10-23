@@ -28,7 +28,7 @@ const (
 	queryTemplate            = `SELECT sum("request_size.count") as request_count, max("response_time.max") as response_max, min("response_time.min") as response_min
 FROM "rp_general"."api_summary_metric" 
 WHERE ("api_id" = '%s' AND "api_version_id" = '%s') AND 
-time >= %dms and time <= %dms - 30m 
+time >= %dms and time <= %dms
 GROUP BY "client_id", "status_code"`
 )
 
