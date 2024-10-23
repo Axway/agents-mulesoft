@@ -424,7 +424,7 @@ func (c *AnypointClient) GetMonitoringMetrics(dataSourceName string, dataSourceI
 		"Authorization": c.getAuthString(c.auth.GetToken()),
 	}
 
-	query := fmt.Sprintf(queryTemplate, apiID, apiVersionID, 1729589392, endTime.UnixMilli())
+	query := fmt.Sprintf(queryTemplate, apiID, apiVersionID, startDate.UnixMilli(), endTime.UnixMilli())
 	url := fmt.Sprintf("%s/monitoring/api/visualizer/api/datasources/proxy/%d/query", c.baseURL, dataSourceID)
 	request := coreapi.Request{
 		Method:  coreapi.GET,
