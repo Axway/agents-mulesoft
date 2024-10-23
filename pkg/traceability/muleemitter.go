@@ -71,13 +71,21 @@ func NewMuleEventEmitter(config *config.MulesoftConfig, eventChannel chan common
 // Start retrieves analytics data from anypoint and sends them on the event channel for processing.
 func (me *MuleEventEmitter) Start() error {
 	var bootInfo *anypoint.MonitoringBootInfo
-	if me.useMonitoringAPI {
+	if !me.useMonitoringAPI {
 		bi, err := me.client.GetMonitoringBootstrap()
 		if err != nil {
 			return err
 		}
 		bootInfo = bi
 	}
+
+	// Initialize Metric Batch
+	me.eventChannel <- common.MetricEvent{Type: common.Initialize}
+
+	// Publish metrics, event receiver takes care if no metrics needs to be published
+	defer func() {
+		me.eventChannel <- common.MetricEvent{Type: common.Completed}
+	}()
 
 	// change the cache to store startTime per API
 	instanceKeys := me.instanceCache.GetAPIServiceInstanceKeys()
@@ -89,7 +97,7 @@ func (me *MuleEventEmitter) Start() error {
 		if apiID == "" {
 			continue
 		}
-		lastAPIReportTime := me.getLastRun(apiID)
+		lastAPIReportTime := me.getLastRun(apiID, instance)
 		metrics, err := me.getMetrics(bootInfo, apiID, apiVersionID, lastAPIReportTime, reportEndTime)
 		endTime := lastAPIReportTime
 		for _, metric := range metrics {
@@ -97,14 +105,17 @@ func (me *MuleEventEmitter) Start() error {
 			if metric.Time.After(lastAPIReportTime) {
 				for _, event := range metric.Events {
 					m := common.MetricEvent{
-						StartTime:  lastAPIReportTime,
-						EndTime:    metric.Time,
-						APIID:      apiID,
-						Instance:   instance,
-						StatusCode: event.StatusCode,
-						Count:      int64(event.RequestSizeCount),
-						Max:        int64(event.ResponseTimeMax),
-						Min:        int64(event.ResponseTimeMin),
+						Type: common.Metric,
+						Metric: common.Metrics{
+							StartTime:  lastAPIReportTime,
+							EndTime:    metric.Time,
+							APIID:      apiID,
+							Instance:   instance,
+							StatusCode: event.StatusCode,
+							Count:      int64(event.RequestSizeCount),
+							Max:        int64(event.ResponseTimeMax),
+							Min:        int64(event.ResponseTimeMin),
+						},
 					}
 					me.eventChannel <- m
 				}
@@ -133,10 +144,10 @@ func (me *MuleEventEmitter) getMetrics(bootInfo *anypoint.MonitoringBootInfo, ap
 	return me.client.GetMonitoringMetrics(bootInfo.Settings.DataSource.InfluxDB.Database, bootInfo.Settings.DataSource.InfluxDB.ID, apiID, apiVersionID, startTime, endTime)
 }
 
-func (me *MuleEventEmitter) getLastRun(apiID string) time.Time {
+func (me *MuleEventEmitter) getLastRun(apiID string, instance *v1.ResourceInstance) time.Time {
 	tStamp, _ := me.cache.Get(CacheKeyTimeStamp + "-" + apiID)
 	// use instance.Metadata.Audit.CreateTimestamp instead of Now()
-	tStart := time.Now()
+	tStart := time.Time(instance.Metadata.Audit.CreateTimestamp)
 	if tStamp != nil {
 		tStart, _ = time.Parse(time.RFC3339Nano, tStamp.(string))
 	} else {

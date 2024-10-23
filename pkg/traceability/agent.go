@@ -23,7 +23,9 @@ import (
 )
 
 type metricCollector interface {
+	InitializeBatch()
 	AddAPIMetricDetail(detail metric.MetricDetail)
+	Publish()
 }
 
 func getMetricCollector() metricCollector {
@@ -38,6 +40,7 @@ type Agent struct {
 	mule            Emitter
 	collector       metricCollector
 	credentialCache cache.Cache
+	publishMetrics  bool
 }
 
 // NewBeater creates an instance of mulesoft_traceability_agent.
@@ -108,40 +111,55 @@ func (a *Agent) Run(b *beat.Beat) error {
 }
 
 func (a *Agent) processEvent(me cmn.MetricEvent) {
-	if me.Instance == nil {
+	switch me.Type {
+	case cmn.Initialize:
+		a.collector.InitializeBatch()
+		a.publishMetrics = false
+	case cmn.Metric:
+		a.processMetricEvent(me.Metric)
+	case cmn.Completed:
+		if a.publishMetrics {
+			a.collector.Publish()
+		}
+	}
+}
+
+func (a *Agent) processMetricEvent(m cmn.Metrics) {
+	if m.Instance == nil {
 		return
 	}
 
 	a.collector.AddAPIMetricDetail(metric.MetricDetail{
-		APIDetails: a.getAPIDetails(me),
-		AppDetails: a.getAppDetails(me),
-		StatusCode: me.StatusCode,
-		Count:      me.Count,
+		APIDetails: a.getAPIDetails(m),
+		AppDetails: a.getAppDetails(m),
+		StatusCode: m.StatusCode,
+		Count:      m.Count,
 		Response: metric.ResponseMetrics{
-			Max: me.Max,
-			Min: me.Min,
+			Max: m.Max,
+			Min: m.Min,
 		},
 		Observation: metric.ObservationDetails{
-			Start: me.StartTime.UnixMilli(),
-			End:   me.EndTime.UnixMilli(),
+			Start: m.StartTime.UnixMilli(),
+			End:   m.EndTime.UnixMilli(),
 		},
 	})
+	a.publishMetrics = true
 }
 
-func (a *Agent) getAPIDetails(me cmn.MetricEvent) models.APIDetails {
-	apisRef := me.Instance.GetReferenceByGVK(management.APIServiceGVK())
-	externalAPIID, _ := coreutil.GetAgentDetailsValue(me.Instance, definitions.AttrExternalAPIID)
-	stage, _ := coreutil.GetAgentDetailsValue(me.Instance, definitions.AttrExternalAPIStage)
+func (a *Agent) getAPIDetails(m cmn.Metrics) models.APIDetails {
+	apisRef := m.Instance.GetReferenceByGVK(management.APIServiceGVK())
+	externalAPIID, _ := coreutil.GetAgentDetailsValue(m.Instance, definitions.AttrExternalAPIID)
+	stage, _ := coreutil.GetAgentDetailsValue(m.Instance, definitions.AttrExternalAPIStage)
 	return models.APIDetails{
 		ID:                 externalAPIID,
 		Name:               apisRef.Name,
 		Revision:           1,
-		APIServiceInstance: me.Instance.Name,
+		APIServiceInstance: m.Instance.Name,
 		Stage:              stage,
 	}
 }
 
-func (a *Agent) getAppDetails(me cmn.MetricEvent) models.AppDetails {
+func (a *Agent) getAppDetails(me cmn.Metrics) models.AppDetails {
 	appDetails := models.AppDetails{}
 	if item, err := a.credentialCache.Get(me.ClientID); err == nil && item != nil {
 		ri, ok := item.(*v1.ResourceInstance)

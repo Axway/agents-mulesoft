@@ -2,6 +2,7 @@ package traceability
 
 import (
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -49,6 +50,41 @@ func (c *mockInstaceCache) GetAPIServiceInstanceByID(id string) (*v1.ResourceIns
 	return nil, fmt.Errorf("error")
 }
 
+type mockEventReceiver struct {
+	metricBatchInitialized bool
+	metricBatchPublish     bool
+	metricReceived         bool
+	receivedMetric         common.Metrics
+	wg                     sync.WaitGroup
+}
+
+func (r *mockEventReceiver) init() {
+	r.wg.Add(1)
+}
+
+func (r *mockEventReceiver) wait() {
+	r.wg.Wait()
+}
+
+func (r *mockEventReceiver) receiveEvents(eventChannel chan common.MetricEvent) {
+	for {
+		select {
+		case event := <-eventChannel:
+			switch event.Type {
+			case common.Initialize:
+				r.metricBatchInitialized = true
+			case common.Metric:
+				r.metricReceived = true
+				r.receivedMetric = event.Metric
+			case common.Completed:
+				r.metricBatchPublish = true
+				r.wg.Done()
+				return
+			}
+		}
+	}
+}
+
 func Test_MuleEventEmitter(t *testing.T) {
 	eventCh := make(chan common.MetricEvent)
 	event := anypoint.APIMonitoringMetric{
@@ -80,19 +116,34 @@ func Test_MuleEventEmitter(t *testing.T) {
 
 	assert.NotNil(t, emitter)
 
+	eventReceiver := &mockEventReceiver{}
 	go emitter.Start()
+	eventReceiver.init()
+	go eventReceiver.receiveEvents(eventCh)
 
-	e := <-eventCh
-	assert.NotEmpty(t, e)
+	eventReceiver.wait()
+	assert.True(t, eventReceiver.metricBatchInitialized)
+	assert.True(t, eventReceiver.metricReceived)
+	assert.True(t, eventReceiver.metricBatchPublish)
 
 	// Should throw an error when the client returns an error
+	eventCh = make(chan common.MetricEvent)
 	client = &mockAnalyticsClient{
 		events: []anypoint.APIMonitoringMetric{},
 		err:    fmt.Errorf("failed"),
 	}
 	emitter = NewMuleEventEmitter(&config.MulesoftConfig{CachePath: "/tmp", UseMonitoringAPI: true}, eventCh, client, instanceCache)
-	err := emitter.Start()
-	assert.Equal(t, client.err, err)
+	eventReceiver = &mockEventReceiver{}
+	eventReceiver.init()
+	go func() {
+		err := emitter.Start()
+		assert.Equal(t, client.err, err)
+	}()
+	go eventReceiver.receiveEvents(eventCh)
+
+	eventReceiver.wait()
+	assert.True(t, eventReceiver.metricBatchInitialized)
+	assert.True(t, eventReceiver.metricBatchPublish)
 }
 
 func TestMuleEventEmitterJob(t *testing.T) {

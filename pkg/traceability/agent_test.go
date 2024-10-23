@@ -24,11 +24,17 @@ type mockMetricCollector struct {
 	details []metric.MetricDetail
 }
 
+func (m *mockMetricCollector) InitializeBatch() {
+}
+
 func (m *mockMetricCollector) AddAPIMetricDetail(detail metric.MetricDetail) {
 	if m.details == nil {
 		m.details = make([]metric.MetricDetail, 0)
 	}
 	m.details = append(m.details, detail)
+}
+
+func (m *mockMetricCollector) Publish() {
 	m.channel <- true
 }
 

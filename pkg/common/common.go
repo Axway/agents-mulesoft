@@ -81,7 +81,23 @@ type PolicyDetail struct {
 	APIId      string
 }
 
+type EventType int
+
+const (
+	// Initialize -
+	Initialize EventType = iota + 1
+	// Metric -
+	Metric
+	// Completed -
+	Completed
+)
+
 type MetricEvent struct {
+	Type   EventType
+	Metric Metrics
+}
+
+type Metrics struct {
 	StartTime  time.Time
 	EndTime    time.Time
 	APIID      string
