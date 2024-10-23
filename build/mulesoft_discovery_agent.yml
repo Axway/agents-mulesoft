@@ -1,35 +1,28 @@
 central:
-  agentName: ${CENTRAL_AGENTNAME:""}
-  organizationID: "<Amplify_ORG_ID>"
-  environment: <Amplify_CENTRAL_ENVIRONMENT_NAME>
-  mode: publishToEnvironmentAndCatalog
-  url: https://apicentral.axway.com
-  platformURL: https://platform.axway.com
-  pollInterval: 5s
-  grpc:
-    enabled: false
+  organizationID:
+  team:
+  environment:
   auth:
-    clientID: <Amplify_CENTRAL_DOSA_CLIENT_ID>
-    privateKey: <Amplify_CENTRAL_DOSA_PRIVATE_KEY_PATH>
-    publicKey: <Amplify_CENTRAL_DOSA_PUBLIC_KEY_PATH>
-    realm: Broker
-    timeout: 30s
-    url: https://login.axway.com/auth
-    # Uncomment the following line if you are using a proxy to access the Amplify platform (apicentral.axway.com / login.axway.com / platform.axway.com) on port 443
-    # Configure the appropriate value (PROXY_USER / PROXY_PASSWORD are optional values)
-    #proxyurl: <PROXY_SCHEME>://<PROXY_USER>:<PROXY_USER_PASSWORD>@<PROXY_URL>:<PROXY_PORT>
+    clientId:
+    privateKey: /keys/private_key.pem
+    publicKey: /keys/public_key.pem
+
+  # Uncomment the following line if you are using a proxy to access the AMPLIFY platform (apicentral.axway.com / login.axway.com / platform.axway.com) on port 443
+  # Configure the appropriate value (PROXY_USER / PROXY_PASSWORD are optional values)
+  #proxyurl: <PROXY_SCHEME>://<PROXY_USER>:<PROXY_USER_PASSWORD>@<PROXY_URL>:<PROXY_PORT>
 
 log:
-  level: debug
+  level: info
   format: json
   output: stdout
   path: logs
 
+
 mulesoft:
-  anypointExchangeUrl: https://anypoint.mulesoft.com
-  environment: "${MULESOFT_ENVIRONMENT}"
-  pollInterval: 20s
-  orgName: "${MULESOFT_ORGNAME}"
+  anypointExchangeUrl:
+  environment:
+  pollInterval: 60s
+  orgName: 
   # Comma-separated list of tags. Used to filter the APIs that have a particular tag in their configuration.
   # Default value: empty. Meaning that no matching is performed.
   #discoveryTags: tags1, tags2
@@ -38,8 +31,6 @@ mulesoft:
   # Default value: empty. Meaning that no API is ignored
   #discoveryIgnoreTags: tags1, tags2
   auth:
-    username: <USERNAME>
-    password: <PASSWORD>
-    clientID: <CLIENTID>
-    clientSecret: <CLIENTSECRET>
+    clientID:
+    clientSecret:
 

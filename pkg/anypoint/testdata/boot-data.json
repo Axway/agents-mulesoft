@@ -1,0 +1,10 @@
+{
+    "Settings": {
+        "datasources": {
+            "influxdb": {
+                "database": "\"db\"",
+                "id": 1234
+            }
+        }
+    }
+}

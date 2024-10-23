@@ -26,7 +26,7 @@ spec:
             - name: CENTRAL_AUTH_PUBLICKEY
               value: /keys/publicKey
             - name: CENTRAL_POLLINTERVAL
-              value: 20s
+              value: 60s
             - name: CENTRAL_ENVIRONMENT
               value:
             - name: CENTRAL_TEAM
@@ -60,7 +60,7 @@ spec:
             - name: MULESOFT_ORGNAME
               value:
             - name: MULESOFT_POLLINTERVAL
-              value: 20s
+              value: 60s
             - name: STATUS_PORT
               value: "8989"
             - name: TRACEABILITY_REDACTION_PATH_SHOW

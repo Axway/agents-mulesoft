@@ -1,0 +1,25 @@
+{
+    "user": {
+        "identityType": "idtype",
+        "id": "123",
+        "username": "name",
+        "firstName": "first",
+        "lastName": "last",
+        "email": "email",
+        "organization": {
+            "id": "333",
+            "name": "org1",
+            "domain": "abc.com"
+        },
+        "memberOfOrganizations": [{
+                "id": "333",
+                "name": "org1"
+            },
+            {
+                "id": "444",
+                "name": "BusinessOrg1"
+            }
+        ]
+
+    }
+}

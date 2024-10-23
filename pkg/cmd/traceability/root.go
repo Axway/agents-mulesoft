@@ -6,6 +6,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/cmd/service"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	libcmd "github.com/elastic/beats/v7/libbeat/cmd"
 	"github.com/elastic/beats/v7/libbeat/cmd/instance"
 
@@ -54,6 +55,18 @@ func run() error {
 // Callback that agent will call to initialize the config. CentralConfig is parsed by Agent SDK
 // and passed to the callback allowing the agent code to access the central config
 func initConfig(centralConfig corecfg.CentralConfig) (interface{}, error) {
+	err := centralConfig.SetWatchResourceFilters([]corecfg.ResourceFilter{
+		{
+			Group:            management.CredentialGVK().Group,
+			Kind:             management.CredentialGVK().Kind,
+			Name:             "*",
+			IsCachedResource: true,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	agentConfig := &config.AgentConfig{
 		CentralConfig:  centralConfig,
 		MulesoftConfig: config.NewMulesoftConfig(RootCmd.GetProperties()),

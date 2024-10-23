@@ -98,10 +98,10 @@ func (m *MockAnypointClient) GetExchangeFileContent(_, _, _ string, shouldConver
 	return result.([]byte), shouldConvert, args.Error(2)
 }
 
-func (m *MockAnypointClient) GetAnalyticsWindow() ([]AnalyticsEvent, error) {
+func (m *MockAnypointClient) GetMonitoringArchive(apiID string, startDate time.Time) ([]APIMonitoringMetric, error) {
 	args := m.Called()
 	result := args.Get(0)
-	return result.([]AnalyticsEvent), args.Error(1)
+	return result.([]APIMonitoringMetric), args.Error(1)
 }
 
 func (m *MockAnypointClient) CreateClientApplication(apiID string, body *AppRequestBody) (*Application, error) {

@@ -21,7 +21,16 @@ import (
 	"github.com/Axway/agents-mulesoft/pkg/config"
 )
 
-const HealthCheckEndpoint = "mulesoft"
+const (
+	HealthCheckEndpoint      = "mulesoft"
+	monitoringURITemplate    = "%s/monitoring/archive/api/v1/organizations/%s/environments/%s/apis/%s/summary/%d/%02d/%02d"
+	metricSummaryURITemplate = "%s/monitoring/archive/api/v1/organizations/%s/environments/%s/apis/%s/summary/%d/%02d/%02d/%s"
+	queryTemplate            = `SELECT sum("request_size.count") as request_count, max("response_time.max") as response_max, min("response_time.min") as response_min
+FROM "rp_general"."api_summary_metric" 
+WHERE ("api_id" = '%s' AND "api_version_id" = '%s') AND 
+time >= %dms and time <= %dms
+GROUP BY "client_id", "status_code"`
+)
 
 // Page describes the page query parameter
 type Page struct {
@@ -52,7 +61,9 @@ type Client interface {
 }
 
 type AnalyticsClient interface {
-	GetAnalyticsWindow(string, string) ([]AnalyticsEvent, error)
+	GetMonitoringBootstrap() (*MonitoringBootInfo, error)
+	GetMonitoringMetrics(dataSourceName string, dataSourceID int, apiID, apiVersionID string, startDate, endTime time.Time) ([]APIMonitoringMetric, error)
+	GetMonitoringArchive(apiID string, startDate time.Time) ([]APIMonitoringMetric, error)
 	OnConfigChange(mulesoftConfig *config.MulesoftConfig)
 	GetClientApplication(appID string) (*Application, error)
 	GetAPI(apiID string) (*API, error)
@@ -68,14 +79,15 @@ type ListAssetClient interface {
 
 // AnypointClient is the client for interacting with Mulesoft Anypoint.
 type AnypointClient struct {
-	baseURL      string
-	clientID     string
-	clientSecret string
-	lifetime     time.Duration
-	apiClient    coreapi.Client
-	auth         Auth
-	environment  *Environment
-	orgName      string
+	baseURL           string
+	monitoringBaseURL string
+	clientID          string
+	clientSecret      string
+	lifetime          time.Duration
+	apiClient         coreapi.Client
+	auth              Auth
+	environment       *Environment
+	orgName           string
 }
 
 type ClientOptions func(*AnypointClient)
@@ -102,6 +114,7 @@ func (c *AnypointClient) OnConfigChange(mulesoftConfig *config.MulesoftConfig) {
 	}
 
 	c.baseURL = mulesoftConfig.AnypointExchangeURL
+	c.monitoringBaseURL = mulesoftConfig.AnypointMonitoringURL
 	c.clientID = mulesoftConfig.ClientID
 	c.clientSecret = mulesoftConfig.ClientSecret
 	c.orgName = mulesoftConfig.OrgName
@@ -229,7 +242,7 @@ func (c *AnypointClient) getCurrentUser(token string) (*User, error) {
 
 	// this sets the User.Organization.ID as the Org ID of the Business Unit specified in Config
 	for _, value := range user.User.MemberOfOrganizations {
-		if value.ID == c.orgName {
+		if value.Name == c.orgName {
 			user.User.Organization.ID = value.ID
 			user.User.Organization.Name = value.Name
 		}
@@ -384,28 +397,154 @@ func (c *AnypointClient) GetExchangeFileContent(link, packaging, mainFile string
 	return fileContent, wasConverted, err
 }
 
-// GetAnalyticsWindow lists the managed assets in Mulesoft: https://docs.qax.mulesoft.com/api-manager/2.x/analytics-event-api
-func (c *AnypointClient) GetAnalyticsWindow(startDate, endDate string) ([]AnalyticsEvent, error) {
-	query := map[string]string{
-		"format":    "json",
-		"startDate": startDate,
-		"endDate":   endDate,
-		"fields":    "Application Name.Application.Browser.City.Client IP.Continent.Country.Hardware Platform.Message ID.OS Family.OS Major Version.OS Minor Version.OS Version.Postal Code.Request Outcome.Request Size.Resource Path.Response Size.Response Time.Status Code.Timezone.User Agent Name.User Agent Version.Verb.Violated Policy Name",
-	}
+func (c *AnypointClient) GetMonitoringBootstrap() (*MonitoringBootInfo, error) {
 	headers := map[string]string{
 		"Authorization": c.getAuthString(c.auth.GetToken()),
 	}
 
-	url := fmt.Sprintf("%s/analytics/1.0/%s/environments/%s/events", c.baseURL, c.auth.GetOrgID(), c.environment.ID)
-	events := make([]AnalyticsEvent, 0)
+	url := fmt.Sprintf("%s/monitoring/api/visualizer/api/bootdata", c.baseURL)
+	bootInfo := &MonitoringBootInfo{}
 	request := coreapi.Request{
-		Method:      coreapi.GET,
-		URL:         url,
-		Headers:     headers,
-		QueryParams: query,
+		Method:  coreapi.GET,
+		URL:     url,
+		Headers: headers,
 	}
-	err := c.invokeJSON(request, &events)
-	return events, err
+
+	err := c.invokeJSON(request, &bootInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	return bootInfo, err
+}
+
+// GetMonitoringMetrics returns monitoring data from InfluxDb
+func (c *AnypointClient) GetMonitoringMetrics(dataSourceName string, dataSourceID int, apiID, apiVersionID string, startDate, endTime time.Time) ([]APIMonitoringMetric, error) {
+	headers := map[string]string{
+		"Authorization": c.getAuthString(c.auth.GetToken()),
+	}
+
+	query := fmt.Sprintf(queryTemplate, apiID, apiVersionID, startDate.UnixMilli(), endTime.UnixMilli())
+	url := fmt.Sprintf("%s/monitoring/api/visualizer/api/datasources/proxy/%d/query", c.baseURL, dataSourceID)
+	request := coreapi.Request{
+		Method:  coreapi.GET,
+		URL:     url,
+		Headers: headers,
+		QueryParams: map[string]string{
+			"db":    dataSourceName,
+			"q":     query,
+			"epoch": "ms",
+		},
+	}
+	metricResponse := &MetricResponse{}
+	err := c.invokeJSON(request, metricResponse)
+	if err != nil {
+		return nil, err
+	}
+	// convert metricResponse
+	metrics := make([]APIMonitoringMetric, 0)
+	for _, mr := range metricResponse.Results {
+		for _, ms := range mr.Series {
+			m := APIMonitoringMetric{
+				Time: ms.Time,
+				Events: []APISummaryMetricEvent{
+					{
+						ClientID:         ms.Tags.ClientID,
+						StatusCode:       ms.Tags.StatusCode,
+						RequestSizeCount: int(ms.Count),
+						ResponseSizeMax:  int(ms.ResponseMax),
+						ResponseSizeMin:  int(ms.ResponseMin),
+					},
+				},
+			}
+			metrics = append(metrics, m)
+		}
+	}
+	return metrics, err
+}
+
+// GetMonitoringArchive returns archived monitoring data Mulesoft:
+// https://anypoint.mulesoft.com/exchange/portals/anypoint-platform/f1e97bc6-315a-4490-82a7-23abe036327a.anypoint-platform/anypoint-monitoring-archive-api/minor/1.0/pages/home/
+func (c *AnypointClient) GetMonitoringArchive(apiID string, startDate time.Time) ([]APIMonitoringMetric, error) {
+	headers := map[string]string{
+		"Authorization": c.getAuthString(c.auth.GetToken()),
+	}
+	year := startDate.Year()
+	month := int(startDate.Month())
+	day := startDate.Day()
+
+	url := fmt.Sprintf(monitoringURITemplate, c.monitoringBaseURL, c.auth.GetOrgID(), c.environment.ID, apiID, year, month, day)
+	dataFiles := &DataFileResources{}
+	request := coreapi.Request{
+		Method:  coreapi.GET,
+		URL:     url,
+		Headers: headers,
+	}
+
+	err := c.invokeJSON(request, &dataFiles)
+	if err != nil && !strings.Contains(err.Error(), "404") {
+		return nil, err
+	}
+
+	metrics := make([]APIMonitoringMetric, 0)
+	for _, dataFile := range dataFiles.Resources {
+		apiMetric, err := c.getMonitoringArchiveFile(apiID, year, month, day, dataFile.ID)
+		if err != nil {
+			logrus.WithField("apiID", apiID).
+				WithField("fileName", dataFile.ID).
+				WithError(err).
+				Warn("failed to read monitoring archive")
+		}
+		if len(apiMetric) > 0 {
+			metrics = append(metrics, apiMetric...)
+		}
+	}
+
+	return metrics, err
+}
+
+func (c *AnypointClient) getMonitoringArchiveFile(apiID string, year, month, day int, fileName string) ([]APIMonitoringMetric, error) {
+	headers := map[string]string{
+		"Authorization": c.getAuthString(c.auth.GetToken()),
+	}
+
+	url := fmt.Sprintf(metricSummaryURITemplate, c.monitoringBaseURL, c.auth.GetOrgID(), c.environment.ID, apiID, year, month, day, fileName)
+	request := coreapi.Request{
+		Method:  coreapi.GET,
+		URL:     url,
+		Headers: headers,
+	}
+
+	body, _, err := c.invoke(request)
+	if err != nil && !strings.Contains(err.Error(), "404") {
+		return nil, err
+	}
+
+	return c.parseMetricSummaries(body)
+}
+
+func (c *AnypointClient) parseMetricSummaries(metricDataStream []byte) ([]APIMonitoringMetric, error) {
+	metrics := make([]APIMonitoringMetric, 0)
+	d := json.NewDecoder(strings.NewReader(string(metricDataStream)))
+	for {
+		metricData := &MetricData{}
+		err := d.Decode(&metricData)
+
+		if err != nil {
+			// io.EOF is expected at end of stream.
+			if err != io.EOF {
+				return metrics, nil
+			}
+			break
+		}
+		metricTime := time.Unix(metricData.Time, 0)
+		metric := APIMonitoringMetric{
+			Time:   metricTime,
+			Events: metricData.Events,
+		}
+		metrics = append(metrics, metric)
+	}
+	return metrics, nil
 }
 
 func (c *AnypointClient) GetSLATiers(apiID string, tierName string) (*Tiers, error) {

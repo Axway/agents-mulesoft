@@ -1,6 +1,11 @@
 package common
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+)
 
 const (
 	AccessCode        = "accessCode"
@@ -74,4 +79,33 @@ type PolicyDetail struct {
 	Policy     string
 	IsSLABased bool
 	APIId      string
+}
+
+type EventType int
+
+const (
+	// Initialize -
+	Initialize EventType = iota + 1
+	// Metric -
+	Metric
+	// Completed -
+	Completed
+)
+
+type MetricEvent struct {
+	Type   EventType
+	Metric Metrics
+}
+
+type Metrics struct {
+	StartTime  time.Time
+	EndTime    time.Time
+	APIID      string
+	Instance   *v1.ResourceInstance
+	ClientID   string
+	StatusCode string
+	Count      int64
+	Max        int64
+	Min        int64
+	Avg        float64
 }

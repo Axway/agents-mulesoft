@@ -1,0 +1,30 @@
+{
+    "results": [
+      {
+        "statement_id": 0,
+        "series": [
+          {
+            "name": "api_summary_metric",
+            "tags": {
+              "client_id": "",
+              "status_code": "200"
+            },
+            "columns": [
+              "time",
+              "request_count",
+              "response_max",
+              "response_min"
+            ],
+            "values": [
+              [
+                1729589392,
+                4,
+                3243,
+                74
+              ]
+            ]
+          }
+        ]
+      }
+    ]
+  }
