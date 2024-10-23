@@ -152,8 +152,6 @@ func (me *MuleEventEmitter) getLastRun(apiID string, instance *v1.ResourceInstan
 		tStart, _ = time.Parse(time.RFC3339Nano, tStamp.(string))
 	} else {
 		// if instance create time is more than a day, use current time to query
-		duration := time.Since(tStart)
-		fmt.Printf("%v", duration)
 		if time.Since(tStart) > 24*time.Hour {
 			tStart = time.Now()
 		}
