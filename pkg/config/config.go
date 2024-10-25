@@ -26,6 +26,7 @@ var config *AgentConfig
 
 const (
 	pathAnypointExchangeURL   = "mulesoft.anypointExchangeUrl"
+	pathAnypointMonitoringURL = "mulesoft.anypointMonitoringUrl"
 	pathEnvironment           = "mulesoft.environment"
 	pathOrgName               = "mulesoft.orgName"
 	pathDiscoveryTags         = "mulesoft.discoveryTags"
@@ -42,6 +43,7 @@ const (
 	pathProxyURL              = "mulesoft.proxyUrl"
 	pathCachePath             = "mulesoft.cachePath"
 	pathDiscoverOriginalRaml  = "mulesoft.discoverOriginalRaml"
+	pathUseMonitoringAPI      = "mulesoft.useMonitoringAPI"
 )
 
 const (
@@ -72,19 +74,21 @@ type AgentConfig struct {
 // MulesoftConfig - represents the config for the Mulesoft gateway
 type MulesoftConfig struct {
 	corecfg.IConfigValidator
-	AnypointExchangeURL  string            `config:"anypointExchangeUrl"`
-	CachePath            string            `config:"cachePath"`
-	DiscoveryIgnoreTags  string            `config:"discoveryIgnoreTags"`
-	DiscoveryTags        string            `config:"discoveryTags"`
-	Environment          string            `config:"environment"`
-	OrgName              string            `config:"orgname"`
-	PollInterval         time.Duration     `config:"pollInterval"`
-	ProxyURL             string            `config:"proxyUrl"`
-	SessionLifetime      time.Duration     `config:"auth.lifetime"`
-	TLS                  corecfg.TLSConfig `config:"ssl"`
-	ClientID             string            `config:"auth.clientID"`
-	ClientSecret         string            `config:"auth.clientSecret"`
-	DiscoverOriginalRaml bool              `config:"discoverOriginalRaml"`
+	AnypointExchangeURL   string            `config:"anypointExchangeUrl"`
+	AnypointMonitoringURL string            `config:"anypointMonitoringUrl"`
+	CachePath             string            `config:"cachePath"`
+	DiscoveryIgnoreTags   string            `config:"discoveryIgnoreTags"`
+	DiscoveryTags         string            `config:"discoveryTags"`
+	Environment           string            `config:"environment"`
+	OrgName               string            `config:"orgname"`
+	PollInterval          time.Duration     `config:"pollInterval"`
+	ProxyURL              string            `config:"proxyUrl"`
+	SessionLifetime       time.Duration     `config:"auth.lifetime"`
+	TLS                   corecfg.TLSConfig `config:"ssl"`
+	ClientID              string            `config:"auth.clientID"`
+	ClientSecret          string            `config:"auth.clientSecret"`
+	DiscoverOriginalRaml  bool              `config:"discoverOriginalRaml"`
+	UseMonitoringAPI      bool              `config:"useMonitoringAPI"`
 }
 
 // ValidateCfg - Validates the gateway config
@@ -119,6 +123,7 @@ func (c *MulesoftConfig) ValidateCfg() (err error) {
 // AddConfigProperties - Adds the command properties needed for Mulesoft
 func AddConfigProperties(rootProps props) {
 	rootProps.AddStringProperty(pathAnypointExchangeURL, "https://anypoint.mulesoft.com", "Mulesoft Anypoint Exchange URL.")
+	rootProps.AddStringProperty(pathAnypointMonitoringURL, "https://monitoring.anypoint.mulesoft.com", "Mulesoft Anypoint Monitoring URL.")
 	rootProps.AddStringProperty(pathEnvironment, "", "Mulesoft Anypoint environment.")
 	rootProps.AddStringProperty(pathOrgName, "", "Mulesoft Anypoint Business Group.")
 	rootProps.AddStringProperty(pathAuthClientID, "", "Mulesoft client id.")
@@ -127,7 +132,7 @@ func AddConfigProperties(rootProps props) {
 	rootProps.AddStringProperty(pathDiscoveryTags, "", "APIs containing any of these tags are selected for discovery.")
 	rootProps.AddStringProperty(pathDiscoveryIgnoreTags, "", "APIs containing any of these tags are ignored. Takes precedence over "+pathDiscoveryIgnoreTags+".")
 	rootProps.AddStringProperty(pathCachePath, "/tmp", "Mulesoft Cache Path")
-	rootProps.AddDurationProperty(pathPollInterval, 20*time.Second, "The interval at which Mulesoft is checked for updates.", properties.WithLowerLimit(20*time.Second))
+	rootProps.AddDurationProperty(pathPollInterval, time.Minute, "The interval at which Mulesoft is checked for updates.", properties.WithLowerLimit(30*time.Second))
 	rootProps.AddStringProperty(pathProxyURL, "", "Proxy URL")
 
 	// ssl properties and command flags
@@ -137,22 +142,24 @@ func AddConfigProperties(rootProps props) {
 	rootProps.AddStringProperty(pathSSLMinVersion, corecfg.TLSDefaultMinVersionString(), "Minimum acceptable SSL/TLS protocol version.")
 	rootProps.AddStringProperty(pathSSLMaxVersion, "0", "Maximum acceptable SSL/TLS protocol version.")
 	rootProps.AddBoolProperty(pathDiscoverOriginalRaml, false, "If RAML API specs are discovered as RAML and not converted to OAS")
+	rootProps.AddBoolProperty(pathUseMonitoringAPI, true, "Flag to setup traceability agent to use Anypoint Monitoring Archive API")
 }
 
 // NewMulesoftConfig - parse the props and create an Mulesoft Configuration structure
 func NewMulesoftConfig(rootProps props) *MulesoftConfig {
 	return &MulesoftConfig{
-		AnypointExchangeURL: rootProps.StringPropertyValue(pathAnypointExchangeURL),
-		CachePath:           rootProps.StringPropertyValue(pathCachePath),
-		DiscoveryIgnoreTags: rootProps.StringPropertyValue(pathDiscoveryIgnoreTags),
-		DiscoveryTags:       rootProps.StringPropertyValue(pathDiscoveryTags),
-		Environment:         rootProps.StringPropertyValue(pathEnvironment),
-		OrgName:             rootProps.StringPropertyValue(pathOrgName),
-		PollInterval:        rootProps.DurationPropertyValue(pathPollInterval),
-		ProxyURL:            rootProps.StringPropertyValue(pathProxyURL),
-		SessionLifetime:     rootProps.DurationPropertyValue(pathAuthLifetime),
-		ClientID:            rootProps.StringPropertyValue(pathAuthClientID),
-		ClientSecret:        rootProps.StringPropertyValue(pathAuthClientSecret),
+		AnypointExchangeURL:   rootProps.StringPropertyValue(pathAnypointExchangeURL),
+		AnypointMonitoringURL: rootProps.StringPropertyValue(pathAnypointMonitoringURL),
+		CachePath:             rootProps.StringPropertyValue(pathCachePath),
+		DiscoveryIgnoreTags:   rootProps.StringPropertyValue(pathDiscoveryIgnoreTags),
+		DiscoveryTags:         rootProps.StringPropertyValue(pathDiscoveryTags),
+		Environment:           rootProps.StringPropertyValue(pathEnvironment),
+		OrgName:               rootProps.StringPropertyValue(pathOrgName),
+		PollInterval:          rootProps.DurationPropertyValue(pathPollInterval),
+		ProxyURL:              rootProps.StringPropertyValue(pathProxyURL),
+		SessionLifetime:       rootProps.DurationPropertyValue(pathAuthLifetime),
+		ClientID:              rootProps.StringPropertyValue(pathAuthClientID),
+		ClientSecret:          rootProps.StringPropertyValue(pathAuthClientSecret),
 		TLS: &corecfg.TLSConfiguration{
 			NextProtos:         rootProps.StringSlicePropertyValue(pathSSLNextProtos),
 			InsecureSkipVerify: rootProps.BoolPropertyValue(pathSSLInsecureSkipVerify),
@@ -161,5 +168,6 @@ func NewMulesoftConfig(rootProps props) *MulesoftConfig {
 			MaxVersion:         corecfg.TLSVersionAsValue(rootProps.StringPropertyValue(pathSSLMaxVersion)),
 		},
 		DiscoverOriginalRaml: rootProps.BoolPropertyValue(pathDiscoverOriginalRaml),
+		UseMonitoringAPI:     rootProps.BoolPropertyValue(pathUseMonitoringAPI),
 	}
 }

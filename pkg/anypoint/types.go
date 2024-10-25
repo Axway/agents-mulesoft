@@ -184,41 +184,6 @@ type ExchangeFile struct {
 	SHA1         string    `json:"sha1"`
 }
 
-// AnalyticsEvent -
-type AnalyticsEvent struct {
-	APIID              string    `json:"API ID"`
-	APIName            string    `json:"API Name"`
-	APIVersionID       string    `json:"API Version ID"`
-	APIVersionName     string    `json:"API Version Name"`
-	ApplicationName    string    `json:"Application Name"`
-	Application        string    `json:"Application"`
-	Browser            string    `json:"Browser"`
-	City               string    `json:"City"`
-	ClientIP           string    `json:"Client IP"`
-	Continent          string    `json:"Continent"`
-	Country            string    `json:"Country"`
-	HardwarePlatform   string    `json:"Hardware Platform"`
-	MessageID          string    `json:"Message ID"`
-	OSFamily           string    `json:"OS Family"`
-	OSMajorVersion     string    `json:"OS Major Version"`
-	OSMinorVersion     string    `json:"OS Minor Version"`
-	OSVersion          string    `json:"OS Version"`
-	PostalCode         string    `json:"Postal Code"`
-	RequestOutcome     string    `json:"Request Outcome"`
-	RequestSize        int       `json:"Request Size"`
-	ResourcePath       string    `json:"Resource Path"`
-	ResponseSize       int       `json:"Response Size"`
-	ResponseTime       int       `json:"Response Time"`
-	StatusCode         int       `json:"Status Code"`
-	Timestamp          time.Time `json:"Timestamp"`
-	Timezone           string    `json:"Timezone"`
-	UserAgentName      string    `json:"User Agent Name"`
-	UserAgentVersion   string    `json:"User Agent Version"`
-	Verb               string    `json:"Verb"`
-	ViolatedPolicyName string    `json:"Violated Policy Name"`
-	AssetVersion       string    `json:"AssetVersion"`
-}
-
 type Application struct {
 	APIEndpoints bool   `json:"apiEndpoints,omitempty"`
 	ClientID     string `json:"clientId"`
