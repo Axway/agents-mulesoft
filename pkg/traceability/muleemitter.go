@@ -138,7 +138,7 @@ func (me *MuleEventEmitter) Start() error {
 
 func (me *MuleEventEmitter) getMetrics(bootInfo *anypoint.MonitoringBootInfo, apiID, apiVersionID string, startTime, endTime time.Time) ([]anypoint.APIMonitoringMetric, error) {
 	if me.useMonitoringAPI {
-		return me.client.GetMonitoringArchive(apiID, startTime)
+		return me.client.GetMonitoringArchive(apiVersionID, startTime)
 	}
 
 	return me.client.GetMonitoringMetrics(bootInfo.Settings.DataSource.InfluxDB.Database, bootInfo.Settings.DataSource.InfluxDB.ID, apiID, apiVersionID, startTime, endTime)
