@@ -23,7 +23,7 @@ import (
 
 const (
 	HealthCheckEndpoint      = "mulesoft"
-	monitoringURITemplate    = "%s/monitoring/archive/api/v1/organizations/%s/environments/%s/apis/%s/summary/%d/%02d/%02d"
+	monitoringURITemplate    = "%s/monitoring/archive/api/v1/organizations/%s/environments/%s/apis/%s/summary/%4d/%02d/%02d"
 	metricSummaryURITemplate = "%s/monitoring/archive/api/v1/organizations/%s/environments/%s/apis/%s/summary/%d/%02d/%02d/%s"
 	queryTemplate            = `SELECT sum("request_size.count") as request_count, max("response_time.max") as response_max, min("response_time.min") as response_min
 FROM "rp_general"."api_summary_metric" 
@@ -537,7 +537,7 @@ func (c *AnypointClient) parseMetricSummaries(metricDataStream []byte) ([]APIMon
 			}
 			break
 		}
-		metricTime := time.Unix(metricData.Time, 0)
+		metricTime := time.UnixMilli(metricData.Time)
 		metric := APIMonitoringMetric{
 			Time:   metricTime,
 			Events: metricData.Events,
