@@ -136,7 +136,7 @@ func TestKongProperties(t *testing.T) {
 	assert.Equal(t, corecfg.TLSVersionAsValue("0"), cfg.TLS.GetMaxVersion())
 	assert.Equal(t, time.Minute, cfg.PollInterval)
 	assert.Equal(t, "", cfg.ProxyURL)
-	assert.Equal(t, "/tmp", cfg.CachePath)
+	assert.Equal(t, "/data", cfg.CachePath)
 	assert.Equal(t, false, cfg.DiscoverOriginalRaml)
 
 	// validate changed values

@@ -97,7 +97,7 @@ func (me *MuleEventEmitter) Start() error {
 		if apiID == "" {
 			continue
 		}
-		lastAPIReportTime := me.getLastRun(apiID, instance)
+		lastAPIReportTime := me.getLastRun(apiID)
 		metrics, err := me.getMetrics(bootInfo, apiID, apiVersionID, lastAPIReportTime, reportEndTime)
 		endTime := lastAPIReportTime
 		for _, metric := range metrics {
@@ -138,24 +138,17 @@ func (me *MuleEventEmitter) Start() error {
 
 func (me *MuleEventEmitter) getMetrics(bootInfo *anypoint.MonitoringBootInfo, apiID, apiVersionID string, startTime, endTime time.Time) ([]anypoint.APIMonitoringMetric, error) {
 	if me.useMonitoringAPI {
-		return me.client.GetMonitoringArchive(apiVersionID, startTime)
+		return me.client.GetMonitoringArchive(apiID, startTime)
 	}
 
 	return me.client.GetMonitoringMetrics(bootInfo.Settings.DataSource.InfluxDB.Database, bootInfo.Settings.DataSource.InfluxDB.ID, apiID, apiVersionID, startTime, endTime)
 }
 
-func (me *MuleEventEmitter) getLastRun(apiID string, instance *v1.ResourceInstance) time.Time {
+func (me *MuleEventEmitter) getLastRun(apiID string) time.Time {
 	tStamp, _ := me.cache.Get(CacheKeyTimeStamp + "-" + apiID)
-	// use instance.Metadata.Audit.CreateTimestamp instead of Now()
-	tStart := time.Time(instance.Metadata.Audit.CreateTimestamp)
+	tStart := time.Now()
 	if tStamp != nil {
 		tStart, _ = time.Parse(time.RFC3339Nano, tStamp.(string))
-	} else {
-		// if instance create time is more than a day, use current time to query
-		if time.Since(tStart) > 24*time.Hour {
-			tStart = time.Now()
-		}
-		me.saveLastRun(apiID, tStart)
 	}
 	return tStart
 }

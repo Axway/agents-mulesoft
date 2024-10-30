@@ -37,6 +37,6 @@ COPY --from=builder /etc/passwd /etc/passwd
 COPY --from=builder /etc/group /etc/group
 
 USER $APP_USER
-VOLUME ["/tmp", "/logs"]
+VOLUME ["/keys", "/data", "/logs"]
 HEALTHCHECK --retries=1 CMD /traceability --status || exit 1
 ENTRYPOINT ["/traceability"]

@@ -22,6 +22,7 @@ func Test_initConfig(t *testing.T) {
 	cfg.MulesoftConfig.Environment = "env1"
 	cfg.MulesoftConfig.PollInterval = 5 * time.Second
 	cfg.MulesoftConfig.OrgName = "dev"
+	cfg.MulesoftConfig.CachePath = "/tmp"
 	err = cfg.MulesoftConfig.ValidateCfg()
 	assert.Nil(t, err)
 }

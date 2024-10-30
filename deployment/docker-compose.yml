@@ -6,23 +6,24 @@ services:
     #   - "8089:8089"
     volumes:
       - /path/to/keys:/keys
+      - /path/to/data:/data
     environment:
       CENTRAL_ORGANIZATIONID: "xxxxxxxx"
       CENTRAL_AUTH_PUBLICKEY: /keys/dosa-public.pem
       CENTRAL_AUTH_PRIVATEKEY: /keys/dosa-key.pem
       CENTRAL_AUTH_KEYPASSWORD:
       CENTRAL_ENVIRONMENT:
-      CENTRAL_AUTH_CLIENTID: <DOSA>
+      CENTRAL_AUTH_CLIENTID:
       LOG_LEVEL: debug
       LOG_FORMAT: json
       LOG_OUTPUT: stdout
       LOG_PATH: logs
       MULESOFT_ANYPOINTEXCHANGEURL: https://anypoint.mulesoft.com
       MULESOFT_ENVIRONMENT: Sandbox
-      MULESOFT_ORGID: <ORG_ID>
+      MULESOFT_ORGID:
       MULESOFT_POLLINTERVAL: 60s
-      MULESOFT_AUTH_USERNAME: <USERNAME>
-      MULESOFT_AUTH_PASSWORD: <PASSWORD>
+      MULESOFT_AUTH_CLIENTID:
+      MULESOFT_AUTH_CLIENTSECRET:
       MULESOFT_DISCOVERORIGINALRAML: false
   traceability:
     image: mulesoft-traceability
@@ -33,23 +34,23 @@ services:
       - /path/to/data:/data
     environment:
       STATUS_PORT: 8989
-      CENTRAL_ORGANIZATIONID: "xxxxxxx"
+      CENTRAL_ORGANIZATIONID:
       CENTRAL_AUTH_PUBLICKEY: /keys/dosa-public.pem
       CENTRAL_AUTH_PRIVATEKEY: /keys/dosa-key.pem
       CENTRAL_AUTH_KEYPASSWORD:
       CENTRAL_ENVIRONMENT:
-      CENTRAL_AUTH_CLIENTID: <DOSA>
+      CENTRAL_AUTH_CLIENTID:
       LOG_LEVEL: debug
       LOG_FORMAT: json
       LOG_OUTPUT: stdout
       LOG_PATH: logs
       MULESOFT_ANYPOINTEXCHANGEURL: https://anypoint.mulesoft.com
       MULESOFT_ENVIRONMENT:
-      MULESOFT_ORGNAME: <ORG_NAME>
+      MULESOFT_ORGNAME:
       MULESOFT_POLLINTERVAL: 60s
-      MULESOFT_AUTH_USERNAME: <USER>
-      MULESOFT_AUTH_PASSWORD: <PASSWORD>
-      MULESOFT_CACHEPATH: "/tmp"
+      MULESOFT_AUTH_CLIENTID:
+      MULESOFT_AUTH_CLIENTSECRET:
+      MULESOFT_CACHEPATH: "/data"
       TRACEABILITY_HOST: "ingestion-lumberjack.datasearch.axway.com:453"
       TRACEABILITY_PROTOCOL: tcp
       TRACEABILITY_COMPRESSIONLEVEL: 3
