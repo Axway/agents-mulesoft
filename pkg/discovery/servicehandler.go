@@ -159,7 +159,10 @@ func (s *serviceHandler) getServiceDetail(asset *anypoint.Asset, api *anypoint.A
 	}
 
 	parser := apic.NewSpecResourceParser(rawSpec, "")
-	parser.Parse()
+	err = parser.Parse()
+	if err != nil {
+		return nil, err
+	}
 
 	modifiedSpec, err := updateSpec(parser.GetSpecProcessor(), api.EndpointURI, configuration)
 	if err != nil {
