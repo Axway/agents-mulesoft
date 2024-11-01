@@ -2,6 +2,7 @@ package traceability
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -102,7 +103,7 @@ func (me *MuleEventEmitter) Start() error {
 		endTime := lastAPIReportTime
 		for _, metric := range metrics {
 			// Report only latest entries, ignore old entries
-			if metric.Time.After(lastAPIReportTime) {
+			if metric.Time.UnixMilli() > lastAPIReportTime.UnixMilli() {
 				for _, event := range metric.Events {
 					m := common.MetricEvent{
 						Type: common.Metric,
@@ -121,7 +122,7 @@ func (me *MuleEventEmitter) Start() error {
 				}
 			}
 			// Results are not sorted. We want the most recent time to bubble up for next run cycle
-			if metric.Time.After(endTime) {
+			if metric.Time.UnixMilli() > endTime.UnixMilli() {
 				endTime = metric.Time
 			}
 		}
@@ -148,14 +149,16 @@ func (me *MuleEventEmitter) getLastRun(apiID string) time.Time {
 	tStamp, _ := me.cache.Get(CacheKeyTimeStamp + "-" + apiID)
 	tStart := time.Now()
 	if tStamp != nil {
-		tStart, _ = time.Parse(time.RFC3339Nano, tStamp.(string))
+		tm, err := strconv.ParseInt(tStamp.(string), 10, 64)
+		if err == nil {
+			tStart = time.UnixMilli(tm)
+		}
 	}
 	return tStart
 }
 
 func (me *MuleEventEmitter) saveLastRun(apiID string, lastTime time.Time) {
-	tm := lastTime.Format(time.RFC3339Nano)
-	me.cache.Set(CacheKeyTimeStamp+"-"+apiID, tm)
+	me.cache.Set(CacheKeyTimeStamp+"-"+apiID, fmt.Sprintf("%d", lastTime.UnixMilli()))
 	me.cache.Save(me.cachePath)
 }
 

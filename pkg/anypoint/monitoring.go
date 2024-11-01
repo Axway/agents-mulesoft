@@ -110,7 +110,7 @@ func (ms *MetricSeries) UnmarshalJSON(data []byte) error {
 	}
 
 	tm := ms.getValue("time")
-	ms.Time = time.Unix(tm, 0)
+	ms.Time = time.UnixMilli(tm)
 	ms.Count = ms.getValue("request_count")
 	ms.ResponseMax = ms.getValue("response_max")
 	ms.ResponseMin = ms.getValue("response_min")

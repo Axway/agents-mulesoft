@@ -419,12 +419,12 @@ func (c *AnypointClient) GetMonitoringBootstrap() (*MonitoringBootInfo, error) {
 }
 
 // GetMonitoringMetrics returns monitoring data from InfluxDb
-func (c *AnypointClient) GetMonitoringMetrics(dataSourceName string, dataSourceID int, apiID, apiVersionID string, startDate, endTime time.Time) ([]APIMonitoringMetric, error) {
+func (c *AnypointClient) GetMonitoringMetrics(dataSourceName string, dataSourceID int, apiID, apiVersionID string, startTime, endTime time.Time) ([]APIMonitoringMetric, error) {
 	headers := map[string]string{
 		"Authorization": c.getAuthString(c.auth.GetToken()),
 	}
 
-	query := fmt.Sprintf(queryTemplate, apiID, apiVersionID, startDate.UnixMilli(), endTime.UnixMilli())
+	query := fmt.Sprintf(queryTemplate, apiID, apiVersionID, startTime.UnixMilli(), endTime.UnixMilli())
 	url := fmt.Sprintf("%s/monitoring/api/visualizer/api/datasources/proxy/%d/query", c.baseURL, dataSourceID)
 	request := coreapi.Request{
 		Method:  coreapi.GET,
@@ -446,7 +446,7 @@ func (c *AnypointClient) GetMonitoringMetrics(dataSourceName string, dataSourceI
 	for _, mr := range metricResponse.Results {
 		for _, ms := range mr.Series {
 			m := APIMonitoringMetric{
-				Time: ms.Time,
+				Time: endTime,
 				Events: []APISummaryMetricEvent{
 					{
 						ClientID:         ms.Tags.ClientID,
