@@ -37,6 +37,6 @@ COPY --from=builder $APP_HOME/bin/discovery /discovery
 COPY --from=builder /etc/passwd /etc/passwd
 
 USER $APP_USER
-VOLUME ["/tmp"]
+VOLUME ["/keys", "/data"]
 HEALTHCHECK --retries=1 CMD /discovery --status || exit 1
 ENTRYPOINT ["/discovery"]

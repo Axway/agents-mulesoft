@@ -131,7 +131,7 @@ func AddConfigProperties(rootProps props) {
 	rootProps.AddDurationProperty(pathAuthLifetime, 60*time.Minute, "Mulesoft session lifetime.")
 	rootProps.AddStringProperty(pathDiscoveryTags, "", "APIs containing any of these tags are selected for discovery.")
 	rootProps.AddStringProperty(pathDiscoveryIgnoreTags, "", "APIs containing any of these tags are ignored. Takes precedence over "+pathDiscoveryIgnoreTags+".")
-	rootProps.AddStringProperty(pathCachePath, "/tmp", "Mulesoft Cache Path")
+	rootProps.AddStringProperty(pathCachePath, "/data", "Mulesoft Cache Path")
 	rootProps.AddDurationProperty(pathPollInterval, time.Minute, "The interval at which Mulesoft is checked for updates.", properties.WithLowerLimit(30*time.Second))
 	rootProps.AddStringProperty(pathProxyURL, "", "Proxy URL")
 

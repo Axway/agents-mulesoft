@@ -23,7 +23,7 @@ import (
 
 const (
 	HealthCheckEndpoint      = "mulesoft"
-	monitoringURITemplate    = "%s/monitoring/archive/api/v1/organizations/%s/environments/%s/apis/%s/summary/%d/%02d/%02d"
+	monitoringURITemplate    = "%s/monitoring/archive/api/v1/organizations/%s/environments/%s/apis/%s/summary/%4d/%02d/%02d"
 	metricSummaryURITemplate = "%s/monitoring/archive/api/v1/organizations/%s/environments/%s/apis/%s/summary/%d/%02d/%02d/%s"
 	queryTemplate            = `SELECT sum("request_size.count") as request_count, max("response_time.max") as response_max, min("response_time.min") as response_min
 FROM "rp_general"."api_summary_metric" 
@@ -419,12 +419,12 @@ func (c *AnypointClient) GetMonitoringBootstrap() (*MonitoringBootInfo, error) {
 }
 
 // GetMonitoringMetrics returns monitoring data from InfluxDb
-func (c *AnypointClient) GetMonitoringMetrics(dataSourceName string, dataSourceID int, apiID, apiVersionID string, startDate, endTime time.Time) ([]APIMonitoringMetric, error) {
+func (c *AnypointClient) GetMonitoringMetrics(dataSourceName string, dataSourceID int, apiID, apiVersionID string, startTime, endTime time.Time) ([]APIMonitoringMetric, error) {
 	headers := map[string]string{
 		"Authorization": c.getAuthString(c.auth.GetToken()),
 	}
 
-	query := fmt.Sprintf(queryTemplate, apiID, apiVersionID, startDate.UnixMilli(), endTime.UnixMilli())
+	query := fmt.Sprintf(queryTemplate, apiID, apiVersionID, startTime.UnixMilli(), endTime.UnixMilli())
 	url := fmt.Sprintf("%s/monitoring/api/visualizer/api/datasources/proxy/%d/query", c.baseURL, dataSourceID)
 	request := coreapi.Request{
 		Method:  coreapi.GET,
@@ -446,7 +446,7 @@ func (c *AnypointClient) GetMonitoringMetrics(dataSourceName string, dataSourceI
 	for _, mr := range metricResponse.Results {
 		for _, ms := range mr.Series {
 			m := APIMonitoringMetric{
-				Time: ms.Time,
+				Time: endTime,
 				Events: []APISummaryMetricEvent{
 					{
 						ClientID:         ms.Tags.ClientID,
@@ -537,7 +537,7 @@ func (c *AnypointClient) parseMetricSummaries(metricDataStream []byte) ([]APIMon
 			}
 			break
 		}
-		metricTime := time.Unix(metricData.Time, 0)
+		metricTime := time.UnixMilli(metricData.Time)
 		metric := APIMonitoringMetric{
 			Time:   metricTime,
 			Events: metricData.Events,

@@ -54,7 +54,7 @@ spec:
                   name: muleauth
                   key: username
             - name: MULESOFT_CACHEPATH
-              value: /tmp
+              value: /data
             - name: MULESOFT_ENVIRONMENT
               value:
             - name: MULESOFT_ORGNAME
@@ -79,7 +79,7 @@ spec:
               value: tcp
             - name: TRACEABILITY_WORKER
               value: "1"
-          image: <Path_To_Image>
+          image:
           imagePullPolicy: Always
           name: traceability
           resources: {}

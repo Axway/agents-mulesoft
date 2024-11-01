@@ -2,6 +2,7 @@ package traceability
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -97,12 +98,12 @@ func (me *MuleEventEmitter) Start() error {
 		if apiID == "" {
 			continue
 		}
-		lastAPIReportTime := me.getLastRun(apiID, instance)
+		lastAPIReportTime := me.getLastRun(apiID)
 		metrics, err := me.getMetrics(bootInfo, apiID, apiVersionID, lastAPIReportTime, reportEndTime)
 		endTime := lastAPIReportTime
 		for _, metric := range metrics {
 			// Report only latest entries, ignore old entries
-			if metric.Time.After(lastAPIReportTime) {
+			if metric.Time.UnixMilli() > lastAPIReportTime.UnixMilli() {
 				for _, event := range metric.Events {
 					m := common.MetricEvent{
 						Type: common.Metric,
@@ -118,13 +119,23 @@ func (me *MuleEventEmitter) Start() error {
 						},
 					}
 					me.eventChannel <- m
+					logrus.WithField("apiID", apiID).
+						WithField("apiVersionID", apiVersionID).
+						WithField("statusCode", event.StatusCode).
+						WithField("count", event.RequestSizeCount).
+						WithField("metricTime", metric.Time).
+						Info("storing API metrics")
 				}
 			}
 			// Results are not sorted. We want the most recent time to bubble up for next run cycle
-			if metric.Time.After(endTime) {
+			if metric.Time.UnixMilli() > endTime.UnixMilli() {
 				endTime = metric.Time
 			}
 		}
+		logrus.WithField("apiID", apiID).
+			WithField("apiVersionID", apiVersionID).
+			WithField("lastReportTime", endTime).
+			Info("updating next query time")
 		me.saveLastRun(apiID, endTime)
 		if err != nil {
 			logrus.WithError(err).Error("failed to get analytics data")
@@ -144,25 +155,20 @@ func (me *MuleEventEmitter) getMetrics(bootInfo *anypoint.MonitoringBootInfo, ap
 	return me.client.GetMonitoringMetrics(bootInfo.Settings.DataSource.InfluxDB.Database, bootInfo.Settings.DataSource.InfluxDB.ID, apiID, apiVersionID, startTime, endTime)
 }
 
-func (me *MuleEventEmitter) getLastRun(apiID string, instance *v1.ResourceInstance) time.Time {
+func (me *MuleEventEmitter) getLastRun(apiID string) time.Time {
 	tStamp, _ := me.cache.Get(CacheKeyTimeStamp + "-" + apiID)
-	// use instance.Metadata.Audit.CreateTimestamp instead of Now()
-	tStart := time.Time(instance.Metadata.Audit.CreateTimestamp)
+	tStart := time.Now()
 	if tStamp != nil {
-		tStart, _ = time.Parse(time.RFC3339Nano, tStamp.(string))
-	} else {
-		// if instance create time is more than a day, use current time to query
-		if time.Since(tStart) > 24*time.Hour {
-			tStart = time.Now()
+		tm, err := strconv.ParseInt(tStamp.(string), 10, 64)
+		if err == nil {
+			tStart = time.UnixMilli(tm)
 		}
-		me.saveLastRun(apiID, tStart)
 	}
 	return tStart
 }
 
 func (me *MuleEventEmitter) saveLastRun(apiID string, lastTime time.Time) {
-	tm := lastTime.Format(time.RFC3339Nano)
-	me.cache.Set(CacheKeyTimeStamp+"-"+apiID, tm)
+	me.cache.Set(CacheKeyTimeStamp+"-"+apiID, fmt.Sprintf("%d", lastTime.UnixMilli()))
 	me.cache.Save(me.cachePath)
 }
 

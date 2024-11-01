@@ -54,7 +54,7 @@ spec:
                   name: muleauth
                   key: username
             - name: MULESOFT_CACHEPATH
-              value: /tmp
+              value: /data
             - name: MULESOFT_ENVIRONMENT
               value:
             - name: MULESOFT_ORGNAME
@@ -62,10 +62,10 @@ spec:
             - name: MULESOFT_POLLINTERVAL
               value: 60s
             - name: MULESOFT_DISCOVERORIGINALRAML
-              value: false
+              value: "false"
             - name: STATUS_PORT
               value: "8989"
-          image: <Path_To_Image>
+          image:
           imagePullPolicy: Always
           name: discovery
           resources: {}
