@@ -119,6 +119,12 @@ func (me *MuleEventEmitter) Start() error {
 						},
 					}
 					me.eventChannel <- m
+					logrus.WithField("apiID", apiID).
+						WithField("apiVersionID", apiVersionID).
+						WithField("statusCode", event.StatusCode).
+						WithField("count", event.RequestSizeCount).
+						WithField("metricTime", metric.Time).
+						Info("storing API metrics")
 				}
 			}
 			// Results are not sorted. We want the most recent time to bubble up for next run cycle
@@ -126,6 +132,10 @@ func (me *MuleEventEmitter) Start() error {
 				endTime = metric.Time
 			}
 		}
+		logrus.WithField("apiID", apiID).
+			WithField("apiVersionID", apiVersionID).
+			WithField("lastReportTime", endTime).
+			Info("updating next query time")
 		me.saveLastRun(apiID, endTime)
 		if err != nil {
 			logrus.WithError(err).Error("failed to get analytics data")
