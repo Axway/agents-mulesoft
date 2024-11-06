@@ -2,7 +2,6 @@ image: docker:dind
 
 variables:
   PROJECT: 'agents-mulesoft'
-  CSR_SUPPRESSION_LIST: "/tmp/csr-suppressions/amplify-central/golang-agents-common.json"
 
   # Fortify
   FORTIFY_PROJECT: "10715"
@@ -12,6 +11,10 @@ variables:
 
   # Blackduck
   BLACKDUCK_PROJECT_NAME: "Amplify - APIC Mulesoft Agents"
+
+  # SRM
+  SRM_PROJECT_NAME: "$BLACKDUCK_PROJECT_NAME"
+  SRM_PROJECT_ID: "263"
 
 ########################################
 # set up custom names for the pipelines of releases and nightly schedules
@@ -71,6 +74,7 @@ twistlock-discovery:
     - apk --no-cache update && apk add make
     - make docker-build-discovery
     - export IMAGE_NAME=mulesoft_discovery_agent:latest
+    - echo "TL_DA=true" >> build.env
 
 twistlock-traceability:
   extends: .twistlock
@@ -80,6 +84,7 @@ twistlock-traceability:
     - apk --no-cache update && apk add make
     - make docker-build-traceability
     - export IMAGE_NAME=mulesoft_traceability_agent:latest
+    - echo "TL_TA=true" >> build.env
 
 twistlock-discovery:on-schedule:
   variables:
