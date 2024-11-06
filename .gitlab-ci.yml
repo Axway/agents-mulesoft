@@ -2,7 +2,6 @@ image: docker:dind
 
 variables:
   PROJECT: 'agents-mulesoft'
-  CSR_SUPPRESSION_LIST: "/tmp/csr-suppressions/amplify-central/golang-agents-common.json"
 
   # Fortify
   FORTIFY_PROJECT: "10715"
@@ -75,6 +74,7 @@ twistlock-discovery:
     - apk --no-cache update && apk add make
     - make docker-build-discovery
     - export IMAGE_NAME=mulesoft_discovery_agent:latest
+    - echo "TL_DA=true" >> build.env
 
 twistlock-traceability:
   extends: .twistlock
@@ -84,6 +84,7 @@ twistlock-traceability:
     - apk --no-cache update && apk add make
     - make docker-build-traceability
     - export IMAGE_NAME=mulesoft_traceability_agent:latest
+    - echo "TL_TA=true" >> build.env
 
 twistlock-discovery:on-schedule:
   variables:
