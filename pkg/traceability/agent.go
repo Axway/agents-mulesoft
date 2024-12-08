@@ -138,7 +138,7 @@ func (a *Agent) processMetricEvent(m cmn.Metrics) {
 			Max: m.Max,
 			Min: m.Min,
 		},
-		Observation: metric.ObservationDetails{
+		Observation: models.ObservationDetails{
 			Start: m.StartTime.UnixMilli(),
 			End:   m.EndTime.UnixMilli(),
 		},
