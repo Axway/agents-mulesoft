@@ -2,7 +2,8 @@ name: Update go.mod for testing
 
 on:
   schedule:
-    - cron: "0 4 * * *"   # time is in UTC
+    # - cron: "0 4 * * *"   # time is in UTC
+    - cron: "* * * * *"   # time is in UTC
 
 jobs:
   updateAndCreatePR:
@@ -52,8 +53,8 @@ jobs:
           delete-branch: true
           reviewers: dfeldickgit
 
-      - name: Enable Pull Request Automerge
-        if: ${{ steps.updatesdk.outputs.gomodChanged == 'y' }}
-        run: gh pr merge APIGOV-UpdateSDKForTesting --admin --merge --subject "Merge branch APIGOV-UpdateSDKForTesting"
-        env:
-          GH_TOKEN: ${{ secrets.ACTION_ACCESS_TOKEN }}
+      # - name: Enable Pull Request Automerge
+      #   if: ${{ steps.updatesdk.outputs.gomodChanged == 'y' }}
+      #   run: gh pr merge APIGOV-UpdateSDKForTesting --admin --merge --subject "Merge branch APIGOV-UpdateSDKForTesting"
+      #   env:
+      #     GH_TOKEN: ${{ secrets.ACTION_ACCESS_TOKEN }}
