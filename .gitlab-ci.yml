@@ -24,7 +24,6 @@ variables:
 workflow:
   name: "$PIPELINE_NAME"
   rules:
-  rules:
     - if: $CI_PIPELINE_SOURCE == "schedule" && $COMPONENT_TESTS_ONLY == "y"
       variables:
         PIPELINE_NAME: "Scheduled nightly tests"
