@@ -18,5 +18,4 @@ jobs:
       - name: Test
         working-directory: .
         run: |
-          echo "no tests"
-          # make test
+          make test
