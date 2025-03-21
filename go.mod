@@ -5,9 +5,9 @@ go 1.23.0
 toolchain go1.23.6
 
 require (
-	github.com/Axway/agent-sdk v1.1.111-0.20250317173812-b9161b84526e
+	github.com/Axway/agent-sdk v1.1.111-0.20250320222728-a4e9a0626361
 	github.com/elastic/beats/v7 v7.17.23
-	github.com/getkin/kin-openapi v0.127.0
+	github.com/getkin/kin-openapi v0.131.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.9.0
 	github.com/tidwall/gjson v1.14.0
@@ -106,6 +106,8 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
+	github.com/oasdiff/yaml v0.0.0-20250309154309-f31be36b4037 // indirect
+	github.com/oasdiff/yaml3 v0.0.0-20250309153720-d2182401db90 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.2 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
