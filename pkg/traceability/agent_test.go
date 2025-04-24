@@ -7,7 +7,6 @@ import (
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	cache "github.com/Axway/agent-sdk/pkg/cache"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
-	"github.com/Axway/agent-sdk/pkg/transaction/metric"
 	"github.com/Axway/agent-sdk/pkg/util"
 
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
@@ -19,27 +18,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type mockMetricCollector struct {
-	channel chan bool
-	details []metric.MetricDetail
-}
-
-func (m *mockMetricCollector) InitializeBatch() {
-}
-
-func (m *mockMetricCollector) AddAPIMetricDetail(detail metric.MetricDetail) {
-	if m.details == nil {
-		m.details = make([]metric.MetricDetail, 0)
-	}
-	m.details = append(m.details, detail)
-}
-
-func (m *mockMetricCollector) Publish() {
-	m.channel <- true
-}
-
 func TestAgent_Run(t *testing.T) {
-	processorChannel := make(chan bool)
 	eventChannel := make(chan common.MetricEvent)
 
 	event := anypoint.APIMonitoringMetric{
@@ -67,11 +46,8 @@ func TestAgent_Run(t *testing.T) {
 	ri, _ := svcInst.AsInstance()
 	instanceCache.AddAPIServiceInstance(ri)
 	emitter := NewMuleEventEmitter(&config.MulesoftConfig{CachePath: "/tmp", UseMonitoringAPI: true}, eventChannel, client, instanceCache)
-	collector := &mockMetricCollector{
-		channel: processorChannel,
-	}
 	credCache := cache.New()
-	traceAgent, err := newAgent(emitter, eventChannel, collector, credCache)
+	traceAgent, err := newAgent(emitter, eventChannel, credCache)
 
 	assert.Nil(t, err)
 	assert.NotNil(t, traceAgent)
@@ -94,9 +70,6 @@ func TestAgent_Run(t *testing.T) {
 	traceAgent.onConfigChange()
 
 	go traceAgent.Run(b)
-
-	done := <-processorChannel
-	assert.True(t, done)
 	traceAgent.Stop()
 }
 
