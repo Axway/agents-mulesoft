@@ -5,7 +5,6 @@ import (
 	"os/signal"
 	"syscall"
 
-	"git.ecd.axway.org/apigov/agents-controller/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/agent"
 	coreagent "github.com/Axway/agent-sdk/pkg/agent"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -17,17 +16,17 @@ import (
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
 	coreutil "github.com/Axway/agent-sdk/pkg/util"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 	cmn "github.com/Axway/agents-mulesoft/pkg/common"
 	"github.com/Axway/agents-mulesoft/pkg/config"
 	"github.com/elastic/beats/v7/libbeat/beat"
 	"github.com/elastic/beats/v7/libbeat/common"
-	"github.com/sirupsen/logrus"
 )
 
 // Agent - mulesoft Beater configuration. Implements the beat.Beater interface.
 type Agent struct {
-	logger          *logrus.Entry
+	logger          log.FieldLogger
 	client          beat.Client
 	doneCh          chan struct{}
 	eventChannel    chan cmn.MetricEvent
@@ -65,7 +64,7 @@ func newAgent(
 	credentialCache cache.Cache,
 ) (*Agent, error) {
 	a := &Agent{
-		logger:          util.NewLogEntry("traceability.agent", "agent"),
+		logger:          log.NewFieldLogger().WithPackage("traceability.agent").WithComponent("agent"),
 		doneCh:          make(chan struct{}),
 		eventChannel:    eventChannel,
 		mule:            emitter,
