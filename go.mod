@@ -2,7 +2,7 @@ module github.com/Axway/agents-mulesoft
 
 go 1.23.3
 
-toolchain go1.23.6
+toolchain go1.23.8
 
 require (
 	github.com/Axway/agent-sdk v1.1.116-0.20250506122318-668862999622
@@ -128,6 +128,7 @@ require (
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
 	github.com/spf13/cobra v1.8.1 // indirect
+	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/spf13/viper v1.18.2 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
