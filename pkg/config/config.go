@@ -121,7 +121,7 @@ func (c *MulesoftConfig) ValidateCfg() (err error) {
 }
 
 // AddConfigProperties - Adds the command properties needed for Mulesoft
-func AddConfigProperties(rootProps props) {
+func AddConfigProperties(rootProps props, isTA bool) {
 	rootProps.AddStringProperty(pathAnypointExchangeURL, "https://anypoint.mulesoft.com", "Mulesoft Anypoint Exchange URL.")
 	rootProps.AddStringProperty(pathAnypointMonitoringURL, "https://monitoring.anypoint.mulesoft.com", "Mulesoft Anypoint Monitoring URL.")
 	rootProps.AddStringProperty(pathEnvironment, "", "Mulesoft Anypoint environment.")
@@ -132,7 +132,13 @@ func AddConfigProperties(rootProps props) {
 	rootProps.AddStringProperty(pathDiscoveryTags, "", "APIs containing any of these tags are selected for discovery.")
 	rootProps.AddStringProperty(pathDiscoveryIgnoreTags, "", "APIs containing any of these tags are ignored. Takes precedence over "+pathDiscoveryIgnoreTags+".")
 	rootProps.AddStringProperty(pathCachePath, "/data", "Mulesoft Cache Path")
-	rootProps.AddDurationProperty(pathPollInterval, time.Minute, "The interval at which Mulesoft is checked for updates.", properties.WithLowerLimit(30*time.Second))
+
+	if isTA {
+		rootProps.AddDurationProperty(pathPollInterval, 30*time.Second, "The interval at which Mulesoft is checked for updates.", properties.WithLowerLimit(30*time.Second))
+	} else {
+		rootProps.AddDurationProperty(pathPollInterval, time.Minute, "The interval at which Mulesoft is checked for updates.", properties.WithLowerLimit(30*time.Second))
+	}
+
 	rootProps.AddStringProperty(pathProxyURL, "", "Proxy URL")
 
 	// ssl properties and command flags

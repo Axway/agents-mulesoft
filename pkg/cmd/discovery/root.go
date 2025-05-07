@@ -41,7 +41,7 @@ func init() {
 	// set the dataplane type that will be added to the agent spec
 	corecfg.AgentDataPlaneType = apic.Mulesoft.String()
 
-	config.AddConfigProperties(RootCmd.GetProperties())
+	config.AddConfigProperties(RootCmd.GetProperties(), false)
 
 	migrate.MatchAttr(
 		common.AttrAPIID,

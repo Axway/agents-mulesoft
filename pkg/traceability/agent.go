@@ -11,10 +11,12 @@ import (
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	cache "github.com/Axway/agent-sdk/pkg/cache"
+	"github.com/Axway/agent-sdk/pkg/transaction"
 	"github.com/Axway/agent-sdk/pkg/transaction/metric"
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
 	coreutil "github.com/Axway/agent-sdk/pkg/util"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agents-mulesoft/pkg/anypoint"
 	cmn "github.com/Axway/agents-mulesoft/pkg/common"
 	"github.com/Axway/agents-mulesoft/pkg/config"
@@ -22,25 +24,16 @@ import (
 	"github.com/elastic/beats/v7/libbeat/common"
 )
 
-type metricCollector interface {
-	InitializeBatch()
-	AddAPIMetricDetail(detail metric.MetricDetail)
-	Publish()
-}
-
-func getMetricCollector() metricCollector {
-	return metric.GetMetricCollector()
-}
-
 // Agent - mulesoft Beater configuration. Implements the beat.Beater interface.
 type Agent struct {
+	logger          log.FieldLogger
 	client          beat.Client
 	doneCh          chan struct{}
 	eventChannel    chan cmn.MetricEvent
 	mule            Emitter
-	collector       metricCollector
 	credentialCache cache.Cache
-	publishMetrics  bool
+	eventGenerator  transaction.EventGenerator
+	eventReport     transaction.EventReport
 }
 
 // NewBeater creates an instance of mulesoft_traceability_agent.
@@ -62,22 +55,29 @@ func NewBeater(_ *beat.Beat, _ *common.Config) (beat.Beater, error) {
 	credentialHandler := NewCredentialHandler(credentialCache, agent.GetCacheManager())
 	agent.RegisterResourceEventHandler(management.CredentialGVK().Kind, credentialHandler)
 
-	return newAgent(emitterJob, eventChannel, getMetricCollector(), credentialCache)
+	return newAgent(emitterJob, eventChannel, credentialCache)
 }
 
 func newAgent(
 	emitter Emitter,
 	eventChannel chan cmn.MetricEvent,
-	collector metricCollector,
 	credentialCache cache.Cache,
 ) (*Agent, error) {
 	a := &Agent{
+		logger:          log.NewFieldLogger().WithPackage("traceability.agent").WithComponent("agent"),
 		doneCh:          make(chan struct{}),
 		eventChannel:    eventChannel,
 		mule:            emitter,
-		collector:       collector,
 		credentialCache: credentialCache,
+		eventGenerator:  transaction.NewEventGenerator(),
 	}
+
+	eventReport, err := transaction.NewEventReportBuilder().SetOnlyTrackMetrics(true).Build()
+	if err != nil {
+		a.logger.WithError(err).Error("failed to create event report")
+		return nil, err
+	}
+	a.eventReport = eventReport
 
 	return a, nil
 }
@@ -113,13 +113,13 @@ func (a *Agent) Run(b *beat.Beat) error {
 func (a *Agent) processEvent(me cmn.MetricEvent) {
 	switch me.Type {
 	case cmn.Initialize:
-		a.collector.InitializeBatch()
-		a.publishMetrics = false
+		a.logger.Debug("starting metrics processing")
 	case cmn.Metric:
 		a.processMetricEvent(me.Metric)
 	case cmn.Completed:
-		if a.publishMetrics {
-			a.collector.Publish()
+		err := a.eventGenerator.AddMetricDetailsFromEventReport(a.eventReport)
+		if err != nil {
+			a.logger.WithError(err).Error("failed to add metrics to collector")
 		}
 	}
 }
@@ -129,7 +129,7 @@ func (a *Agent) processMetricEvent(m cmn.Metrics) {
 		return
 	}
 
-	a.collector.AddAPIMetricDetail(metric.MetricDetail{
+	a.eventReport.AddMetricDetail(metric.MetricDetail{
 		APIDetails: a.getAPIDetails(m),
 		AppDetails: a.getAppDetails(m),
 		StatusCode: m.StatusCode,
@@ -143,7 +143,6 @@ func (a *Agent) processMetricEvent(m cmn.Metrics) {
 			End:   m.EndTime.UnixMilli(),
 		},
 	})
-	a.publishMetrics = true
 }
 
 func (a *Agent) getAPIDetails(m cmn.Metrics) models.APIDetails {

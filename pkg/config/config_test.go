@@ -100,7 +100,7 @@ func TestKongProperties(t *testing.T) {
 	newProps := &fakeProps{props: map[string]propData{}}
 
 	// validate add props
-	AddConfigProperties(newProps)
+	AddConfigProperties(newProps, false)
 	assert.Contains(t, newProps.props, pathAnypointExchangeURL)
 	assert.Contains(t, newProps.props, pathEnvironment)
 	assert.Contains(t, newProps.props, pathOrgName)
