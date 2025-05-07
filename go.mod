@@ -1,11 +1,11 @@
 module github.com/Axway/agents-mulesoft
 
-go 1.23.0
+go 1.23.3
 
-toolchain go1.23.6
+toolchain go1.23.8
 
 require (
-	github.com/Axway/agent-sdk v1.1.116-0.20250505152050-d12a3d7820cb
+	github.com/Axway/agent-sdk v1.1.116-0.20250506163038-263ac63c0bb4
 	github.com/elastic/beats/v7 v7.17.23
 	github.com/getkin/kin-openapi v0.131.0
 	github.com/sirupsen/logrus v1.9.3
@@ -123,7 +123,7 @@ require (
 	github.com/shirou/gopsutil v3.20.12+incompatible // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/snowzach/rotatefilehook v0.0.0-20220211133110-53752135082d // indirect
-	github.com/spf13/afero v1.8.2 // indirect
+	github.com/spf13/afero v1.10.0 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/cobra v1.7.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
