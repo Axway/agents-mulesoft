@@ -60,7 +60,7 @@ spec:
             - name: MULESOFT_ORGNAME
               value:
             - name: MULESOFT_POLLINTERVAL
-              value: 5m
+              value: 60s
             - name: STATUS_PORT
               value: "8989"
             - name: TRACEABILITY_REDACTION_PATH_SHOW
