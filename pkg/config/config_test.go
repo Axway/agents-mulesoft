@@ -134,7 +134,7 @@ func TestKongProperties(t *testing.T) {
 	assert.Equal(t, corecfg.NewCipherArray(corecfg.TLSDefaultCipherSuitesStringSlice()), cfg.TLS.GetCipherSuites())
 	assert.Equal(t, corecfg.TLSVersionAsValue(corecfg.TLSDefaultMinVersionString()), cfg.TLS.GetMinVersion())
 	assert.Equal(t, corecfg.TLSVersionAsValue("0"), cfg.TLS.GetMaxVersion())
-	assert.Equal(t, time.Minute, cfg.PollInterval)
+	assert.Equal(t, 5*time.Minute, cfg.PollInterval)
 	assert.Equal(t, "", cfg.ProxyURL)
 	assert.Equal(t, "/data", cfg.CachePath)
 	assert.Equal(t, false, cfg.DiscoverOriginalRaml)
