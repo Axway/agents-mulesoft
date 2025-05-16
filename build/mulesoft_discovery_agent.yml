@@ -21,7 +21,7 @@ log:
 mulesoft:
   anypointExchangeUrl:
   environment:
-  pollInterval: 60s
+  pollInterval: 5m
   orgName: 
   # Comma-separated list of tags. Used to filter the APIs that have a particular tag in their configuration.
   # Default value: empty. Meaning that no matching is performed.

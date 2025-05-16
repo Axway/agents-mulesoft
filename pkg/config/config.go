@@ -134,9 +134,9 @@ func AddConfigProperties(rootProps props, isTA bool) {
 	rootProps.AddStringProperty(pathCachePath, "/data", "Mulesoft Cache Path")
 
 	if isTA {
-		rootProps.AddDurationProperty(pathPollInterval, 30*time.Second, "The interval at which Mulesoft is checked for updates.", properties.WithLowerLimit(30*time.Second))
+		rootProps.AddDurationProperty(pathPollInterval, 5*time.Minute, "The interval at which Mulesoft is checked for updates.", properties.WithLowerLimit(30*time.Second))
 	} else {
-		rootProps.AddDurationProperty(pathPollInterval, time.Minute, "The interval at which Mulesoft is checked for updates.", properties.WithLowerLimit(30*time.Second))
+		rootProps.AddDurationProperty(pathPollInterval, 5*time.Minute, "The interval at which Mulesoft is checked for updates.", properties.WithLowerLimit(30*time.Second))
 	}
 
 	rootProps.AddStringProperty(pathProxyURL, "", "Proxy URL")
