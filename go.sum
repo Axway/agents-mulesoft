@@ -21,8 +21,8 @@ cloud.google.com/go/storage v1.0.0/go.mod h1:IhtSnM/ZTZV8YYJWCY8RULGVqBDmpoyjwiy
 cloud.google.com/go/storage v1.5.0/go.mod h1:tpKbwo567HUNpVclU5sGELwQWBDZ8gh0ZeosJ0Rtdos=
 cloud.google.com/go/storage v1.6.0/go.mod h1:N7U0C8pVQ/+NIKOBQyamJIeKQKkZ+mxpohlUTyfDhBk=
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
-github.com/Axway/agent-sdk v1.1.118-0.20250528145335-24bf135e75c6 h1:OBzQPQIitNw9Iv7u/JYamuWiCHDxGQ5Njqp6jKPZ6xA=
-github.com/Axway/agent-sdk v1.1.118-0.20250528145335-24bf135e75c6/go.mod h1:A4qcVXXGiUi4K1LWanL8eGVV1yeb6r59CnpskN0hUOY=
+github.com/Axway/agent-sdk v1.1.117 h1:uQbWbbZWnudw+kUMscadobT50QUksCshobr8q+ssqPI=
+github.com/Axway/agent-sdk v1.1.117/go.mod h1:A4qcVXXGiUi4K1LWanL8eGVV1yeb6r59CnpskN0hUOY=
 github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 h1:w+iIsaOQNcT7OZ575w+acHgRric5iCyQh+xv+KJ4HB8=
 github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78/go.mod h1:LmzpDX56iTiv29bbRTIsUNlaFfuhWRQBWjQdVyAevI8=
 github.com/Azure/go-autorest v12.2.0+incompatible/go.mod h1:r+4oMnoxhatjLLJ6zxSWATqVooLgysK6ZNox3g/xq24=
