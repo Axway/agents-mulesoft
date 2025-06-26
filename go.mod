@@ -5,7 +5,7 @@ go 1.23.3
 toolchain go1.23.8
 
 require (
-	github.com/Axway/agent-sdk v1.1.121-0.20250625172106-e563997be170
+	github.com/Axway/agent-sdk v1.1.121
 	github.com/elastic/beats/v7 v7.17.23
 	github.com/getkin/kin-openapi v0.131.0
 	github.com/sirupsen/logrus v1.9.3
